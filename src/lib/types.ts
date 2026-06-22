@@ -88,3 +88,15 @@ export interface Message {
   content: string;
   createdAt: number;
 }
+
+/** 每角色主观记忆（借 Generative Agents 的 ConceptNode；本切片不含反思 provenance）。 */
+export interface Memory {
+  id: string;
+  charId: string;
+  kind: "observation" | "reflection";
+  text: string;
+  keywords: string[];     // 写入时抽取，供关键词相关性近似
+  importance: number;     // 1–10
+  createdAt: number;
+  lastAccessed: number;
+}
