@@ -4,14 +4,13 @@ import { DEMO_SEED } from "../world/seed-demo";
 import { BUILTIN_SEEDS } from "../world/seeds-builtin";
 import { nextTime } from "../clock";
 
-/** Seeds all built-in WorldSeeds into storage if absent. Idempotent. */
+/** Upserts all built-in WorldSeeds into storage, always updating to latest definitions.
+ *  Preserves original createdAt so feed ordering is stable. Idempotent. */
 export async function ensureBuiltinSeeds(): Promise<void> {
   const repo = getRepository();
   for (const seed of BUILTIN_SEEDS) {
     const existing = await repo.getSeed(seed.id);
-    if (!existing) {
-      await repo.upsertSeed({ ...seed, createdAt: nextTime(), source: "builtin" });
-    }
+    await repo.upsertSeed({ ...seed, createdAt: existing?.createdAt ?? nextTime(), source: "builtin" });
   }
 }
 

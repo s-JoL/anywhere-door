@@ -69,7 +69,7 @@ function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string 
 // ---------------------------------------------------------------------------
 const INTENSITY_META = {
   calm:     { label: "平和", color: "var(--lamp)" },
-  charged:  { label: "张力", color: "var(--rose)" },
+  charged:  { label: "烈度", color: "var(--rose)" },
   explicit: { label: "热烈", color: "#ff6b6b" },
 } as const;
 
