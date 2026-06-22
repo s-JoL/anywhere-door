@@ -14,13 +14,22 @@ import type { WorldSeed } from "@/lib/types";
 function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string {
   const [displayed, setDisplayed] = useState("");
   const rafRef = useRef<number | null>(null);
+  const doneRef = useRef(false);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced || !active) {
-      setDisplayed(active ? text : "");
+
+    if (!active) {
+      setDisplayed("");
+      // do NOT reset doneRef here — we want to remember completion on revisit
       return;
     }
+
+    if (prefersReduced || doneRef.current) {
+      setDisplayed(text);
+      return;
+    }
+
     setDisplayed("");
     let i = 0;
     let last = performance.now();
@@ -35,6 +44,8 @@ function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string 
       }
       if (i < text.length) {
         rafRef.current = requestAnimationFrame(tick);
+      } else {
+        doneRef.current = true; // mark as completed
       }
     }
 
@@ -43,6 +54,12 @@ function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string 
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [text, active, charPerMs]);
+
+  // Reset doneRef when the text itself changes
+  useEffect(() => {
+    doneRef.current = false;
+    setDisplayed("");
+  }, [text]);
 
   return displayed;
 }
@@ -325,7 +342,7 @@ export default function Home() {
       if (!el) return;
       const obs = new IntersectionObserver(
         ([entry]) => { if (entry.isIntersecting) setFocusedIndex(i); },
-        { threshold: 0.5 },
+        { threshold: 0.5, root: containerRef.current },
       );
       obs.observe(el);
       observers.push(obs);
