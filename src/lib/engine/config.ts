@@ -4,6 +4,6 @@ export interface EngineConfig {
 }
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
-  maxConsecutiveAiTurns: 6,
+  maxConsecutiveAiTurns: 3,
   maxSpeakersPerRound: 2,
 };

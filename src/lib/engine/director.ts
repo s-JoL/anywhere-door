@@ -6,11 +6,11 @@ import { nextTime } from "../clock";
 /** 纯：根据最近一句更新张力（冲突/动作/强标点升，平淡衰减），钳 0–10。 */
 export function updateTension(prev: number, lastLine: string): number {
   let t = prev;
-  if (/[（(].*[)）]/.test(lastLine)) t += 1.5;          // 有动作
+  if (/[（(].*[)）]/.test(lastLine)) t += 0.5;          // 有动作
   if (/[！!?？]/.test(lastLine)) t += 1;                 // 情绪
   if (/枪|血|死|逃|打|抓|吼|威胁|危险|喊/.test(lastLine)) t += 2; // 冲突词
   if (lastLine.length <= 6) t -= 1;                      // 短促闲谈
-  t -= 0.5;                                              // 自然衰减
+  t -= 1;                                                // 自然衰减
   return Math.max(0, Math.min(10, t));
 }
 
@@ -47,8 +47,7 @@ export interface MaybeDirectArgs {
 export async function maybeDirect(args: MaybeDirectArgs): Promise<Message | null> {
   const { instanceId, state, recentLines, tensionBefore, tensionAfter, llm } = args;
   const rose = tensionAfter - tensionBefore >= 1.5;
-  const high = tensionAfter >= 6;
-  if (!rose && !high) return null;
+  if (!rose) return null; // 只在张力真实跃升时插旁白，避免高位时每回合刷屏
   const line = await directorNarrate({ state, recentLines, llm });
   if (!line) return null;
   return { id: newId("n"), instanceId, role: "system", speakerId: null, content: line, narration: true, createdAt: nextTime() };
