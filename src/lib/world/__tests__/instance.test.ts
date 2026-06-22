@@ -15,4 +15,11 @@ describe("instantiate", () => {
     const loc = DEMO_SEED.openingState.locations[DEMO_SEED.openingState.currentLocationId];
     expect(loc.presentCharacterIds.length).toBeGreaterThan(0);
   });
+  it("demo seed has two characters present in the opening location, each with a private goal", () => {
+    const loc = DEMO_SEED.openingState.locations[DEMO_SEED.openingState.currentLocationId];
+    expect(loc.presentCharacterIds).toContain("c-lan");
+    expect(loc.presentCharacterIds).toContain("c-zhou");
+    const zhou = DEMO_SEED.characters.find((c) => c.id === "c-zhou");
+    expect(zhou?.goal && zhou.goal.length > 0).toBe(true);
+  });
 });

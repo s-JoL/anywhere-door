@@ -5,7 +5,7 @@ import { DEMO_SEED } from "../../world/seed-demo";
 describe("prompt", () => {
   it("present characters are those in the current location", () => {
     const present = presentCharacters(DEMO_SEED, DEMO_SEED.openingState);
-    expect(present.map((c) => c.id)).toEqual(["c-lan"]);
+    expect(present.map((c) => c.id)).toEqual(["c-lan", "c-zhou"]);
   });
   it("system prompt grounds the character in worldview + current visible scene, not global truth", () => {
     const c = DEMO_SEED.characters[0];
