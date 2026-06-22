@@ -18,6 +18,8 @@ export interface Character {
   description: string;   // 设定（含性格）
   identity?: Identity;   // 不可变硬事实
   goal?: string;         // 当前目标（被 God 注入主观 prompt）
+  systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
+  postHistoryInstructions?: string;  // 角色覆盖末尾后置强化（支持 {{original}}）
 }
 
 /** 不可变：世界的"物理法则"，创建后只读。 */

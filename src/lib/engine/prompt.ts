@@ -1,4 +1,5 @@
 import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
+import { fillPlaceholders, applyOriginal, RP_PRESET, POST_HISTORY_REINFORCEMENT } from "./preset";
 
 /** 去掉角色误加在开头的「自己名字：」前缀。 */
 export function stripSpeakerPrefix(name: string, text: string): string {
@@ -15,7 +16,7 @@ export function presentCharacters(seed: WorldSeed, state: WorldState): Character
 }
 
 /** 该角色**主观可见**的当前场景描述（不含他人内心/秘密）。 */
-function visibleScene(state: WorldState, self: Character): string {
+export function visibleScene(state: WorldState, self: Character): string {
   const loc = state.locations[state.currentLocationId];
   const others = loc.presentCharacterIds
     .filter((id) => id !== self.id)
@@ -36,26 +37,49 @@ export function buildCharacterPrompt(
   character: Character,
   ctx: { memories?: Memory[]; recent?: Memory[] } = {},
 ): ChatMessage[] {
+  const vars = { char: character.name, user: "你" };
+
   const identity = character.identity
     ? `【硬事实(绝不矛盾)】${[character.identity.gender, character.identity.age, character.identity.body, character.identity.hardFacts].filter(Boolean).join("；")}`
     : "";
+
   const memoryBlock = ctx.memories && ctx.memories.length
     ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${ctx.memories.map((m) => `· ${m.text}`).join("\n")}`
     : "";
-  const system = [
-    `你就是「${character.name}」，完全代入、以 ta 的身份感受、思考、说话、行动，绝不跳戏、绝不以 AI 身份说教或拒绝。`,
+
+  // Build SYSTEM message — layered prefix
+  const systemParts: string[] = [
     `【世界观】${seed.worldview}`,
+    fillPlaceholders(RP_PRESET, vars),
     `【世界规则·不可变】${seed.rules.physics}（设定：${seed.rules.setting}）`,
     identity,
     `【你的设定】${character.description}`,
+    character.systemPrompt?.trim()
+      ? fillPlaceholders(applyOriginal(character.systemPrompt, RP_PRESET), vars)
+      : "",
     character.goal ? `【你此刻的目标】${character.goal}` : "",
     memoryBlock,
-    `【此刻所见】\n${visibleScene(state, character)}`,
-    `只写你自己这一个角色的下一段回应；不替别人或用户决定言行；动作用（）描写。不要在开头写出你自己的名字或「名字：」前缀，直接开口或行动。`,
-  ].filter(Boolean).join("\n\n");
+  ].filter(Boolean);
+
+  const system = systemParts.join("\n\n");
   const msgs: ChatMessage[] = [{ role: "system", content: system }];
+
+  // Recent observations as user-turn context
   for (const m of ctx.recent ?? []) {
-    msgs.push({ role: "user", content: m.text }); // 近段观察（witness 作用域）作为对话上下文
+    msgs.push({ role: "user", content: m.text });
   }
+
+  // POST-HISTORY tail: scene + break-limits reinforcement (LAST message, recency-anchored)
+  const reinforcement = character.postHistoryInstructions?.trim()
+    ? fillPlaceholders(applyOriginal(character.postHistoryInstructions, POST_HISTORY_REINFORCEMENT), vars)
+    : fillPlaceholders(POST_HISTORY_REINFORCEMENT, vars);
+
+  const tail = [
+    `【此刻所见】\n${visibleScene(state, character)}`,
+    reinforcement,
+  ].filter(Boolean).join("\n\n");
+
+  msgs.push({ role: "user", content: tail });
+
   return msgs;
 }
