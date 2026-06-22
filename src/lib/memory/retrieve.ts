@@ -11,7 +11,7 @@ function normalize(values: number[]): number[] {
 const W_RECENCY = 0.5, W_RELEVANCE = 3, W_IMPORTANCE = 2;
 
 /**
- * 按 recency×relevance×importance 给记忆打分取 top-k。
+ * 按 recency / relevance / importance 三项加权求和（非乘积）给记忆打分取 top-k。
  * recency：按 createdAt 降序的名次 i → decay^i（越新越大）。
  * relevance：查询关键词与记忆关键词的交集大小。
  * importance：记忆自带分值。
@@ -30,7 +30,7 @@ export function scoreMemories(
   const recencyById = new Map<string, number>();
   byRecency.forEach((mem, i) => recencyById.set(mem.id, Math.pow(decay, i)));
 
-  const recency = normalize(memories.map((m) => recencyById.get(m.id)!));
+  const recency = normalize(memories.map((m) => (recencyById.get(m.id) ?? 0)));
   const relev = normalize(memories.map((m) => relevance(queryKw, m.keywords)));
   const importance = normalize(memories.map((m) => m.importance));
 
