@@ -1,4 +1,4 @@
-import type { WorldSeed, WorldState, Character, ChatMessage, Message, Memory } from "../types";
+import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
 
 export function presentCharacters(seed: WorldSeed, state: WorldState): Character[] {
   const loc = state.locations[state.currentLocationId];
@@ -28,7 +28,7 @@ export function buildCharacterPrompt(
   seed: WorldSeed,
   state: WorldState,
   character: Character,
-  ctx: { memories?: Memory[]; recent?: Message[] } = {},
+  ctx: { memories?: Memory[]; recent?: Memory[] } = {},
 ): ChatMessage[] {
   const identity = character.identity
     ? `【硬事实(绝不矛盾)】${[character.identity.gender, character.identity.age, character.identity.body, character.identity.hardFacts].filter(Boolean).join("；")}`
@@ -49,7 +49,7 @@ export function buildCharacterPrompt(
   ].filter(Boolean).join("\n\n");
   const msgs: ChatMessage[] = [{ role: "system", content: system }];
   for (const m of ctx.recent ?? []) {
-    msgs.push({ role: m.role === "assistant" ? "assistant" : "user", content: m.content });
+    msgs.push({ role: "user", content: m.text }); // 近段观察（witness 作用域）作为对话上下文
   }
   return msgs;
 }
