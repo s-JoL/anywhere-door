@@ -1,0 +1,34 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import { getRepository, resetRepository } from "../index";
+import type { WorldInstance, Message } from "../../types";
+
+function inst(id: string): WorldInstance {
+  return {
+    id, seedId: "seed-1", createdAt: 1, updatedAt: 1,
+    state: { currentLocationId: "bar", time: { day: 1, clock: "黄昏", lighting: "暖" }, locations: {}, objects: {}, roster: {}, flags: {} },
+  };
+}
+
+describe("IndexedDbRepository", () => {
+  beforeEach(async () => {
+    // 重置单例并删除数据库以隔离用例
+    resetRepository();
+    indexedDB.deleteDatabase("the-reveries");
+  });
+
+  it("upserts and gets an instance", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(inst("w1"));
+    const got = await repo.getInstance("w1");
+    expect(got?.seedId).toBe("seed-1");
+  });
+
+  it("appends and lists messages in createdAt order", async () => {
+    const repo = getRepository();
+    const m = (id: string, t: number): Message => ({ id, instanceId: "w1", role: "user", speakerId: null, content: id, createdAt: t });
+    await repo.appendMessage(m("b", 2));
+    await repo.appendMessage(m("a", 1));
+    const list = await repo.listMessages("w1");
+    expect(list.map((x) => x.id)).toEqual(["a", "b"]);
+  });
+});
