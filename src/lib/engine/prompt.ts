@@ -1,5 +1,11 @@
 import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
 
+/** 去掉角色误加在开头的「自己名字：」前缀。 */
+export function stripSpeakerPrefix(name: string, text: string): string {
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(`^\\s*${esc}\\s*[:：]\\s*`), "");
+}
+
 export function presentCharacters(seed: WorldSeed, state: WorldState): Character[] {
   const loc = state.locations[state.currentLocationId];
   if (!loc) return [];
@@ -45,7 +51,7 @@ export function buildCharacterPrompt(
     character.goal ? `【你此刻的目标】${character.goal}` : "",
     memoryBlock,
     `【此刻所见】\n${visibleScene(state, character)}`,
-    `只写你自己这一个角色的下一段回应；不替别人或用户决定言行；动作用（）描写。`,
+    `只写你自己这一个角色的下一段回应；不替别人或用户决定言行；动作用（）描写。不要在开头写出你自己的名字或「名字：」前缀，直接开口或行动。`,
   ].filter(Boolean).join("\n\n");
   const msgs: ChatMessage[] = [{ role: "system", content: system }];
   for (const m of ctx.recent ?? []) {
