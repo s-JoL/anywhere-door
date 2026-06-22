@@ -1,5 +1,6 @@
 import { newId } from "@/lib/id";
 import type { WorldSeed, ModelConfig, Character, WorldState } from "@/lib/types";
+import { derivePresentation } from "@/lib/world/presentation";
 
 export interface CharDraft {
   name: string;
@@ -23,6 +24,11 @@ export interface WorldDraft {
   clock?: string;
   lighting?: string;
   characters: CharDraft[];
+  // Presentation (optional — derived from seed if omitted)
+  genre?: string;
+  mood?: string[];
+  intensity?: "calm" | "charged" | "explicit";
+  hook?: string;
 }
 
 export function buildSeedFromDraft(
@@ -101,7 +107,7 @@ export function buildSeedFromDraft(
         : ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
   };
 
-  return {
+  const partialSeed: WorldSeed = {
     id: "seed-created-" + newId(""),
     title: draft.title.trim(),
     worldview: draft.worldview.trim(),
@@ -111,5 +117,17 @@ export function buildSeedFromDraft(
     modelConfig,
     createdAt: now,
     source: "created",
+  };
+
+  const basePres = derivePresentation(partialSeed);
+  return {
+    ...partialSeed,
+    presentation: {
+      ...basePres,
+      ...(draft.genre ? { genre: draft.genre } : {}),
+      ...(draft.mood ? { mood: draft.mood } : {}),
+      ...(draft.intensity ? { intensity: draft.intensity } : {}),
+      ...(draft.hook ? { hook: draft.hook } : {}),
+    },
   };
 }
