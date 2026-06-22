@@ -1,6 +1,6 @@
 import { ReveriesDB } from "./dexie-db";
 import type { Repository } from "./repository";
-import type { WorldInstance, Message, Memory } from "../types";
+import type { WorldInstance, Message, Memory, WorldSeed } from "../types";
 
 export class IndexedDbRepository implements Repository {
   private db = new ReveriesDB();
@@ -16,4 +16,10 @@ export class IndexedDbRepository implements Repository {
     const rows = await this.db.memories.where("charId").equals(charId).toArray();
     return rows.sort((a, b) => a.createdAt - b.createdAt);
   }
+  async getSeed(id: string) { return this.db.seeds.get(id); }
+  async listSeeds(): Promise<WorldSeed[]> {
+    const rows = await this.db.seeds.toArray();
+    return rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  }
+  async upsertSeed(s: WorldSeed) { await this.db.seeds.put(s); }
 }
