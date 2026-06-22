@@ -221,14 +221,13 @@ export default function Home() {
 
   return (
     <main
-      className="h-[100dvh] w-full overflow-y-auto overscroll-none"
-      style={{ scrollSnapType: "y mandatory" }}
+      className="h-[100dvh] w-full overflow-y-auto overscroll-none snap-y snap-mandatory"
     >
       {seeds.map((seed, i) => (
         <WorldPanel key={seed.id} seed={seed} index={i} isFirst={i === 0} />
       ))}
       {seeds.length === 0 && (
-        <section className="h-[100dvh] snap-start flex items-center justify-center world-bg">
+        <section className="h-[100dvh] w-full snap-start flex items-center justify-center world-bg">
           <div className="text-[13px] text-[var(--smoke)] pulse">世界正在苏醒…</div>
         </section>
       )}
