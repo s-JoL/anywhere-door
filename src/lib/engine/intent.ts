@@ -1,4 +1,4 @@
-import type { WorldSeed, WorldState, Character, Message, ChatMessage } from "../types";
+import type { WorldSeed, WorldState, Character, Memory, ChatMessage } from "../types";
 import type { Intent } from "./select";
 import type { LlmFn } from "./turn";
 import { buildCharacterPrompt } from "./prompt";
@@ -23,7 +23,7 @@ export interface DecideIntentArgs {
   seed: WorldSeed;
   state: WorldState;
   character: Character;
-  recent: Message[];   // 近段对话历史（witness 作用域，该角色能感知的范围）
+  recent: Memory[];   // 近段观察历史（witness 作用域，该角色能感知的范围）
   llm: LlmFn;
 }
 

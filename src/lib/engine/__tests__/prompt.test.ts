@@ -15,14 +15,14 @@ describe("prompt", () => {
     expect(msgs[0].content).toContain("無燈酒馆"); // 当前可见场景
     expect(msgs[0].content).toContain(DEMO_SEED.rules.physics); // 不可变规则锚
   });
-  it("injects retrieved memories and recent dialogue when provided", () => {
+  it("injects retrieved memories and the character's own recent observations", () => {
     const c = DEMO_SEED.characters[0];
     const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {
       memories: [{ id: "m1", charId: c.id, kind: "observation", text: "你：我之前来过这里", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
-      recent: [{ id: "x1", instanceId: "w", role: "user", speakerId: null, content: "还记得我吗？", createdAt: 2 }],
+      recent: [{ id: "r1", charId: c.id, kind: "observation", text: "老周：你又来啦", keywords: [], importance: 4, createdAt: 2, lastAccessed: 2 }],
     });
     const sys = msgs[0].content;
-    expect(sys).toContain("我之前来过这里"); // 记忆注入
-    expect(msgs.some((m) => m.content.includes("还记得我吗"))).toBe(true); // 近段对话注入
+    expect(sys).toContain("我之前来过这里");                 // 记忆注入
+    expect(msgs.some((m) => m.content.includes("老周：你又来啦"))).toBe(true); // 近段观察作为对话注入
   });
 });
