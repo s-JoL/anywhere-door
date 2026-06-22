@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { derivePresentation } from "../presentation";
 import { DEMO_SEED } from "../seed-demo";
-import type { WorldSeed, WorldPresentation } from "../../types";
+import type { WorldSeed } from "../../types";
 
 // A seed with hand-authored presentation
 const SEED_WITH_PRESENTATION: WorldSeed = {

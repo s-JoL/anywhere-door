@@ -23,7 +23,7 @@ export function derivePresentation(seed: WorldSeed): WorldPresentation {
     .slice(0, 2)
     .map((c) => ({
       name: c.name,
-      line: (c.description ?? "").split(/[。\n]/)[0].slice(0, 24),
+      line: c.description.split(/[。\n]/)[0].slice(0, 24),
     }));
 
   return {
