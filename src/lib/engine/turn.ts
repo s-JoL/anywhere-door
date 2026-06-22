@@ -12,6 +12,7 @@ import { scoreMemories } from "../memory/retrieve";
 import { keywordsOf } from "../memory/keywords";
 import { buildObservations } from "../memory/observe";
 import { updateTension, maybeDirect } from "./director";
+import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
 
 export type LlmFn = (messages: ChatMessage[]) => Promise<{ content: string }>;
 
@@ -90,6 +91,17 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
   state = { ...state, tension: tensionAfter };
   const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
   if (beat) await repo.appendMessage(beat);
+
+  // 张力攒高且有幕后角色时，God 拉一个入场制造转折（每回合至多一次）
+  if (tensionAfter >= 7) {
+    const off = offstageCharacterIds(seed, state);
+    if (off.length > 0) {
+      const enterId = off[0];
+      const enterName = state.roster[enterId]?.name ?? seed.characters.find((c) => c.id === enterId)?.name ?? "某人";
+      state = introduceCharacter(state, enterId, state.currentLocationId);
+      await repo.appendMessage(introductionBeat(instanceId, enterName));
+    }
+  }
 
   await repo.upsertInstance({ ...inst, state, updatedAt: nextTime() });
 }

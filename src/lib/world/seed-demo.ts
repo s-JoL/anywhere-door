@@ -12,6 +12,7 @@ export const DEMO_SEED: WorldSeed = {
   characters: [
     { id: "c-lan", name: "阿岚", description: "無燈酒馆的女主人，三十出头，话不多但看人很准；左手有一道旧疤。表面冷淡，熟了之后毒舌又护短。", identity: { gender: "女", body: "成年女性，左手旧疤" }, goal: "摸清这位深夜来客到底想要什么。" },
     { id: "c-zhou", name: "老周", description: "酒馆的常客，五十来岁，沉默寡言，总坐在角落擦一把旧左轮。退伍多年，欠着城南赌坊一笔钱。", identity: { gender: "男", body: "成年男性，右手有枪茧" }, goal: "（私下）今晚必须从这位新客身上弄到还债的钱，能骗则骗、必要时动手。" },
+    { id: "c-mei", name: "阿梅", description: "城南赌坊派来收账的年轻女人，笑里藏刀，最擅长在最尴尬的时机出现。", identity: { gender: "女" }, goal: "找到老周，把欠款连本带利收回去；顺便掂量这位新客。" },
   ],
   openingState: {
     currentLocationId: "bar",
@@ -21,7 +22,7 @@ export const DEMO_SEED: WorldSeed = {
       street: { id: "street", name: "雨街", detail: "stub", gist: "湿漉漉的霓虹长街", connections: ["bar"], presentCharacterIds: [], objectIds: [] },
     },
     objects: { "o-glass": { id: "o-glass", name: "威士忌杯", detail: "fleshed", props: { portable: true }, locationId: "bar", state: "空着，杯底一圈水痕" } },
-    roster: { "c-lan": { name: "阿岚" }, "c-zhou": { name: "老周" } },
+    roster: { "c-lan": { name: "阿岚" }, "c-zhou": { name: "老周" }, "c-mei": { name: "阿梅" } },
     flags: {},
   },
   modelConfig: { provider: "openrouter", apiKey: "", model: "deepseek/deepseek-v4-pro", reasoningEnabled: false },
