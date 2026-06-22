@@ -11,6 +11,7 @@ import { nextTime } from "../clock";
 import { scoreMemories } from "../memory/retrieve";
 import { keywordsOf } from "../memory/keywords";
 import { buildObservations } from "../memory/observe";
+import { shouldReflect, reflect } from "../memory/reflect";
 import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
 
@@ -30,6 +31,32 @@ export interface RunTurnArgs {
   deltas?: Delta[];
   llm: LlmFn;
   onEvent?: (e: TurnEvent) => void;
+}
+
+export interface MaybeReflectArgs {
+  repo: Repository;
+  charIds: string[];
+  characterNameById: (id: string) => string;
+  llm: LlmFn;
+}
+
+/**
+ * For each character who spoke this turn: load their memories, and if
+ * shouldReflect passes, synthesize reflection memories and persist them.
+ */
+export async function maybeReflect({ repo, charIds, characterNameById, llm }: MaybeReflectArgs): Promise<void> {
+  for (const charId of charIds) {
+    const memories = await repo.listMemories(charId);
+    if (!shouldReflect(memories)) continue;
+    const reflections = await reflect({
+      characterName: characterNameById(charId),
+      charId,
+      memories,
+      llm,
+      now: nextTime(),
+    });
+    for (const r of reflections) await repo.appendMemory(r);
+  }
 }
 
 /** 多发言者自由发言回合：用户消息 → 校验并应用 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
@@ -54,6 +81,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
   const config = DEFAULT_ENGINE_CONFIG;
   let budget = config.maxConsecutiveAiTurns;
   let lastSpeakerId: string | null = null;
+  const speakerIds: string[] = [];
 
   while (budget > 0) {
     const present = presentCharacters(seed, state);
@@ -89,6 +117,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       await repo.appendMessage(reply);
       // 该发言作为观察写给当前在场者（含后续发言者，从而看到刚说的话）
       for (const obs of buildObservations(state, { speakerName: speaker.name, text: clean })) await repo.appendMemory(obs);
+      if (!speakerIds.includes(speaker.id)) speakerIds.push(speaker.id);
       lastSpeakerId = speaker.id;
       budget--;
     }
@@ -122,4 +151,12 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
   }
 
   await repo.upsertInstance({ ...inst, state, updatedAt: nextTime() });
+
+  // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
+  await maybeReflect({
+    repo,
+    charIds: speakerIds,
+    characterNameById: (id) => state.roster[id]?.name ?? seed.characters.find((c) => c.id === id)?.name ?? id,
+    llm,
+  });
 }

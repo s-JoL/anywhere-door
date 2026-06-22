@@ -93,7 +93,7 @@ export interface Message {
   narration?: boolean;
 }
 
-/** 每角色主观记忆（借 Generative Agents 的 ConceptNode；本切片不含反思 provenance）。 */
+/** 每角色主观记忆（借 Generative Agents 的 ConceptNode）。 */
 export interface Memory {
   id: string;
   charId: string;
@@ -103,4 +103,6 @@ export interface Memory {
   importance: number;     // 1–10
   createdAt: number;
   lastAccessed: number;
+  /** 反思记忆的来源记忆 id 列表（仅 kind:"reflection" 有值）。 */
+  evidence?: string[];
 }
