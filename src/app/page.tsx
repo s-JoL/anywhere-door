@@ -14,11 +14,9 @@ import type { WorldSeed } from "@/lib/types";
 function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string {
   const [displayed, setDisplayed] = useState("");
   const rafRef = useRef<number | null>(null);
-  const prefersReduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced || !active) {
       setDisplayed(active ? text : "");
       return;
@@ -44,7 +42,7 @@ function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string 
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [text, active, prefersReduced, charPerMs]);
+  }, [text, active, charPerMs]);
 
   return displayed;
 }
@@ -321,6 +319,7 @@ export default function Home() {
 
   useEffect(() => {
     if (seeds.length === 0) return;
+    panelRefs.current = panelRefs.current.slice(0, seeds.length); // trim stale refs
     const observers: IntersectionObserver[] = [];
     panelRefs.current.forEach((el, i) => {
       if (!el) return;
