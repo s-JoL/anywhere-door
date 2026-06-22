@@ -110,4 +110,25 @@ describe("buildSeedFromDraft", () => {
     expect(seed.openingState.time.clock).toBe("午后三点");
     expect(seed.openingState.time.lighting).toBe("晴朗午光");
   });
+
+  it("always sets seed.presentation with a non-empty hook", () => {
+    const seed = buildSeedFromDraft(baseDraft, modelConfig, 1000)!;
+    expect(seed.presentation).toBeDefined();
+    expect(seed.presentation!.hook.length).toBeGreaterThan(0);
+    expect(seed.presentation!.genre.length).toBeGreaterThan(0);
+  });
+
+  it("uses provided hook from draft when given", () => {
+    const draft: WorldDraft = {
+      ...baseDraft,
+      hook: "你站在庄园铁门外，雾让五步外的一切都消失了——而那扇门正在慢慢开。",
+      genre: "悬疑",
+      mood: ["压抑", "诡异"],
+      intensity: "charged",
+    };
+    const seed = buildSeedFromDraft(draft, modelConfig, 1000)!;
+    expect(seed.presentation!.hook).toBe("你站在庄园铁门外，雾让五步外的一切都消失了——而那扇门正在慢慢开。");
+    expect(seed.presentation!.genre).toBe("悬疑");
+    expect(seed.presentation!.mood).toEqual(["压抑", "诡异"]);
+  });
 });
