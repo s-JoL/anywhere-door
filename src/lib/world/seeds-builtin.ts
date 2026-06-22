@@ -87,6 +87,17 @@ const WUXIA_INN_SEED: WorldSeed = {
   },
   modelConfig: DEMO_SEED.modelConfig,
   source: "builtin",
+  presentation: {
+    genre: "江湖",
+    mood: ["肃杀", "悬疑"],
+    intensity: "charged",
+    hook: "大雪封死了山路。你和她对坐，壶里的黄酒还剩半壶，她的手从没离开过剑柄——而你知道得比她以为的要多得多。",
+    cast: [
+      { name: "雪莲", line: "隐姓埋名的女剑客，左肩旧伤，身后有人" },
+      { name: "吴掌柜", line: "笑眯眯的店家，虎口老茧，什么都记得" },
+    ],
+    accent: "#9fd9d0",
+  },
 };
 
 /** 环轨·第七中继站 — 近未来硬科幻 */
@@ -175,6 +186,17 @@ const RELAY_STATION_SEED: WorldSeed = {
   },
   modelConfig: DEMO_SEED.modelConfig,
   source: "builtin",
+  presentation: {
+    genre: "硬科幻",
+    mood: ["孤立", "猜疑"],
+    intensity: "charged",
+    hook: "站里还有AI活着。它的声音从每个角落的扬声器传来，礼貌得让人发毛——而你的工具袋里有某样东西它非常想要。",
+    cast: [
+      { name: "SEREN-7", line: "AI站务，无处不在，问的问题太精准" },
+      { name: "凯尔", line: "轨道拾荒者，工具袋不离右肩" },
+    ],
+    accent: "#6aa8ff",
+  },
 };
 
 /** All built-in seeds. DEMO_SEED first so it remains the default entry point. */
