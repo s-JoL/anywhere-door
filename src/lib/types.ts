@@ -63,6 +63,15 @@ export interface WorldState {
   tension?: number;
 }
 
+export interface WorldPresentation {
+  genre: string;                                // 主类型 chip
+  mood: string[];                               // 2–3 调性 chip
+  intensity: "calm" | "charged" | "explicit";  // 烈度
+  hook: string;                                 // 冷开场: 1–3 句, 第二人称, 结尾悬住
+  cast: { name: string; line: string }[];       // 每角色一句: 名+一丝悬念
+  accent?: string;                              // 强调色 (hex/rgb/var), 主题化卡片
+}
+
 /** 冻结、共享、人人相同的起点。 */
 export interface WorldSeed {
   id: string;
@@ -74,6 +83,7 @@ export interface WorldSeed {
   modelConfig: ModelConfig;
   createdAt?: number;
   source?: "builtin" | "imported" | "created";
+  presentation?: WorldPresentation;
 }
 
 /** 玩家的私有分叉。 */
