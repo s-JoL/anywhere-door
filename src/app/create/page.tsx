@@ -35,6 +35,10 @@ export default function CreatePage() {
   const [chars, setChars] = useState<CharCard[]>([emptyChar()]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [genre, setGenre] = useState("");
+  const [moodText, setMoodText] = useState("");
+  const [intensity, setIntensity] = useState<"calm" | "charged" | "explicit" | "">("");
+  const [hook, setHook] = useState("");
 
   function updateChar(i: number, patch: Partial<CharCard>) {
     setChars((cs) => cs.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
@@ -62,6 +66,7 @@ export default function CreatePage() {
       present: c.present,
     }));
     const redLines = redLinesText.split("\n").map((s) => s.trim()).filter(Boolean);
+    const moodArr = moodText.split(/[,，、]/).map((s) => s.trim()).filter(Boolean);
     const draft: WorldDraft = {
       title,
       worldview,
@@ -73,6 +78,10 @@ export default function CreatePage() {
       clock: clock || undefined,
       lighting: lighting || undefined,
       characters: charDrafts,
+      genre: genre.trim() || undefined,
+      mood: moodArr.length > 0 ? moodArr : undefined,
+      intensity: intensity || undefined,
+      hook: hook.trim() || undefined,
     };
     const seed = buildSeedFromDraft(draft, DEMO_SEED.modelConfig, Date.now());
     if (!seed) {
@@ -163,6 +172,60 @@ export default function CreatePage() {
             </div>
           </div>
         </details>
+      </section>
+
+      {/* 卖相 (可选) */}
+      <section className="relative z-10 flex flex-col gap-4">
+        <div className="eyebrow">卖相（可选）</div>
+        <p className="text-[11px] text-[var(--smoke)] -mt-2">
+          让路过的人在一秒内决定要不要进来。
+        </p>
+        <div className="flex gap-3">
+          <div className="flex flex-1 flex-col gap-1">
+            <label className="text-[11px] text-[var(--smoke)]">类型</label>
+            <input
+              className="field w-full"
+              placeholder="都市夜谈 / 江湖 / 科幻…"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-1">
+            <label className="text-[11px] text-[var(--smoke)]">调性（逗号分隔）</label>
+            <input
+              className="field w-full"
+              placeholder="暧昧, 危险"
+              value={moodText}
+              onChange={(e) => setMoodText(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-[var(--smoke)]">烈度</label>
+          <select
+            className="field w-full px-3 py-2 text-[13px]"
+            value={intensity}
+            onChange={(e) => setIntensity(e.target.value as "calm" | "charged" | "explicit" | "")}
+          >
+            <option value="">自动</option>
+            <option value="calm">平和</option>
+            <option value="charged">张力</option>
+            <option value="explicit">热烈</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-[var(--smoke)]">冷开场钩子</label>
+          <textarea
+            className="field w-full resize-none"
+            rows={3}
+            placeholder="用一句话把人拽进来：第二人称、结尾悬住——「你推开那扇门……」"
+            value={hook}
+            onChange={(e) => setHook(e.target.value)}
+          />
+          <span className="text-[10px] text-[var(--smoke)]">
+            留空则自动从场景描述生成。
+          </span>
+        </div>
       </section>
 
       {/* 角色 */}
