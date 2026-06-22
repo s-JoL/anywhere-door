@@ -58,4 +58,9 @@ describe("applyDelta (immutable)", () => {
     expect(next.time.clock).toBe("深夜");
     expect(next.time.lighting).toBe("幽蓝");
   });
+  it("setObjectState does not mutate input state", () => {
+    const s = baseState();
+    applyDelta(s, { kind: "setObjectState", objectId: "glass", state: "满" });
+    expect(s.objects.glass.state).toBe("空");
+  });
 });

@@ -1,5 +1,4 @@
-import type { WorldState } from "../types";
-import type { WorldRules } from "../types";
+import type { WorldState, WorldRules } from "../types";
 
 export type Delta =
   | { kind: "moveCharacter"; characterId: string; toLocationId: string }
@@ -13,6 +12,7 @@ export type Validation = { ok: true } | { ok: false; reason: string };
 export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): Validation {
   switch (d.kind) {
     case "moveCharacter": {
+      if (!state.roster[d.characterId]) return { ok: false, reason: `角色 ${d.characterId} 不存在` };
       const here = Object.values(state.locations).find((l) => l.presentCharacterIds.includes(d.characterId));
       if (!here) return { ok: false, reason: `角色 ${d.characterId} 不在任何场景中` };
       if (!state.locations[d.toLocationId]) return { ok: false, reason: `目标场景 ${d.toLocationId} 不存在` };
