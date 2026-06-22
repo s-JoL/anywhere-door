@@ -89,8 +89,13 @@ export default function CreatePage() {
       setSaving(false);
       return;
     }
-    await getRepository().upsertSeed(seed);
-    router.push("/play?world=" + seed.id);
+    try {
+      await getRepository().upsertSeed(seed);
+      router.push("/play?world=" + seed.id);
+    } catch {
+      setError("保存失败，请重试");
+      setSaving(false);
+    }
   }
 
   return (
