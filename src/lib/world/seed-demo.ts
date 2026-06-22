@@ -11,16 +11,17 @@ export const DEMO_SEED: WorldSeed = {
   },
   characters: [
     { id: "c-lan", name: "阿岚", description: "無燈酒馆的女主人，三十出头，话不多但看人很准；左手有一道旧疤。表面冷淡，熟了之后毒舌又护短。", identity: { gender: "女", body: "成年女性，左手旧疤" }, goal: "摸清这位深夜来客到底想要什么。" },
+    { id: "c-zhou", name: "老周", description: "酒馆的常客，五十来岁，沉默寡言，总坐在角落擦一把旧左轮。退伍多年，欠着城南赌坊一笔钱。", identity: { gender: "男", body: "成年男性，右手有枪茧" }, goal: "（私下）今晚必须从这位新客身上弄到还债的钱，能骗则骗、必要时动手。" },
   ],
   openingState: {
     currentLocationId: "bar",
     time: { day: 1, clock: "深夜 23:40", lighting: "霓虹透过雨窗的冷光" },
     locations: {
-      bar: { id: "bar", name: "無燈酒馆", detail: "fleshed", gist: "狭长的吧台，半空的酒架，雨声敲窗", description: "暖黄的吊灯只剩一盏，吧台木纹被岁月磨得发亮。门口的霓虹把雨珠染成红蓝。", connections: ["street"], presentCharacterIds: ["c-lan"], objectIds: ["o-glass"] },
+      bar: { id: "bar", name: "無燈酒馆", detail: "fleshed", gist: "狭长的吧台，半空的酒架，雨声敲窗", description: "暖黄的吊灯只剩一盏，吧台木纹被岁月磨得发亮。门口的霓虹把雨珠染成红蓝。", connections: ["street"], presentCharacterIds: ["c-lan", "c-zhou"], objectIds: ["o-glass"] },
       street: { id: "street", name: "雨街", detail: "stub", gist: "湿漉漉的霓虹长街", connections: ["bar"], presentCharacterIds: [], objectIds: [] },
     },
     objects: { "o-glass": { id: "o-glass", name: "威士忌杯", detail: "fleshed", props: { portable: true }, locationId: "bar", state: "空着，杯底一圈水痕" } },
-    roster: { "c-lan": { name: "阿岚" } },
+    roster: { "c-lan": { name: "阿岚" }, "c-zhou": { name: "老周" } },
     flags: {},
   },
   modelConfig: { provider: "openrouter", apiKey: "", model: "deepseek/deepseek-v4-pro", reasoningEnabled: false },
