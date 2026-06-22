@@ -15,6 +15,7 @@
 
 import { readPngTextChunks } from "./png";
 import type { Character, ModelConfig, WorldRules, WorldSeed, WorldState } from "../types";
+import { derivePresentation } from "../world/presentation";
 
 // ---------------------------------------------------------------------------
 // Base64 decode — works in browser (atob) and Node (Buffer)
@@ -170,6 +171,28 @@ export function cardToSeed(
       tension: 0,
     };
 
+    // Derive a hook from first_mes if present, else scenario/worldview
+    const firstMes =
+      typeof d.first_mes === "string" ? d.first_mes.trim() : "";
+    // Strip common macros: {{char}}, {{user}}, <START>, *action* etc.
+    const strippedFirstMes = firstMes
+      .replace(/\{\{[^}]+\}\}/g, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/^\s*\*[^*]+\*\s*/gm, "")
+      .trim();
+    // Take the first 1–2 sentences (split on 。! ? . ！？) up to 80 chars
+    const hookRaw = strippedFirstMes || scenarioText || worldview;
+    const hookSentences = hookRaw.split(/(?<=[。！？.!?])/).slice(0, 2).join("").trim();
+    const hook = hookSentences.slice(0, 80) || hookRaw.slice(0, 80);
+
+    // Tags for genre/mood
+    const tags: string[] =
+      Array.isArray((d as Record<string, unknown>).tags)
+        ? ((d as Record<string, unknown>).tags as string[]).filter((t) => typeof t === "string")
+        : [];
+    const genre = tags[0] ?? "角色";
+    const mood = tags.slice(1, 3);
+
     const seed: WorldSeed = {
       id: "seed-import-" + idSuffix,
       title: name,
@@ -182,7 +205,20 @@ export function cardToSeed(
       source: "imported",
     };
 
-    return seed;
+    // Derive presentation (uses seed's openingState we just built)
+    const basePres = derivePresentation(seed);
+    return {
+      ...seed,
+      presentation: {
+        ...basePres,
+        genre,
+        mood,
+        intensity: "charged" as const,
+        hook,
+        cast: [{ name, line: character.description.split(/[。\n]/)[0].slice(0, 24) }],
+        accent: "var(--lamp)",
+      },
+    };
   } catch {
     return null;
   }
