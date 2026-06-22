@@ -48,12 +48,22 @@ export default function Play() {
         {DEMO_SEED.title}
       </header>
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-        {messages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "self-end text-right" : "self-start"}>
-            {m.role === "assistant" && <div className="text-[11px] text-amber-300/70">{DEMO_SEED.characters.find((c) => c.id === m.speakerId)?.name}</div>}
-            <div className="whitespace-pre-wrap rounded-lg bg-white/5 px-3 py-2 text-[15px] leading-relaxed">{m.content}</div>
-          </div>
-        ))}
+        {messages.map((m) => {
+          if (m.role === "system") {
+            return (
+              <div key={m.id} className="my-1 text-center text-[12px] italic text-amber-200/70">
+                {m.narration ? `— 🌍 ${m.content} —` : `— ${m.content} —`}
+              </div>
+            );
+          }
+          const speaker = m.role === "assistant" ? DEMO_SEED.characters.find((c) => c.id === m.speakerId)?.name : undefined;
+          return (
+            <div key={m.id} className={m.role === "user" ? "self-end text-right" : "self-start"}>
+              {speaker && <div className="text-[11px] text-amber-300/70">{speaker}</div>}
+              <div className="whitespace-pre-wrap rounded-lg bg-white/5 px-3 py-2 text-[15px] leading-relaxed">{m.content}</div>
+            </div>
+          );
+        })}
         {busy && <p className="text-center text-xs tracking-[0.3em] text-amber-300/70">···</p>}
         {err && <p className="text-center text-sm text-red-400/90">{err}</p>}
         <div ref={bottomRef} />
