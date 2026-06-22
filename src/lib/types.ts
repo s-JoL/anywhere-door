@@ -58,6 +58,7 @@ export interface WorldState {
   objects: Record<string, WorldObject>;
   roster: Record<string, CharObjective>;
   flags: Record<string, string | number | boolean>;
+  tension?: number;
 }
 
 /** 冻结、共享、人人相同的起点。 */
@@ -87,6 +88,7 @@ export interface Message {
   speakerId: string | null;  // assistant 时 = characterId
   content: string;
   createdAt: number;
+  narration?: boolean;
 }
 
 /** 每角色主观记忆（借 Generative Agents 的 ConceptNode；本切片不含反思 provenance）。 */

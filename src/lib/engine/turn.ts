@@ -11,6 +11,7 @@ import { nextTime } from "../clock";
 import { scoreMemories } from "../memory/retrieve";
 import { keywordsOf } from "../memory/keywords";
 import { buildObservations } from "../memory/observe";
+import { updateTension, maybeDirect } from "./director";
 
 export type LlmFn = (messages: ChatMessage[]) => Promise<{ content: string }>;
 
@@ -79,6 +80,16 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
     }
     if (sel.forced) break; // 破冰只破一次，随即交回用户
   }
+
+  // 导演：按本回合最后一句更新张力，必要时插一条世界旁白
+  const allMsgs = await repo.listMessages(instanceId);
+  const spokenLines = allMsgs.filter((m) => m.role !== "system").slice(-6).map((m) => m.content);
+  const lastLine = spokenLines[spokenLines.length - 1] ?? input;
+  const tensionBefore = state.tension ?? 0;
+  const tensionAfter = updateTension(tensionBefore, lastLine);
+  state = { ...state, tension: tensionAfter };
+  const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
+  if (beat) await repo.appendMessage(beat);
 
   await repo.upsertInstance({ ...inst, state, updatedAt: nextTime() });
 }
