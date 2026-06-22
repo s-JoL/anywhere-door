@@ -1,9 +1,21 @@
 import { getRepository } from "../storage";
 import { instantiate } from "../world/instance";
 import { DEMO_SEED } from "../world/seed-demo";
+import { BUILTIN_SEEDS } from "../world/seeds-builtin";
 import { nextTime } from "../clock";
 
-/** Seeds the demo WorldSeed into storage if absent. */
+/** Seeds all built-in WorldSeeds into storage if absent. Idempotent. */
+export async function ensureBuiltinSeeds(): Promise<void> {
+  const repo = getRepository();
+  for (const seed of BUILTIN_SEEDS) {
+    const existing = await repo.getSeed(seed.id);
+    if (!existing) {
+      await repo.upsertSeed({ ...seed, createdAt: nextTime(), source: "builtin" });
+    }
+  }
+}
+
+/** Seeds the demo WorldSeed into storage if absent. Kept for backward compatibility. */
 export async function ensureDemoSeed(): Promise<void> {
   const repo = getRepository();
   const existing = await repo.getSeed(DEMO_SEED.id);
