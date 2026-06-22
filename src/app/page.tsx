@@ -95,6 +95,12 @@ export default function Home() {
           className="hidden"
           onChange={handleFileChange}
         />
+        <Link
+          href="/create"
+          className="rounded-xl border border-[var(--line)] bg-[var(--ink-2)]/40 px-4 py-2 text-[12px] tracking-wide text-[var(--smoke)] transition hover:border-[var(--lamp)] hover:text-[var(--lamp)] active:scale-[0.98]"
+        >
+          ✎ 造一个世界
+        </Link>
         <button
           onClick={() => fileInputRef.current?.click()}
           className="rounded-xl border border-[var(--line)] bg-[var(--ink-2)]/40 px-4 py-2 text-[12px] tracking-wide text-[var(--smoke)] transition hover:border-[var(--lamp)] hover:text-[var(--lamp)] active:scale-[0.98]"
