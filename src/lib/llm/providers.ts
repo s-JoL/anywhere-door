@@ -10,9 +10,11 @@ export function isValidProvider(p: unknown): p is ModelConfig["provider"] {
 }
 
 export function buildUpstreamRequest(cfg: ModelConfig, messages: ChatMessage[]) {
+  const payload: Record<string, unknown> = { model: cfg.model, messages, stream: true };
+  if (cfg.provider === "openrouter") payload.reasoning = { enabled: cfg.reasoningEnabled };
   return {
     url: `${BASES[cfg.provider]}/chat/completions`,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` } as Record<string, string>,
-    body: JSON.stringify({ model: cfg.model, messages, stream: true }),
+    body: JSON.stringify(payload),
   };
 }

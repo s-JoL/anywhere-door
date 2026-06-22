@@ -11,6 +11,7 @@ describe("buildUpstreamRequest", () => {
     expect(r.headers.Authorization).toBe("Bearer k");
     expect(JSON.parse(r.body).stream).toBe(true);
     expect(JSON.parse(r.body).model).toBe("x/y");
+    expect(JSON.parse(r.body).reasoning).toEqual({ enabled: false });
   });
   it("deepseek: own base url", () => {
     const r = buildUpstreamRequest(
@@ -18,5 +19,6 @@ describe("buildUpstreamRequest", () => {
       [{ role: "user", content: "hi" }],
     );
     expect(r.url).toBe("https://api.deepseek.com/chat/completions");
+    expect(JSON.parse(r.body).reasoning).toBeUndefined();
   });
 });
