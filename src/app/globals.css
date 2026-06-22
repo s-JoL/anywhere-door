@@ -1,3 +1,98 @@
 @import "tailwindcss";
-:root { color-scheme: dark; }
-html, body { margin: 0; background: #0f0d0b; color: #f3ead9; }
+
+:root {
+  color-scheme: dark;
+  /* 雨夜·無燈酒馆 —— 暗湿沥青 + 一盏暖灯 + 透雨霓虹 */
+  --ink: #0b0e14;
+  --ink-2: #10151f;
+  --glass: rgba(18, 24, 36, 0.55);
+  --line: rgba(201, 210, 224, 0.1);
+  --lamp: #f0c36b;
+  --lamp-soft: rgba(240, 195, 107, 0.16);
+  --rose: #ff3d7f;
+  --teal: #38e1c8;
+  --mist: #dbe1ec;
+  --smoke: #7c8699;
+  --serif: "Songti SC", "Noto Serif SC", "STSong", "STZhongsong", ui-serif, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--ink);
+  color: var(--mist);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 沉浸世界背景：灯光从顶部漫下，霓虹在两侧渗，底部潮湿压暗 */
+.world-bg::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(125% 65% at 50% -12%, var(--lamp-soft), transparent 58%),
+    radial-gradient(75% 50% at 112% 4%, rgba(255, 61, 127, 0.1), transparent 55%),
+    radial-gradient(70% 50% at -12% 22%, rgba(56, 225, 200, 0.07), transparent 55%),
+    linear-gradient(180deg, #0c1019 0%, var(--ink) 42%, #07090e 100%);
+}
+/* 极淡斜向雨丝纹理 */
+.world-bg::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
+  background-image: repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.55) 0 1px, transparent 1px 8px);
+}
+
+/* 顶部世界状态条 */
+.eyebrow { font-size: 10.5px; letter-spacing: 0.34em; color: var(--smoke); text-transform: uppercase; }
+.presence-dot {
+  width: 6px; height: 6px; border-radius: 99px; background: var(--lamp);
+  box-shadow: 0 0 9px var(--lamp);
+}
+
+/* 角色名标 */
+.tag { font-size: 11px; letter-spacing: 0.14em; color: var(--lamp); }
+/* 动作（）压暗成斜体 */
+.act { color: var(--smoke); font-style: italic; }
+
+/* God 旁白过场字幕（签名元素） */
+.narr {
+  font-family: var(--serif); color: #d3bd8e; font-size: 15px; line-height: 1.95;
+  letter-spacing: 0.03em; text-align: center;
+}
+.rule { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
+
+/* 玩家自己的话：左侧霓虹细线 */
+.you-line { border-left: 2px solid var(--rose); box-shadow: -8px 0 24px -16px var(--rose); }
+
+.caret::after { content: "▌"; color: var(--lamp); margin-left: 1px; animation: blink 1.05s steps(2) infinite; }
+
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+@keyframes sweep { from { background-position: 220% 0; } to { background-position: -120% 0; } }
+@keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes breathe { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.85; } }
+
+.rise { animation: rise 0.5s ease both; }
+.pulse { animation: pulse 2.6s ease-in-out infinite; }
+.breathe { animation: breathe 1.7s ease-in-out infinite; }
+.sweep {
+  background: linear-gradient(90deg, transparent 38%, rgba(240, 195, 107, 0.16) 50%, transparent 62%);
+  background-size: 220% 100%; animation: sweep 1.7s ease both;
+}
+
+/* 沉浸输入 */
+.field {
+  background: var(--glass); border: 1px solid var(--line); color: var(--mist);
+  border-radius: 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.field::placeholder { color: var(--smoke); }
+.field:focus {
+  outline: none; border-color: rgba(240, 195, 107, 0.42);
+  box-shadow: 0 0 0 1px rgba(240, 195, 107, 0.22), 0 0 28px rgba(240, 195, 107, 0.08);
+}
+.send-glow { box-shadow: 0 0 22px -4px var(--lamp); }
+.glass-bar { background: rgba(8, 11, 17, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .pulse, .breathe, .sweep, .caret::after { animation: none !important; }
+}
