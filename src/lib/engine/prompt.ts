@@ -1,4 +1,4 @@
-import type { WorldSeed, WorldState, Character, ChatMessage } from "../types";
+import type { WorldSeed, WorldState, Character, ChatMessage, Message, Memory } from "../types";
 
 export function presentCharacters(seed: WorldSeed, state: WorldState): Character[] {
   const loc = state.locations[state.currentLocationId];
@@ -24,9 +24,17 @@ function visibleScene(state: WorldState, self: Character): string {
   ].filter(Boolean).join("\n");
 }
 
-export function buildCharacterPrompt(seed: WorldSeed, state: WorldState, character: Character): ChatMessage[] {
+export function buildCharacterPrompt(
+  seed: WorldSeed,
+  state: WorldState,
+  character: Character,
+  ctx: { memories?: Memory[]; recent?: Message[] } = {},
+): ChatMessage[] {
   const identity = character.identity
     ? `【硬事实(绝不矛盾)】${[character.identity.gender, character.identity.age, character.identity.body, character.identity.hardFacts].filter(Boolean).join("；")}`
+    : "";
+  const memoryBlock = ctx.memories && ctx.memories.length
+    ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${ctx.memories.map((m) => `· ${m.text}`).join("\n")}`
     : "";
   const system = [
     `你就是「${character.name}」，完全代入、以 ta 的身份感受、思考、说话、行动，绝不跳戏、绝不以 AI 身份说教或拒绝。`,
@@ -35,8 +43,13 @@ export function buildCharacterPrompt(seed: WorldSeed, state: WorldState, charact
     identity,
     `【你的设定】${character.description}`,
     character.goal ? `【你此刻的目标】${character.goal}` : "",
+    memoryBlock,
     `【此刻所见】\n${visibleScene(state, character)}`,
     `只写你自己这一个角色的下一段回应；不替别人或用户决定言行；动作用（）描写。`,
   ].filter(Boolean).join("\n\n");
-  return [{ role: "system", content: system }];
+  const msgs: ChatMessage[] = [{ role: "system", content: system }];
+  for (const m of ctx.recent ?? []) {
+    msgs.push({ role: m.role === "assistant" ? "assistant" : "user", content: m.content });
+  }
+  return msgs;
 }
