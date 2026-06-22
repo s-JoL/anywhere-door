@@ -42,6 +42,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
     const allMem = await repo.listMemories(speaker.id);
     const queryKw = keywordsOf(input);
     const memories = scoreMemories(allMem, queryKw, { topK: 6 });
+    // TODO(P1.3): recent 历史目前是整实例日志，未按 witness 作用域过滤；引入多场景/角色移动后须裁剪到发言者能感知的范围，否则成为泄漏通道。
     // 近段对话历史（最近若干条，去掉本轮刚追加的用户消息以免重复）
     const history = (await repo.listMessages(instanceId)).filter((m) => m.id !== userMsg.id).slice(-8);
 

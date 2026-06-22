@@ -18,7 +18,7 @@ describe("runTurn (skeleton)", () => {
     let sawPrompt: any[] = [];
     const llm = async (messages: any[]) => { sawPrompt = messages; return { content: "（阿岚瞥了你一眼）又来赊账？" }; };
 
-    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w1", input: "我想赊一杯酒。", llm });
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w1", input: "我想赊一杯酒。", deltas: [{ kind: "setObjectState", objectId: "o-glass", state: "被推到吧台另一侧" }], llm });
 
     // 发言者(阿岚)的 prompt 注入了她自己的记忆
     expect(JSON.stringify(sawPrompt)).toContain("上次你赊的账还没结");
@@ -28,6 +28,9 @@ describe("runTurn (skeleton)", () => {
     const zhouMems = await repo.listMemories("c-zhou");
     expect(lanMems.some((m) => m.text.includes("赊一杯酒"))).toBe(true);
     expect(zhouMems.some((m) => m.text.includes("赊一杯酒"))).toBe(true);
+
+    const after = await repo.getInstance("w1");
+    expect(after?.state.objects["o-glass"].state).toBe("被推到吧台另一侧"); // 回合级 valid-delta 集成覆盖
   });
 
   it("does NOT leak the scene's events into an absent character's memory (subjective isolation)", async () => {
