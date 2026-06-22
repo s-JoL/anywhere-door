@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { runTurn } from "../turn";
+import type { TurnEvent } from "../turn";
 import { DEMO_SEED } from "../../world/seed-demo";
 import { instantiate } from "../../world/instance";
 import { getRepository, resetRepository } from "../../storage";
@@ -12,6 +13,18 @@ function makeLlm(line: (sys: string) => string) {
     if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
     const sys = messages[0]?.content ?? "";
     return { content: line(sys) };
+  };
+}
+
+// streaming fake llm：判断请求 → speak JSON；生成请求 → 调用 onContent 回调后返回内容
+function makeStreamingLlm() {
+  return async (messages: ChatMessage[], onContent?: (delta: string) => void) => {
+    const last = messages[messages.length - 1]?.content ?? "";
+    if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
+    // 生成请求：模拟流式输出两个片段
+    onContent?.("片");
+    onContent?.("段");
+    return { content: "片段" };
   };
 }
 
@@ -43,5 +56,42 @@ describe("runTurn (multi-speaker free-speech)", () => {
     const after = await repo.getInstance("w2");
     expect(after?.state.objects["o-glass"].state).toBe("满"); // valid 应用
     expect(after?.state.objects["ghost"]).toBeUndefined();    // invalid 丢弃
+  });
+
+  it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));
+    const llm = makeStreamingLlm();
+
+    const events: TurnEvent[] = [];
+    await runTurn({
+      seed: DEMO_SEED, repo, instanceId: "w3", input: "我进来了。", llm,
+      onEvent: (e) => events.push(e),
+    });
+
+    // 必须有 speaker-start 事件
+    const starts = events.filter((e) => e.type === "speaker-start");
+    expect(starts.length).toBeGreaterThan(0);
+
+    // 必须有 delta 事件
+    const deltas = events.filter((e) => e.type === "delta");
+    expect(deltas.length).toBeGreaterThan(0);
+
+    // 必须有 speaker-end 事件，内容为去前缀后的文本
+    const ends = events.filter((e) => e.type === "speaker-end");
+    expect(ends.length).toBeGreaterThan(0);
+    expect(ends[0].content).toBe("片段");
+
+    // speaker-start 和 speaker-end 的 id 对应同一条持久化消息
+    const startId = starts[0].id;
+    const endId = ends[0].id;
+    expect(startId).toBe(endId);
+
+    // 持久化消息存在且 content 正确
+    const msgs = await repo.listMessages("w3");
+    const persisted = msgs.find((m) => m.id === startId);
+    expect(persisted).toBeDefined();
+    expect(persisted?.content).toBe("片段");
+    expect(persisted?.role).toBe("assistant");
   });
 });

@@ -32,7 +32,7 @@ export default function Play() {
     try {
       await runTurn({
         seed: DEMO_SEED, repo: getRepository(), instanceId, input: text,
-        llm: (msgs) => streamChat({ cfg: DEMO_SEED.modelConfig, messages: msgs }),
+        llm: (msgs, onContent) => streamChat({ cfg: DEMO_SEED.modelConfig, messages: msgs, onContent }),
       });
       setMessages(await getRepository().listMessages(instanceId));
     } catch (e) {

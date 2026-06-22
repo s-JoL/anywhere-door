@@ -14,7 +14,13 @@ import { buildObservations } from "../memory/observe";
 import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
 
-export type LlmFn = (messages: ChatMessage[]) => Promise<{ content: string }>;
+export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
+
+export type TurnEvent =
+  | { type: "speaker-start"; id: string; speakerId: string; speakerName: string }
+  | { type: "delta"; id: string; text: string }
+  | { type: "speaker-end"; id: string; content: string }
+  | { type: "narration"; id: string; content: string };
 
 export interface RunTurnArgs {
   seed: WorldSeed;
@@ -23,10 +29,11 @@ export interface RunTurnArgs {
   input: string;
   deltas?: Delta[];
   llm: LlmFn;
+  onEvent?: (e: TurnEvent) => void;
 }
 
 /** 多发言者自由发言回合：用户消息 → 校验并应用 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
-export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm }: RunTurnArgs): Promise<void> {
+export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm, onEvent }: RunTurnArgs): Promise<void> {
   const inst = await repo.getInstance(instanceId);
   if (!inst) throw new Error(`实例 ${instanceId} 不存在`);
 
@@ -71,9 +78,14 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
       const memories = scoreMemories(own, keywordsOf(input), { topK: 6 });
       const recent = own.slice(-8); // witness 作用域：只用该角色自己的观察
       const msgs = buildCharacterPrompt(seed, state, speaker, { memories, recent });
-      const { content } = await llm(msgs);
+
+      const replyId = newId("m");
+      onEvent?.({ type: "speaker-start", id: replyId, speakerId: speaker.id, speakerName: speaker.name });
+      const { content } = await llm(msgs, (d) => onEvent?.({ type: "delta", id: replyId, text: d }));
       const clean = stripSpeakerPrefix(speaker.name, content);
-      const reply: Message = { id: newId("m"), instanceId, role: "assistant", speakerId: speaker.id, content: clean, createdAt: nextTime() };
+      onEvent?.({ type: "speaker-end", id: replyId, content: clean });
+
+      const reply: Message = { id: replyId, instanceId, role: "assistant", speakerId: speaker.id, content: clean, createdAt: nextTime() };
       await repo.appendMessage(reply);
       // 该发言作为观察写给当前在场者（含后续发言者，从而看到刚说的话）
       for (const obs of buildObservations(state, { speakerName: speaker.name, text: clean })) await repo.appendMemory(obs);
@@ -91,7 +103,10 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
   const tensionAfter = updateTension(tensionBefore, lastLine);
   state = { ...state, tension: tensionAfter };
   const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
-  if (beat) await repo.appendMessage(beat);
+  if (beat) {
+    await repo.appendMessage(beat);
+    onEvent?.({ type: "narration", id: beat.id, content: beat.content });
+  }
 
   // 张力攒高且有幕后角色时，God 拉一个入场制造转折（每回合至多一次）
   if (tensionAfter >= 6) {
@@ -100,7 +115,9 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
       const enterId = off[0];
       const enterName = state.roster[enterId]?.name ?? seed.characters.find((c) => c.id === enterId)?.name ?? "某人";
       state = introduceCharacter(state, enterId, state.currentLocationId);
-      await repo.appendMessage(introductionBeat(instanceId, enterName));
+      const introBeat = introductionBeat(instanceId, enterName);
+      await repo.appendMessage(introBeat);
+      onEvent?.({ type: "narration", id: introBeat.id, content: introBeat.content });
     }
   }
 
