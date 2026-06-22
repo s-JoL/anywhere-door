@@ -1,19 +1,54 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getRepository } from "@/lib/storage";
 import { ensureDemoSeed } from "@/lib/engine/bootstrap";
+import { parseCardFile, cardToSeed } from "@/lib/import/character-card";
+import { DEMO_SEED } from "@/lib/world/seed-demo";
 import type { WorldSeed } from "@/lib/types";
 
 export default function Home() {
   const [seeds, setSeeds] = useState<WorldSeed[]>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function refreshSeeds() {
+    setSeeds(await getRepository().listSeeds());
+  }
 
   useEffect(() => {
     (async () => {
       await ensureDemoSeed();
-      setSeeds(await getRepository().listSeeds());
+      await refreshSeeds();
     })();
   }, []);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so same file can be re-imported
+    e.target.value = "";
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const card = parseCardFile(file.name, bytes);
+      if (!card) {
+        setImportError("这张卡读不出来，换一张试试");
+        return;
+      }
+      const suffix = Math.random().toString(36).slice(2, 8);
+      const seed = cardToSeed(card, DEMO_SEED.modelConfig, Date.now(), suffix);
+      if (!seed) {
+        setImportError("这张卡读不出来，换一张试试");
+        return;
+      }
+      await getRepository().upsertSeed(seed);
+      await refreshSeeds();
+    } catch {
+      setImportError("这张卡读不出来，换一张试试");
+    }
+  }
 
   return (
     <main className="world-bg relative mx-auto flex min-h-[100dvh] max-w-md flex-col justify-between px-6 py-10">
@@ -51,8 +86,27 @@ export default function Home() {
         )}
       </div>
 
-      <div className="relative z-10 text-center text-[11px] text-[var(--smoke)]">
-        自带模型 key · 本地优先 · 不设限
+      <div className="relative z-10 flex flex-col items-center gap-2">
+        {/* Hidden file input for character card import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".png,.json"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="rounded-xl border border-[var(--line)] bg-[var(--ink-2)]/40 px-4 py-2 text-[12px] tracking-wide text-[var(--smoke)] transition hover:border-[var(--lamp)] hover:text-[var(--lamp)] active:scale-[0.98]"
+        >
+          导入角色卡
+        </button>
+        {importError && (
+          <p className="text-[11px] text-red-400">{importError}</p>
+        )}
+        <div className="text-[11px] text-[var(--smoke)]">
+          自带模型 key · 本地优先 · 不设限
+        </div>
       </div>
     </main>
   );
