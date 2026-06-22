@@ -36,6 +36,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
   if (present.length > 0) {
     const speaker = present[0];
     const prompt = buildCharacterPrompt(seed, state, speaker);
+    // P1.2: 这里将注入该角色检索到的记忆 + 近段对话历史；当前骨架仅 [system, user]。
     prompt.push({ role: "user", content: input });
     const { content } = await llm(prompt);
     const reply: Message = { id: newId("m"), instanceId, role: "assistant", speakerId: speaker.id, content, createdAt: nextTime() };
