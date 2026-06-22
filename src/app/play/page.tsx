@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { getRepository } from "@/lib/storage";
-import { ensureDemoInstance } from "@/lib/engine/bootstrap";
+import { ensureDemoSeed, ensureInstanceForSeed } from "@/lib/engine/bootstrap";
 import { runTurn, type TurnEvent } from "@/lib/engine/turn";
 import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
-import type { Message, WorldState } from "@/lib/types";
+import type { Message, WorldSeed, WorldState } from "@/lib/types";
 
 type Item = {
   id: string;
@@ -14,15 +15,6 @@ type Item = {
   content: string;
   streaming?: boolean;
 };
-
-const nameOf = (id: string | null | undefined) =>
-  DEMO_SEED.characters.find((c) => c.id === id)?.name ?? "某人";
-
-function msgToItem(m: Message): Item {
-  if (m.role === "user") return { id: m.id, kind: "user", content: m.content };
-  if (m.role === "system") return { id: m.id, kind: "narration", content: m.content };
-  return { id: m.id, kind: "speaker", speakerName: nameOf(m.speakerId), content: m.content };
-}
 
 /** 把对白里的（动作）压暗成斜体，叙述本体保持明亮。 */
 function Spoken({ text }: { text: string }) {
@@ -38,12 +30,15 @@ function Spoken({ text }: { text: string }) {
 
 function tensionColor(t: number): string {
   const x = Math.max(0, Math.min(10, t)) / 10;
-  // 暖琥珀 → 霓虹桃红
   const lerp = (a: number, b: number) => Math.round(a + (b - a) * x);
   return `rgb(${lerp(240, 255)},${lerp(195, 61)},${lerp(107, 127)})`;
 }
 
-export default function Play() {
+function PlayInner() {
+  const params = useSearchParams();
+  const worldId = params.get("world") ?? DEMO_SEED.id;
+
+  const [seed, setSeed] = useState<WorldSeed | null>(null);
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [world, setWorld] = useState<WorldState | null>(null);
@@ -54,20 +49,41 @@ export default function Play() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const streamingId = useRef<string | null>(null);
 
-  const reload = useCallback(async (id: string) => {
-    const repo = getRepository();
-    const [msgs, inst] = await Promise.all([repo.listMessages(id), repo.getInstance(id)]);
-    setItems(msgs.map(msgToItem));
-    setWorld(inst?.state ?? null);
-  }, []);
+  const nameOf = useCallback(
+    (id: string | null | undefined) =>
+      (seed ?? DEMO_SEED).characters.find((c) => c.id === id)?.name ?? "某人",
+    [seed],
+  );
+
+  function msgToItem(m: Message, resolveName: (id: string | null | undefined) => string): Item {
+    if (m.role === "user") return { id: m.id, kind: "user", content: m.content };
+    if (m.role === "system") return { id: m.id, kind: "narration", content: m.content };
+    return { id: m.id, kind: "speaker", speakerName: resolveName(m.speakerId), content: m.content };
+  }
+
+  const reload = useCallback(
+    async (id: string, resolveName: (cid: string | null | undefined) => string) => {
+      const repo = getRepository();
+      const [msgs, inst] = await Promise.all([repo.listMessages(id), repo.getInstance(id)]);
+      setItems(msgs.map((m) => msgToItem(m, resolveName)));
+      setWorld(inst?.state ?? null);
+    },
+    [],
+  );
 
   useEffect(() => {
     (async () => {
-      const id = await ensureDemoInstance();
-      setInstanceId(id);
-      await reload(id);
+      await ensureDemoSeed();
+      const repo = getRepository();
+      const loaded = (await repo.getSeed(worldId)) ?? DEMO_SEED;
+      setSeed(loaded);
+      const resolve = (id: string | null | undefined) =>
+        loaded.characters.find((c) => c.id === id)?.name ?? "某人";
+      const iid = await ensureInstanceForSeed(worldId);
+      setInstanceId(iid);
+      await reload(iid, resolve);
     })();
-  }, [reload]);
+  }, [worldId, reload]);
 
   // 贴近底部时才自动吸底，避免打断上翻；流式逐字用 auto 防抖
   useEffect(() => {
@@ -92,7 +108,7 @@ export default function Play() {
   }
 
   async function send() {
-    if (!input.trim() || busy || !instanceId) return;
+    if (!input.trim() || busy || !instanceId || !seed) return;
     const text = input.trim();
     setInput("");
     setBusy(true);
@@ -100,20 +116,28 @@ export default function Play() {
     setItems((xs) => [...xs, { id: `u-${Date.now()}`, kind: "user", content: text }]);
     try {
       await runTurn({
-        seed: DEMO_SEED,
+        seed,
         repo: getRepository(),
         instanceId,
         input: text,
-        llm: (msgs, onContent) => streamChat({ cfg: DEMO_SEED.modelConfig, messages: msgs, onContent }),
+        llm: (msgs, onContent) => streamChat({ cfg: seed.modelConfig, messages: msgs, onContent }),
         onEvent,
       });
-      await reload(instanceId);
+      await reload(instanceId, nameOf);
     } catch (e) {
       setErr(`这一刻没能继续：${(e as Error).message}`);
     } finally {
       streamingId.current = null;
       setBusy(false);
     }
+  }
+
+  if (!seed) {
+    return (
+      <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col items-center justify-center">
+        <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">世界正在苏醒 · · ·</div>
+      </main>
+    );
   }
 
   const loc = world ? world.locations[world.currentLocationId] : null;
@@ -137,7 +161,7 @@ export default function Play() {
           )}
         </div>
         <div className="mt-1 flex items-center gap-2 text-[12.5px]">
-          <span style={{ color: "var(--lamp)" }}>📍 {loc?.name ?? DEMO_SEED.title}</span>
+          <span style={{ color: "var(--lamp)" }}>📍 {loc?.name ?? seed.title}</span>
           {world && <span className="text-[var(--smoke)]">· {world.time.clock} · {world.time.lighting}</span>}
         </div>
         {present.length > 0 && (
@@ -220,5 +244,19 @@ export default function Play() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function Play() {
+  return (
+    <Suspense
+      fallback={
+        <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col items-center justify-center">
+          <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">世界正在苏醒 · · ·</div>
+        </main>
+      }
+    >
+      <PlayInner />
+    </Suspense>
   );
 }

@@ -72,6 +72,8 @@ export interface WorldSeed {
   openingState: WorldState;
   characters: Character[];
   modelConfig: ModelConfig;
+  createdAt?: number;
+  source?: "builtin" | "imported" | "created";
 }
 
 /** 玩家的私有分叉。 */
