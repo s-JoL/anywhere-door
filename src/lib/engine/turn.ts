@@ -2,7 +2,7 @@ import type { WorldSeed, ChatMessage, Message } from "../types";
 import type { Repository } from "../storage";
 import type { Delta } from "../world/delta";
 import { validateDelta, applyDelta } from "../world/delta";
-import { buildCharacterPrompt, presentCharacters } from "./prompt";
+import { buildCharacterPrompt, presentCharacters, stripSpeakerPrefix } from "./prompt";
 import { decideIntent } from "./intent";
 import { selectSpeakers, type Candidate } from "./select";
 import { DEFAULT_ENGINE_CONFIG } from "./config";
@@ -72,10 +72,11 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
       const recent = own.slice(-8); // witness 作用域：只用该角色自己的观察
       const msgs = buildCharacterPrompt(seed, state, speaker, { memories, recent });
       const { content } = await llm(msgs);
-      const reply: Message = { id: newId("m"), instanceId, role: "assistant", speakerId: speaker.id, content, createdAt: nextTime() };
+      const clean = stripSpeakerPrefix(speaker.name, content);
+      const reply: Message = { id: newId("m"), instanceId, role: "assistant", speakerId: speaker.id, content: clean, createdAt: nextTime() };
       await repo.appendMessage(reply);
       // 该发言作为观察写给当前在场者（含后续发言者，从而看到刚说的话）
-      for (const obs of buildObservations(state, { speakerName: speaker.name, text: content })) await repo.appendMemory(obs);
+      for (const obs of buildObservations(state, { speakerName: speaker.name, text: clean })) await repo.appendMemory(obs);
       lastSpeakerId = speaker.id;
       budget--;
     }
@@ -93,7 +94,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm 
   if (beat) await repo.appendMessage(beat);
 
   // 张力攒高且有幕后角色时，God 拉一个入场制造转折（每回合至多一次）
-  if (tensionAfter >= 7) {
+  if (tensionAfter >= 6) {
     const off = offstageCharacterIds(seed, state);
     if (off.length > 0) {
       const enterId = off[0];
