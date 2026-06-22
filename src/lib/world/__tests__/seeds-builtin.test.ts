@@ -60,6 +60,13 @@ describe("BUILTIN_SEEDS", () => {
         expect(seed.rules.physics.length).toBeGreaterThan(0);
         expect(seed.rules.setting.length).toBeGreaterThan(0);
       });
+
+      it("has a presentation with non-empty hook, genre, and at least 1 cast member", () => {
+        expect(seed.presentation).toBeDefined();
+        expect(seed.presentation!.hook.length).toBeGreaterThan(0);
+        expect(seed.presentation!.genre.length).toBeGreaterThan(0);
+        expect(seed.presentation!.cast.length).toBeGreaterThanOrEqual(1);
+      });
     }
   );
 });

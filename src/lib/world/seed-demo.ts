@@ -26,4 +26,15 @@ export const DEMO_SEED: WorldSeed = {
     flags: {},
   },
   modelConfig: { provider: "openrouter", apiKey: "", model: "deepseek/deepseek-v4-pro", reasoningEnabled: false },
+  presentation: {
+    genre: "都市夜谈",
+    mood: ["暧昧", "危险"],
+    intensity: "charged",
+    hook: "你推开那扇门，雨声从身后涌进来。吧台后的女人头也没抬，但你知道她已经把你看透了。",
+    cast: [
+      { name: "阿岚", line: "無燈的主人，左手旧疤，看人比酒更准" },
+      { name: "老周", line: "角落里的常客，旧左轮，一笔还不上的债" },
+    ],
+    accent: "#f0c36b",
+  },
 };
