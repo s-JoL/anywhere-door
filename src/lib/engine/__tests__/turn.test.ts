@@ -211,6 +211,24 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(log.some((e) => e.source === "offscreen")).toBe(true);
   });
 
+  it("spreads a salient observation between co-present characters as hearsay (传话)", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-gossip"));
+    // 预置 c-lan 一条显著的一手观察(c-lan 与 c-zhou 同在酒馆)
+    await repo.appendMemory({ id: "m-salient", charId: "c-lan", kind: "observation", text: "阿岚：那个背双刀的杀手摸进了后巷", keywords: ["杀手", "后巷"], importance: 8, createdAt: 1, lastAccessed: 1 });
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) return { content: "[]" };
+      if (sys.includes("世界环境作家")) return { content: "x" };
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: "……" };
+    };
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-gossip", input: "我环视酒馆。", llm });
+    const zhou = await repo.listMemories("c-zhou");
+    expect(zhou.some((m) => m.kind === "hearsay" && m.text.includes("背双刀的杀手"))).toBe(true);
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));

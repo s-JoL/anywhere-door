@@ -1,4 +1,4 @@
-import type { WorldSeed, WorldState, WorldInstance, ChatMessage, Message, TurnSnapshot } from "../types";
+import type { WorldSeed, WorldState, WorldInstance, ChatMessage, Message, Memory, TurnSnapshot } from "../types";
 import type { Repository } from "../storage";
 import type { Delta, DeltaSource } from "../world/delta";
 import { validateDelta, applyDelta } from "../world/delta";
@@ -11,6 +11,7 @@ import { nextTime } from "../clock";
 import { scoreMemories } from "../memory/retrieve";
 import { keywordsOf } from "../memory/keywords";
 import { buildObservations, buildSelfMemory } from "../memory/observe";
+import { propagateGossip } from "../memory/gossip";
 import { shouldReflect, reflect } from "../memory/reflect";
 import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
@@ -257,6 +258,19 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       if (fd) {
         const v = validateDelta(state, seed.rules, fd);
         if (v.ok) { state = applyDelta(state, fd); await logDelta(fd, "flesh"); }
+      }
+    }
+
+    // 传话:同场 NPC 把最显著的近期一手观察口耳相传 → 在场他人获得二手 hearsay 记忆
+    {
+      const hereNow = state.locations[state.currentLocationId];
+      const presentNpcs = (hereNow?.presentCharacterIds ?? [])
+        .filter((id) => id !== "you")
+        .map((id) => ({ id, name: state.roster[id]?.name ?? id }));
+      if (presentNpcs.length >= 2) {
+        const recentByChar: Record<string, Memory[]> = {};
+        for (const g of presentNpcs) recentByChar[g.id] = (await repo.listMemories(g.id)).slice(-12);
+        for (const m of propagateGossip(presentNpcs, recentByChar)) await repo.appendMemory(m);
       }
     }
 

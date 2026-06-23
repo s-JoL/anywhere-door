@@ -141,7 +141,7 @@ export interface Message {
 export interface Memory {
   id: string;
   charId: string;
-  kind: "observation" | "reflection";
+  kind: "observation" | "reflection" | "hearsay";
   text: string;
   keywords: string[];     // 写入时抽取，供关键词相关性近似
   importance: number;     // 1–10
