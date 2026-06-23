@@ -26,7 +26,7 @@
 
 `runTurn`([`src/lib/engine/turn.ts`](../src/lib/engine/turn.ts))一个回合:
 
-1. **(线下演化 seam,no-op)** 预留:回来时按离开时长补演化([`world/offscreen.ts`](../src/lib/world/offscreen.ts))。
+1. **离场演化**:玩家回来时,`evolveWhileAway` 按**离开时长**(`Date.now - lastSeenAt`,≥1h 才触发)让 LLM 提议这段时间里合理发生的平静变化(角色挪位/时间推移/物态/关系淡化),经同一 validate/apply/事件日志落库([`world/offscreen.ts`](../src/lib/world/offscreen.ts))。与"交互驱动:离开即冻结"一致——不实时空转,回来才懒补。
 2. **意图**:每个在场角色**并行**判断是否开口(speak/pass + 急切度),`selectSpeakers` 取 top-N + 破冰([`engine/intent.ts`](../src/lib/engine/intent.ts), [`select.ts`](../src/lib/engine/select.ts))。
 3. **发言**:被选中的角色**流式**说话,prompt 只含其**主观可见**的场景/记忆/关系/lore([`engine/prompt.ts`](../src/lib/engine/prompt.ts))。
 4. **导演**:God 更新张力、在**张力跃升(≥1.5)或已在高位(≥7)且仍上行**时插入**旁白**(高位但持平/衰减的回合不插,天然防刷屏)、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。

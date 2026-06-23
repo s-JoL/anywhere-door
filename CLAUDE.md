@@ -65,7 +65,7 @@ with it, not its substance.**
 | 4. Social causality (relationships shift from events; private memory/secrets) | ✓ memory + CK-style relationship ledger (signed affinity + evidence + day-decay); ownership→resentment wired | **Core** |
 | 6. Canon consistency (never self-contradictory) | ✓ lore injection + `establishLore` | **Core** |
 | 3. Physical causality (locked / flammable / broken enforced) | ✓ enforced for the drama-driving props: `portable` (`moveObject`) + `locked`/`gates` (doors block passage, `setObjectLocked`); flammable/broken pending | **Selective core** — mechanize only the few drama-driving props |
-| 5. Off-screen evolution (world moves while you're away) | no-op `evolveWhileAway` seam | **Roadmap** — consistent with "interaction-driven: freezes when you leave" |
+| 5. Off-screen evolution (world moves while you're away) | ✓ lazy on-return: `evolveWhileAway` proposes plausible deltas scaled by time away (≥1h), via the same validate/apply/log gate | **Core now** — "interaction-driven: frozen while away, lazily reconciled on return" |
 
 ## 5. The one modeling principle (entities & agency)
 

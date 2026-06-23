@@ -190,6 +190,27 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect((await repo.getInstance("w-log"))?.turn).toBe(1);
   });
 
+  it("lazily evolves the world on return after time away (off-screen, source-tagged in the log)", async () => {
+    const repo = getRepository();
+    const inst = instantiate(DEMO_SEED, 1, "w-away");
+    inst.lastSeenAt = Date.now() - 5 * 3_600_000; // 离开 5 小时
+    await repo.upsertInstance(inst);
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("离场演化器")) return { content: '[{"kind":"setCondition","entityId":"you","condition":"刚醒，睡眼惺忪"}]' };
+      if (sys.includes("世界状态记录器")) return { content: "[]" };
+      if (sys.includes("世界环境作家")) return { content: "x" };
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: "……" };
+    };
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-away", input: "我回来了。", llm });
+    const after = await repo.getInstance("w-away");
+    expect(after?.state.roster["you"].condition).toBe("刚醒，睡眼惺忪");
+    const log = await repo.listDeltaLog("w-away");
+    expect(log.some((e) => e.source === "offscreen")).toBe(true);
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));
