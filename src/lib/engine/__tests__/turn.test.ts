@@ -58,6 +58,28 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.objects["ghost"]).toBeUndefined();    // invalid 丢弃
   });
 
+  it("reactor commits object state and player condition changes", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-reactor"));
+
+    // Fake LLM: detect reactor prompt by "世界状态记录器" in system message
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) {
+        return { content: '[{"kind":"setObjectState","objectId":"o-glass","state":"打翻在吧台上"},{"kind":"setCondition","entityId":"you","condition":"浑身湿透"}]' };
+      }
+      if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
+      return { content: "……" };
+    };
+
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-reactor", input: "我把杯子碰翻了。", llm });
+
+    const after = await repo.getInstance("w-reactor");
+    expect(after?.state.objects["o-glass"]?.state).toBe("打翻在吧台上");
+    expect(after?.state.roster["you"]?.condition).toBe("浑身湿透");
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));
