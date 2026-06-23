@@ -442,6 +442,28 @@ describe("parseDeltas setObjectLocked", () => {
   });
 });
 
+describe("reactor: social-causality rendering", () => {
+  it("surfaces object ownership in the object list (so theft has teeth)", () => {
+    const s = baseState();
+    s.objects["o-glass"].props = { owner: "c-lan" };
+    const msgs = buildReactorPrompt(s, [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[1].content).toContain("属阿岚");
+  });
+  it("renders relationship affinity, band/disposition and the latest evidence", () => {
+    const s = baseState();
+    s.relationships = { "c-lan": { you: { affinity: -30, disposition: "记恨在心", evidence: ["拿走了我的剑"], sinceDay: 1 } } };
+    const sys = buildReactorPrompt(s, [], { "c-lan": "阿岚", you: "你" })[1].content;
+    expect(sys).toContain("记恨在心");
+    expect(sys).toContain("好感-30");
+    expect(sys).toContain("拿走了我的剑");
+  });
+  it("system prompt teaches the affinityDelta + reason adjustment model and ownership consequence", () => {
+    const sys = buildReactorPrompt(baseState(), [], { you: "你" })[0].content;
+    expect(sys).toContain("affinityDelta");
+    expect(sys).toContain("物品归属即后果");
+  });
+});
+
 describe("react + prompt: setObjectLocked", () => {
   it("react returns a setObjectLocked delta from fake llm", async () => {
     const fakeLlm = async () => ({ content: '[{"kind":"setObjectLocked","objectId":"o-glass","locked":true}]' });

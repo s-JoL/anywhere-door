@@ -1,6 +1,7 @@
 import type { WorldState, ChatMessage, WorldRules } from "../types";
 import type { Delta } from "../world/delta";
 import type { LlmFn } from "./turn";
+import { effectiveAffinity, affinityBand } from "../world/relationship";
 
 const VALID_KINDS = new Set([
   "moveCharacter",
@@ -46,7 +47,7 @@ export function parseDeltas(text: string): Delta[] {
         result.push(item as Delta);
       } else if (item.kind === "moveScene" && typeof item.toLocationId === "string") {
         result.push(item as Delta);
-      } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && typeof item.disposition === "string") {
+      } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && (typeof item.disposition === "string" || typeof item.affinityDelta === "number" || typeof item.reason === "string")) {
         result.push(item as Delta);
       } else if (item.kind === "establishLore" && typeof item.id === "string" && Array.isArray(item.keys) && item.keys.every((k: unknown) => typeof k === "string") && typeof item.content === "string") {
         result.push(item as Delta);
@@ -92,7 +93,12 @@ export function buildReactorPrompt(
     })
     .join("\n");
   const objectList = Object.entries(state.objects)
-    .map(([id, o]) => `  ${id}: ${o.name}${o.state ? `（${o.state}）` : ""}`)
+    .map(([id, o]) => {
+      const ownerId = o.props?.owner;
+      const ownerName = ownerId ? (nameById[ownerId] ?? state.roster[ownerId]?.name ?? ownerId) : "";
+      const meta = [ownerName ? `属${ownerName}` : "", o.state].filter(Boolean).join("，");
+      return `  ${id}: ${o.name}${meta ? `（${meta}）` : ""}`;
+    })
     .join("\n");
   const locationList = Object.entries(state.locations)
     .map(([id, l]) => `  ${id}: ${l.name}`)
@@ -114,7 +120,7 @@ Delta JSON 格式（13 种，选用实际发生的）：
 {"kind":"establishObject","id":"新id","name":"物品名","locationId":"<locations中的id>","state":"初始状态","locked":true,"gates":"<这扇门/障碍把守通往的locations中的id，仅门类物体填>"}
 {"kind":"establishLocation","id":"新地点id","name":"地点名","gist":"一句话描述","connectFrom":"<当前地点id>"}
 {"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
-{"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
+{"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","affinityDelta":-15,"reason":"凭什么:拿走了我的剑","disposition":"(可选)记恨在心"}
 {"kind":"establishLore","id":"新设定id","keys":["会再次被提到的词","别名"],"content":"一句永久世界设定"}
 {"kind":"establishCharacter","id":"新角色id","name":"角色名","role":"一句话身份/定位","goal":"(可选)当前目标","locationId":"<locations中的id>"}
 {"kind":"moveObject","objectId":"<objects中的id>","toLocationId":"<locations中的id>"}
@@ -136,7 +142,8 @@ Delta JSON 格式（13 种，选用实际发生的）：
 - 玩家明确带走/拽走的角色，用 moveCharacter 一并移动；玩家明确拿走/带走的物品，用 moveObject 一并移动到新地点。
 这类"玩家自身移动"的 delta 优先级最高，务必输出，不要因别的变化挤占而漏掉。
 
-当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记下新的态度（简短中文短语，如"戒备松动""记恨在心"）。只在确有改变时发，不要每回合重复同一态度。
+当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记一次**调整**：affinityDelta 为好感增减（正=拉近，负=疏远，量级约 5–30 看事情轻重），reason 写**凭什么**（一句简短理由），disposition 可选地给一个当下态度短语。只在确有改变时发，不要每回合重复。
+【物品归属即后果】上面【场景内物品】里标了"属某人"的物品有主人。当有人**拿走/扣留/损毁**他人之物（尤见 moveObject 把带 owner 的物品挪走、且取者非物主），物主会因此**疏远取者**：补一条 setRelationship(fromId=物主, toId=取者, 负 affinityDelta, reason 写明拿了什么)。
 
 只输出 JSON 数组，不要其他文字。`;
 
@@ -148,9 +155,12 @@ Delta JSON 格式（13 种，选用实际发生的）：
     const lines: string[] = [];
     for (const [fromId, targets] of Object.entries(state.relationships)) {
       const fromName = nameById[fromId] ?? state.roster[fromId]?.name ?? fromId;
-      for (const [toId, disp] of Object.entries(targets)) {
+      for (const [toId, rel] of Object.entries(targets)) {
         const toName = nameById[toId] ?? state.roster[toId]?.name ?? toId;
-        lines.push(`  ${fromName}→${toName}: ${disp}`);
+        const aff = effectiveAffinity(rel, state.time.day);
+        const phrase = rel.disposition ?? affinityBand(aff);
+        const why = rel.evidence.length ? ` · 近因:${rel.evidence[rel.evidence.length - 1]}` : "";
+        lines.push(`  ${fromName}→${toName}: ${phrase}（好感${aff}${why}）`);
       }
     }
     return lines.join("\n");

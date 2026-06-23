@@ -1,4 +1,5 @@
 import type { WorldState, WorldRules, Character } from "../types";
+import { applyRelationshipUpdate } from "./relationship";
 
 export type Delta =
   | { kind: "moveCharacter"; characterId: string; toLocationId: string }
@@ -9,7 +10,7 @@ export type Delta =
   | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string; locked?: boolean; gates?: string }
   | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
   | { kind: "moveScene"; toLocationId: string }
-  | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
+  | { kind: "setRelationship"; fromId: string; toId: string; disposition?: string; affinityDelta?: number; reason?: string }
   | { kind: "establishLore"; id: string; keys: string[]; content: string }
   | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
   | { kind: "moveObject"; objectId: string; toLocationId: string }
@@ -24,7 +25,7 @@ function freeTextFields(d: Delta): string[] {
     case "setCondition": return [d.condition];
     case "establishObject": return [d.name, d.state ?? ""];
     case "establishLocation": return [d.name, d.gist ?? "", d.description ?? ""];
-    case "setRelationship": return [d.disposition];
+    case "setRelationship": return [d.disposition ?? "", d.reason ?? ""];
     case "establishLore": return [d.content, ...d.keys];
     case "setFlag": return typeof d.value === "string" ? [d.value] : [];
     default: return [];
@@ -122,8 +123,8 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
         return { ok: false, reason: `目标实体 ${d.toId} 不在名册中` };
       if (d.fromId === d.toId)
         return { ok: false, reason: "不能对自身建立关系" };
-      if (!d.disposition)
-        return { ok: false, reason: "态度描述不能为空" };
+      if (typeof d.affinityDelta !== "number" && !d.disposition?.trim() && !d.reason?.trim())
+        return { ok: false, reason: "关系更新为空(需 affinityDelta / disposition / reason 之一)" };
       return { ok: true };
     }
     case "establishLore": {
@@ -240,17 +241,21 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
     }
     case "moveScene":
       return { ...state, currentLocationId: d.toLocationId };
-    case "setRelationship":
+    case "setRelationship": {
+      const prev = state.relationships?.[d.fromId]?.[d.toId];
+      const next = applyRelationshipUpdate(
+        prev,
+        { affinityDelta: d.affinityDelta, reason: d.reason, disposition: d.disposition },
+        state.time.day,
+      );
       return {
         ...state,
         relationships: {
           ...state.relationships,
-          [d.fromId]: {
-            ...(state.relationships?.[d.fromId] ?? {}),
-            [d.toId]: d.disposition,
-          },
+          [d.fromId]: { ...(state.relationships?.[d.fromId] ?? {}), [d.toId]: next },
         },
       };
+    }
     case "establishLore":
       return {
         ...state,

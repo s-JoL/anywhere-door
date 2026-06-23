@@ -306,22 +306,35 @@ describe("setRelationship delta", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("applyDelta: sets relationship immutably", () => {
+  it("validate: accepts an affinityDelta-only update (no disposition)", () => {
+    const d = { kind: "setRelationship" as const, fromId: "c-lan", toId: "you", affinityDelta: -20, reason: "拿走了我的剑" };
+    expect(validateDelta(relBaseState(), rules, d).ok).toBe(true);
+  });
+
+  it("applyDelta: builds a structured relationship immutably", () => {
     const start: WorldState = { ...relBaseState(), relationships: undefined };
     const result = applyDelta(start, { kind: "setRelationship", fromId: "c-lan", toId: "you", disposition: "记恨在心" });
-    expect(result.relationships?.["c-lan"]?.["you"]).toBe("记恨在心");
+    expect(result.relationships?.["c-lan"]?.["you"]?.disposition).toBe("记恨在心");
     expect(start.relationships).toBeUndefined();
+  });
+
+  it("applyDelta: affinityDelta + reason accrue into affinity and evidence", () => {
+    const start: WorldState = { ...relBaseState(), relationships: undefined };
+    const result = applyDelta(start, { kind: "setRelationship", fromId: "c-lan", toId: "you", affinityDelta: -20, reason: "拿走了我的剑" });
+    const rel = result.relationships?.["c-lan"]?.["you"];
+    expect(rel?.affinity).toBe(-20);
+    expect(rel?.evidence).toEqual(["拿走了我的剑"]);
   });
 
   it("applyDelta: preserves existing relationships", () => {
     const start: WorldState = {
       ...relBaseState(),
       roster: { "c-lan": { name: "兰" }, "you": { name: "你" }, "c-zhou": { name: "周" } },
-      relationships: { "c-lan": { "you": "戒备" } },
+      relationships: { "c-lan": { "you": { affinity: -10, disposition: "戒备", evidence: [], sinceDay: 1 } } },
     };
     const result = applyDelta(start, { kind: "setRelationship", fromId: "c-lan", toId: "c-zhou", disposition: "欠了人情" });
-    expect(result.relationships?.["c-lan"]?.["you"]).toBe("戒备");
-    expect(result.relationships?.["c-lan"]?.["c-zhou"]).toBe("欠了人情");
+    expect(result.relationships?.["c-lan"]?.["you"]?.disposition).toBe("戒备");
+    expect(result.relationships?.["c-lan"]?.["c-zhou"]?.disposition).toBe("欠了人情");
   });
 });
 

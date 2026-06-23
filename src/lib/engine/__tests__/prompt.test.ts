@@ -50,7 +50,7 @@ describe("prompt", () => {
     const c = DEMO_SEED.characters[0]; // c-lan
     const stateWithRel = {
       ...DEMO_SEED.openingState,
-      relationships: { "c-lan": { "you": "记恨在心" } },
+      relationships: { "c-lan": { "you": { affinity: -40, disposition: "记恨在心", evidence: [], sinceDay: 0 } } },
     };
     const msgs = buildCharacterPrompt(DEMO_SEED, stateWithRel, c, {});
     const sys = msgs[0].content;
@@ -71,7 +71,7 @@ describe("prompt", () => {
           presentCharacterIds: ["c-lan"], // c-zhou removed from bar
         },
       },
-      relationships: { "c-lan": { "c-zhou": "敌视" } },
+      relationships: { "c-lan": { "c-zhou": { affinity: -50, disposition: "敌视", evidence: [], sinceDay: 0 } } },
     };
     const msgs = buildCharacterPrompt(DEMO_SEED, stateWithoutZhou, c, {});
     const sys = msgs[0].content;

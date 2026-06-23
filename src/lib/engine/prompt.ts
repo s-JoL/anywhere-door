@@ -1,6 +1,7 @@
 import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
 import { fillPlaceholders, applyOriginal, RP_PRESET, POST_HISTORY_REINFORCEMENT } from "./preset";
 import { retrieveLore, formatLore } from "../world/lore";
+import { effectiveAffinity, affinityBand } from "../world/relationship";
 
 /** 去掉角色误加在开头的「自己名字：」前缀。 */
 export function stripSpeakerPrefix(name: string, text: string): string {
@@ -67,10 +68,12 @@ export function buildCharacterPrompt(
     const loc = state.locations[state.currentLocationId];
     const presentIds = new Set([...(loc?.presentCharacterIds ?? []), "you"]);
     const lines: string[] = [];
-    for (const [toId, disp] of Object.entries(myRelations)) {
+    for (const [toId, rel] of Object.entries(myRelations)) {
       if (!presentIds.has(toId)) continue;
       const name = toId === "you" ? "你（玩家）" : (state.roster[toId]?.name ?? toId);
-      lines.push(`对${name}：${disp}`);
+      // 角色体会到的是态度（短语或档位），不是裸数字。
+      const phrase = rel.disposition ?? affinityBand(effectiveAffinity(rel, state.time.day));
+      lines.push(`对${name}：${phrase}`);
     }
     if (!lines.length) return "";
     return `【你此刻的心态】${lines.join("；")}。让这些态度自然影响你的言行。`;
