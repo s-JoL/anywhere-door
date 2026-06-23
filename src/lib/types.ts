@@ -61,6 +61,7 @@ export interface WorldState {
   roster: Record<string, CharObjective>;
   flags: Record<string, string | number | boolean>;
   tension?: number;
+  relationships?: Record<string, Record<string, string>>;
 }
 
 export interface WorldPresentation {

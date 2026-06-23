@@ -60,6 +60,21 @@ export function buildCharacterPrompt(
     ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${ctx.memories.map((m) => `· ${m.text}`).join("\n")}`
     : "";
 
+  const dispositionBlock = (() => {
+    const myRelations = state.relationships?.[character.id];
+    if (!myRelations) return "";
+    const loc = state.locations[state.currentLocationId];
+    const presentIds = new Set([...(loc?.presentCharacterIds ?? []), "you"]);
+    const lines: string[] = [];
+    for (const [toId, disp] of Object.entries(myRelations)) {
+      if (!presentIds.has(toId)) continue;
+      const name = toId === "you" ? "你（玩家）" : (state.roster[toId]?.name ?? toId);
+      lines.push(`对${name}：${disp}`);
+    }
+    if (!lines.length) return "";
+    return `【你此刻的心态】${lines.join("；")}。让这些态度自然影响你的言行。`;
+  })();
+
   // Build SYSTEM message — layered prefix
   const systemParts: string[] = [
     `【世界观】${seed.worldview}`,
@@ -72,6 +87,7 @@ export function buildCharacterPrompt(
       : "",
     character.goal ? `【你此刻的目标】${character.goal}` : "",
     memoryBlock,
+    dispositionBlock,
   ].filter(Boolean);
 
   const system = systemParts.join("\n\n");

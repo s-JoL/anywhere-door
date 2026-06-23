@@ -8,7 +8,8 @@ export type Delta =
   | { kind: "setCondition"; entityId: string; condition: string }
   | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string }
   | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
-  | { kind: "moveScene"; toLocationId: string };
+  | { kind: "moveScene"; toLocationId: string }
+  | { kind: "setRelationship"; fromId: string; toId: string; disposition: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -55,6 +56,17 @@ export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): 
       const cur = state.locations[state.currentLocationId];
       if (d.toLocationId !== state.currentLocationId && !cur?.connections.includes(d.toLocationId))
         return { ok: false, reason: `${state.currentLocationId} 与 ${d.toLocationId} 不相连` };
+      return { ok: true };
+    }
+    case "setRelationship": {
+      if (!state.roster[d.fromId])
+        return { ok: false, reason: `来源实体 ${d.fromId} 不在名册中` };
+      if (!state.roster[d.toId])
+        return { ok: false, reason: `目标实体 ${d.toId} 不在名册中` };
+      if (d.fromId === d.toId)
+        return { ok: false, reason: "不能对自身建立关系" };
+      if (!d.disposition)
+        return { ok: false, reason: "态度描述不能为空" };
       return { ok: true };
     }
   }
@@ -140,5 +152,16 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
     }
     case "moveScene":
       return { ...state, currentLocationId: d.toLocationId };
+    case "setRelationship":
+      return {
+        ...state,
+        relationships: {
+          ...state.relationships,
+          [d.fromId]: {
+            ...(state.relationships?.[d.fromId] ?? {}),
+            [d.toId]: d.disposition,
+          },
+        },
+      };
   }
 }
