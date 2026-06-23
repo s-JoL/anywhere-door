@@ -16,6 +16,7 @@ export interface Character {
   id: string;
   name: string;
   description: string;   // 设定（含性格）
+  detail?: "stub" | "fleshed";  // 实例内按需生长的角色：stub 待充实，fleshed 已完整（seed 角色视为 fleshed）
   identity?: Identity;   // 不可变硬事实
   goal?: string;         // 当前目标（被 God 注入主观 prompt）
   systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
@@ -62,6 +63,8 @@ export interface WorldState {
   locations: Record<string, Location>;
   objects: Record<string, WorldObject>;
   roster: Record<string, CharObjective>;
+  /** 实例私有、按需生长的角色（seed 冻结共享，新角色绝不写回 seed）。 */
+  characters?: Record<string, Character>;
   flags: Record<string, string | number | boolean>;
   tension?: number;
   relationships?: Record<string, Record<string, string>>;

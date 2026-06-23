@@ -12,7 +12,7 @@ export function presentCharacters(seed: WorldSeed, state: WorldState): Character
   const loc = state.locations[state.currentLocationId];
   if (!loc) return [];
   return loc.presentCharacterIds
-    .map((id) => seed.characters.find((c) => c.id === id))
+    .map((id) => seed.characters.find((c) => c.id === id) ?? state.characters?.[id])
     .filter((c): c is Character => !!c);
 }
 

@@ -1,4 +1,4 @@
-import type { WorldState, WorldRules } from "../types";
+import type { WorldState, WorldRules, Character } from "../types";
 
 export type Delta =
   | { kind: "moveCharacter"; characterId: string; toLocationId: string }
@@ -10,7 +10,8 @@ export type Delta =
   | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
   | { kind: "moveScene"; toLocationId: string }
   | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
-  | { kind: "establishLore"; id: string; keys: string[]; content: string };
+  | { kind: "establishLore"; id: string; keys: string[]; content: string }
+  | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -114,6 +115,13 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
         return { ok: false, reason: "世界设定内容不能为空" };
       return { ok: true };
     }
+    case "establishCharacter": {
+      if (!d.name) return { ok: false, reason: "角色名不能为空" };
+      if (state.roster[d.id]) return { ok: false, reason: `角色 ${d.id} 已存在` };
+      if (!state.locations[d.locationId])
+        return { ok: false, reason: `地点 ${d.locationId} 不存在` };
+      return { ok: true };
+    }
   }
 }
 
@@ -213,5 +221,29 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         ...state,
         lore: [...(state.lore ?? []), { id: d.id, keys: d.keys, content: d.content }],
       };
+    case "establishCharacter": {
+      const loc = state.locations[d.locationId];
+      const char: Character = {
+        id: d.id,
+        name: d.name,
+        description: d.role ?? "",
+        detail: "stub",
+        ...(d.goal ? { goal: d.goal } : {}),
+      };
+      return {
+        ...state,
+        characters: { ...(state.characters ?? {}), [d.id]: char },
+        roster: { ...state.roster, [d.id]: { name: d.name } },
+        locations: {
+          ...state.locations,
+          [d.locationId]: {
+            ...loc,
+            presentCharacterIds: loc.presentCharacterIds.includes(d.id)
+              ? loc.presentCharacterIds
+              : [...loc.presentCharacterIds, d.id],
+          },
+        },
+      };
+    }
   }
 }
