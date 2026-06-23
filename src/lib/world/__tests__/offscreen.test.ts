@@ -86,7 +86,7 @@ describe("offscreen evolution seam", () => {
       state: minimalState,
       rules: minimalRules,
       msAway: 86400000, // 24 hours
-      llm: async (messages, onContent) => {
+      llm: async (_messages, onContent) => {
         onContent?.("streaming content");
         return { content: "result" };
       },

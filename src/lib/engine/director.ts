@@ -1,4 +1,4 @@
-import type { WorldState, Message, ChatMessage } from "../types";
+import type { WorldState, Message } from "../types";
 import type { LlmFn } from "./turn";
 import { newId } from "../id";
 import { nextTime } from "../clock";
