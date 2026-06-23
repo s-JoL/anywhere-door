@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { buildUpstreamRequest, isValidProvider } from "@/lib/llm/providers";
+import { resolveApiKey } from "@/lib/llm/resolve-key";
 import type { ChatMessage, ModelConfig } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -10,7 +11,8 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); } catch { return json({ error: "invalid json" }, 400); }
   if (!isValidProvider(body.provider)) return json({ error: "unknown provider" }, 400);
 
-  const apiKey = body.apiKey?.trim() || (body.provider === "openrouter" ? process.env.OPENROUTER_API_KEY ?? "" : "");
+  // Production is strictly BYO-key; the env fallback is a dev-only convenience.
+  const apiKey = resolveApiKey(body, process.env.NODE_ENV);
   if (!apiKey) return json({ error: "missing api key" }, 400);
 
   const up = buildUpstreamRequest({ ...body, apiKey }, body.messages);
