@@ -14,6 +14,12 @@ export function defaultImportance(text: string): number {
   return Math.max(1, Math.min(10, s));
 }
 
+/** 给单个角色构造一条观察记忆（用于 evidence→记忆等引擎内部写入）。 */
+export function buildSelfMemory(charId: string, text: string, importance = 6): Memory {
+  const t = nextTime();
+  return { id: newId("mem"), charId, kind: "observation", text, keywords: keywordsOf(text), importance, createdAt: t, lastAccessed: t };
+}
+
 /** 为当前场景的每个在场角色生成一条该发言的观察记忆（witness 作用域）。 */
 export function buildObservations(
   state: WorldState,

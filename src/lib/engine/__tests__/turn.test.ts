@@ -153,6 +153,22 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.locations[cur].description).toContain("私室");
   });
 
+  it("writes a setRelationship's reason into the fromId character's memory (evidence→记忆)", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-evi"));
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) return { content: '[{"kind":"setRelationship","fromId":"c-lan","toId":"you","affinityDelta":-25,"reason":"拿走了她的剑"}]' };
+      if (sys.includes("世界环境作家")) return { content: "x" };
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: "……" };
+    };
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-evi", input: "我拿起她的剑。", llm });
+    const lan = await repo.listMemories("c-lan");
+    expect(lan.some((m) => m.text.includes("拿走了她的剑"))).toBe(true);
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));

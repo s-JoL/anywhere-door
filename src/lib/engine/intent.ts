@@ -2,6 +2,25 @@ import type { WorldSeed, WorldState, Character, Memory, ChatMessage } from "../t
 import type { Intent } from "./select";
 import type { LlmFn } from "./turn";
 import { buildCharacterPrompt } from "./prompt";
+import { effectiveAffinity } from "../world/relationship";
+
+/**
+ * 社会因果→发言意图:角色对**在场**对象最强烈的感受(|好感|,爱或恨皆然)转成一个
+ * 0..weight 的急切度加成——情绪卷入越深越想开口/越可能在冷场时打破沉默。
+ */
+export function affinityEagernessBoost(state: WorldState, characterId: string, weight = 0.4): number {
+  const rels = state.relationships?.[characterId];
+  if (!rels) return 0;
+  const loc = state.locations[state.currentLocationId];
+  const present = new Set([...(loc?.presentCharacterIds ?? []), "you"]);
+  let strongest = 0;
+  for (const [toId, rel] of Object.entries(rels)) {
+    if (!present.has(toId)) continue;
+    const a = Math.abs(effectiveAffinity(rel, state.time.day));
+    if (a > strongest) strongest = a;
+  }
+  return (strongest / 100) * weight;
+}
 
 const SAFE_PASS: Intent = { action: "pass", eagerness: 0 };
 
@@ -38,7 +57,10 @@ export async function decideIntent(args: DecideIntentArgs): Promise<Intent> {
     const msgs: ChatMessage[] = buildCharacterPrompt(seed, state, character, { recent });
     msgs.push({ role: "user", content: JUDGE_TAIL });
     const { content } = await llm(msgs);
-    return parseIntent(content);
+    const intent = parseIntent(content);
+    // 社会因果:对在场对象情绪卷入越深,急切度越高(影响选发言者 + 冷场破冰)
+    const boost = affinityEagernessBoost(state, character.id);
+    return { action: intent.action, eagerness: Math.min(1, intent.eagerness + boost) };
   } catch {
     return SAFE_PASS;
   }
