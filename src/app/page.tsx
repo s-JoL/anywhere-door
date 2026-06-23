@@ -313,7 +313,6 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
 
       <div className="relative z-10 pb-6 text-center">
         <div className="text-[11px] text-[var(--smoke)]">自带模型 key · 本地优先 · 不设限</div>
-        <div className="mt-1 text-[10px] text-[var(--smoke)] opacity-40">曾用名 · 浮生</div>
       </div>
     </section>
   );

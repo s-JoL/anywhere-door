@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { runTurn } from "../turn";
+import { regenerateLastTurn, runTurn } from "../turn";
 import type { TurnEvent } from "../turn";
 import { DEMO_SEED } from "../../world/seed-demo";
 import { instantiate } from "../../world/instance";
@@ -168,5 +168,66 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(persisted).toBeDefined();
     expect(persisted?.content).toBe("片段");
     expect(persisted?.role).toBe("assistant");
+  });
+
+  it("regenerates the last turn by restoring prior state and replacing turn messages and memories", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-regen"));
+
+    const replies = ["第一次回应", "旧回应", "新回应"];
+    const objectStates = ["第一次状态", "旧状态", "新状态"];
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) {
+        const state = objectStates.shift() ?? "意外状态";
+        return { content: `[{"kind":"setObjectState","objectId":"o-glass","state":"${state}"}]` };
+      }
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: replies.shift() ?? "意外回应" };
+    };
+
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-regen", input: "第一句。", llm });
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-regen", input: "我把杯子碰了一下。", llm });
+
+    let msgs = await repo.listMessages("w-regen");
+    expect(msgs.some((m) => m.content === "旧回应")).toBe(true);
+    let inst = await repo.getInstance("w-regen");
+    expect(inst?.state.objects["o-glass"]?.state).toBe("旧状态");
+
+    await regenerateLastTurn({ seed: DEMO_SEED, repo, instanceId: "w-regen", llm });
+
+    msgs = await repo.listMessages("w-regen");
+    expect(msgs.filter((m) => m.role === "user").map((m) => m.content)).toEqual(["第一句。", "我把杯子碰了一下。"]);
+    expect(msgs.some((m) => m.content === "旧回应")).toBe(false);
+    expect(msgs.some((m) => m.content === "新回应")).toBe(true);
+
+    inst = await repo.getInstance("w-regen");
+    expect(inst?.state.objects["o-glass"]?.state).toBe("新状态");
+
+    const lanMemories = await repo.listMemories("c-lan");
+    expect(lanMemories.some((m) => m.text.includes("旧回应"))).toBe(false);
+    expect(lanMemories.some((m) => m.text.includes("新回应"))).toBe(true);
+  });
+
+  it("rolls back messages and memories when the turn fails before completion", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-fail"));
+
+    await expect(runTurn({
+      seed: DEMO_SEED,
+      repo,
+      instanceId: "w-fail",
+      input: "这句不应该污染世界。",
+      llm: async () => { throw new Error("missing api key"); },
+    })).rejects.toThrow("missing api key");
+
+    const msgs = await repo.listMessages("w-fail");
+    expect(msgs).toEqual([]);
+    const memories = await repo.listAllMemories();
+    expect(memories).toEqual([]);
+    const inst = await repo.getInstance("w-fail");
+    expect(inst?.lastTurnSnapshot).toBeUndefined();
+    expect(inst?.state.objects["o-glass"]?.state).toBe("空着，杯底一圈水痕");
   });
 });

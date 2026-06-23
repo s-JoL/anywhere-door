@@ -22,6 +22,7 @@ const DEFAULT_FORM: UserConfig = {
   model: "deepseek/deepseek-v4-pro",
   reasoningEnabled: false,
 };
+const API_KEY_PLACEHOLDER = "sk-…";
 
 type TestState =
   | { kind: "idle" }
@@ -52,7 +53,6 @@ export default function SettingsPage() {
   async function onTest() {
     setTest({ kind: "testing" });
     const t0 = Date.now();
-    // 经由 /api/llm/chat 代理：apiKey 为空时在 dev 下回退到 env（仅 openrouter）。
     const res = await testModel({
       provider: form.provider,
       apiKey: form.apiKey.trim(),
@@ -126,7 +126,7 @@ export default function SettingsPage() {
               value={form.apiKey}
               autoComplete="off"
               spellCheck={false}
-              placeholder="sk-…（留空则在 dev 下回退到服务器 env）"
+              placeholder={API_KEY_PLACEHOLDER}
               onChange={(e) => patch({ apiKey: e.target.value })}
             />
             <button
