@@ -63,6 +63,35 @@ the target turn-scoped layered runtime:
 This spine is the preferred order for implementation planning. Product features
 below should build on it instead of inventing local prompt-only shortcuts.
 
+## 2.6 Execution-Layer Hard Problems (first-class)
+
+The runtime spine above keeps the world *consistent*; these decide whether the
+consistent world is *felt* and *affordable*. They are first-class work items, not
+polish. Decisions and rationale: `docs/first-principles-synthesis.md`.
+
+1. **Rendering consistency (A).** State is truth, but the user reads prose, and
+   prose can contradict state. Split voices — the narrator/Director voice stays
+   grounded to hard facts; character voices may make false claims, which the
+   Reactor routes to belief/lie, never silently into state. Enforcement is hybrid:
+   prompt-grounding every turn, plus a lightweight post-check only for hard-state
+   objects (doors, locks, key items, presence, location).
+2. **Latency (B).** Many serial LLM calls on the user's key fight immersion. Split
+   fast path (casting + streaming, first token quickly) from slow path (Reactor,
+   memory, flesh, post-check), with the instance lock as commit barrier.
+3. **Cost (C).** Depth tiers (fast / standard / deep) scale the slow path. MVP ships
+   a single tier; tiers follow as the cost valve.
+4. **Reactor precision (D).** The call that makes the world change. Gate it by the
+   Director's structural-change signal (zero extra call), biased toward running
+   (forgetting a consequence is the cardinal failure). Evidence-first proposals with
+   per-delta evidence and logged rejection reasons.
+
+Plus an upstream owner gap: **feed cold-start (generation cost + quality).** The
+funnel begins at the feed, and generating good doors is itself many LLM calls;
+under BYO-key, browsing has a cost/key friction. Needs a static example-door pool
+(key-free first impression), a background pre-generation pool with diversity, and
+its own metrics (seconds-to-judge, open-door conversion, take-root rate). This
+deserves a named owner alongside the runtime.
+
 ## 3. Phase 1 — Make The MVP Feel Like A Private Living-World Browser
 
 Goal: every first session proves "this is a real world", and every return makes

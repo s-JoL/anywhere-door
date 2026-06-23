@@ -204,6 +204,20 @@ Characters are real because they are limited:
 Director and Reactor stay omniscient and separate from characters. A single mind
 cannot be both blind enough for drama and omniscient enough for orchestration.
 
+**Why centralized omniscience is structural, not stylistic.** A world shared by
+many partial perceivers cannot let each perceiver independently generate reality:
+multiplicity itself diverges — N independent minds, even perfect ones, elaborate
+mutually contradictory worlds. Consistency therefore requires a single source of
+truth: one omniscient hub (WorldState as canon; Director/Reactor as its
+orchestration) holds the world and distributes partial projections. This is a
+**star topology** — one hub of truth, many partial spokes — never a mesh of
+independent minds. Information boundaries are a consequence of that hub, not only a
+dramatic device. The runtime is then two arrows around the hub: **perception**
+(hub projects what each agent sees) outward, and **agency** (agents pull
+information and propose changes, always adjudicated by the hub) inward. Player and
+characters are symmetric *inside* the world; the player's only asymmetry is an
+out-of-world authority axis (see §10).
+
 ## 9. Pressure, Time, And Offstage Life
 
 Pressure lines are unfinished causality, not quests. They should surface through
@@ -233,6 +247,22 @@ must preserve channel isolation.
 | Director Notes | Steer pacing, tone, boundaries, or desired direction without becoming in-world speech. | Light advanced control. |
 | Scene Contract | Set local boundaries, intensity, consent/NSFW constraints, and relationship direction. | Advanced / NSFW / Studio. |
 | God Mode / Studio Mode | Direct private-world edits, canon repair, branch control, seed creation. | Hidden by default, discoverable for power users. |
+
+**These layers are one continuous authority axis, not four separate modes.** The
+axis runs from *discovering* the world (Player Mode: you may only influence it
+through in-world action, which must pass in-world causality) to *authoring* it
+(God Mode: you may propose any hard fact). One invariant holds at every point:
+
+> The only way to change the world is a validated delta written to the event log.
+> Raising authority raises **which deltas you may propose**, never **whether you
+> may bypass the gate**. The gate is never bypassed.
+
+Because of this, an authored world is as real — consistent, persistent, auditable,
+forkable — as a discovered one. "A world with its own indifferent life" and "a
+world that bends to the user" are the two ends of this single axis, not rival
+products. Personalization ("the door knows you") is the system pre-setting this
+knob from the Taste Chronicle, and it acts only at the Director/God layer; it never
+becomes a character's in-world knowledge.
 
 God Mode edits the user's private branch, not the public seed. Characters should
 not automatically know about Director Notes, scene contracts, or cross-world user
@@ -299,6 +329,12 @@ work should avoid blocking them:
 - **Record = snapshot + append-only delta log.** The snapshot is the fast current
   state; every committed delta is logged with turn, game time, real time, source,
   and cause.
+- **Authored edits reconcile, not overwrite.** A God/Studio edit to a hard fact
+  goes through the same validated-delta gate (provenance `god-edited`) and then
+  triggers a bounded consistency repair: contradicting memories, beliefs, and
+  relationship evidence are *superseded* (never deleted — append-only), scoped to
+  witnesses of the now-contradicted events. The authored world stays self-consistent,
+  auditable, and forkable.
 - **Interaction-driven evolution.** The world advances through interaction and
   lazy return reconciliation, not server-side idle simulation.
 - **BYO-key and local-first.** Production is bring-your-own-key; data lives in

@@ -210,6 +210,14 @@ type Provenance =
 
 Wrong belief is allowed. Omniscient correction is not.
 
+**Projection production: mechanical facts, directed salience.** The factual layer
+of a `SubjectiveContext` is a deterministic filter of `WorldState` (present
+characters, visible objects, own memories) — consistent by construction and cheap,
+so partial perceivers cannot diverge. The Director may then adjust *salience and
+attention* on top (foreground a pressure-line sign, surface a previously-unnoticed
+presence) but must not invent facts. Facts are grounded; framing and attention are
+free.
+
 ### 4.6 Director
 
 The omniscient dramatic orchestrator. It is not a character.
@@ -231,6 +239,19 @@ The Director can see the whole world, but it should write only through:
 - casting decisions consumed by AgentRuntime
 
 It should not bypass validation.
+
+**Narrator grounding (rendering consistency).** The Director / narrator voice is the
+omniscient world description and must stay grounded: it may not narrate a hard
+physical fact that contradicts committed state (a locked door is not described as
+open). Hard facts are fed to the narrator as constraints; a lightweight post-check
+guards hard-state objects (doors, locks, key items, presence, location). Character
+voices are not bound this way — their false claims are drama (see §4.7).
+
+**Reactor gating.** The Director also emits a per-turn signal of whether structural
+change likely occurred, gating whether the Reactor runs. It is already running and
+omniscient, so this adds no extra call. The signal is **biased toward running**:
+under-committing — the world forgetting a consequence — is the cardinal failure, so
+when uncertain, run.
 
 ### 4.7 AgentRuntime
 
@@ -263,6 +284,12 @@ Characters may not:
 - read cross-world Taste Chronicle
 - know God edits unless canonized or perceived
 
+A character may still *claim* a false hard fact (a lie, a misremembering). Such
+claims are never silently written to `WorldState`; the Reactor routes them to that
+character's belief or to a recorded lie. This is the same divergence guard as the
+single source of truth (see `AGENTS.md` §8): a partial perceiver may not author
+reality merely by asserting it.
+
 ### 4.8 Reactor
 
 The objective consequence translator.
@@ -291,7 +318,12 @@ Reactor should be evidence-first:
 - include relationship reasons as evidence
 
 The Reactor is inspired by Voyager's critic loop: it should not only generate
-changes but make them checkable.
+changes but make them checkable. Each proposed delta should carry the prose
+evidence it rests on, and rejected deltas should record their reason (for Context
+Inspector). The Reactor runs only when the Director's structural-change signal
+fires (§4.6); high-consequence deltas (large relationship swings, locking,
+character birth/death) may warrant a second check, while low-consequence ones pass
+liberally.
 
 ### 4.9 Materializer
 
@@ -379,6 +411,11 @@ Constraints:
 Pause Mode disables most reconciliation. Living World Mode may later make it
 more proactive.
 
+**Shared with God edits.** The same consequence-repair machinery serves God/Studio
+hard edits (§4.13): an authored fact triggers a bounded reconcile scoped to
+witnesses of the now-contradicted events, *superseding* (never deleting)
+contradicting subjective records so the authored world stays self-consistent.
+
 ### 4.12 TasteSeedRuntime
 
 World generation is outside the world instance.
@@ -428,6 +465,9 @@ Rules:
 - God edits affect private branch, not public seed
 - edits go through validated deltas where possible
 - Context Inspector can show model context, but only as an advanced/debug view
+- God hard edits trigger edit-then-reconcile: after the delta commits (provenance
+  `god-edited`), a witness-scoped reconcile pass (§4.11) supersedes contradicting
+  memories/beliefs/relationships; records are superseded, never deleted (append-only)
 
 ## 5. Full Turn Flow
 
@@ -452,6 +492,17 @@ acquire instance lock
 -> persist instance/messages/memories/deltaLog
 -> release lock
 ```
+
+**Fast path vs slow path.** To protect immersion under multiple serial LLM calls on
+the user's own key, split the flow by what must complete before the user reads the
+first prose. The *fast path* (Director casting + selected characters streaming)
+reaches first token quickly so the user has something to read. The *slow path*
+(Reactor deltas, memory/hearsay writes, post-pass flesh, the hard-state consistency
+check) may settle during or after streaming, as long as it commits before the next
+turn builds context. The instance lock (§7) enforces one commit at a time: the user
+may read immediately but cannot commit the next turn until this turn's structural
+settle finishes. A depth tier (fast / standard / deep) scales the slow path
+(`maxActiveAgents`, memory/reflection frequency, flesh threshold, post-check scope).
 
 Rollback:
 
