@@ -111,6 +111,12 @@ export function buildReactorPrompt(
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
+【证据优先·先验后写】对你打算输出的每一条 delta，先确认近期发言里**有没有一句明确显示这件事真的发生了**——不是被提及、被打算、被假设、被询问、被回忆。只有"确实已经发生"才输出:
+- "某人说想去后院"但还没动身 → 不要 moveScene/moveCharacter;
+- 提到/谈论一把剑但没人真的动它 → 不要 setObjectState/moveObject;
+- 威胁"我会杀了你"但没动手 → 不要 setCondition。
+宁可少输出、漏一条，也不要凭空写一条没真发生的变化。
+
 Delta JSON 格式（13 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}

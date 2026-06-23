@@ -281,6 +281,11 @@ describe("buildReactorPrompt", () => {
     expect(msgs[0].content).not.toContain("【世界铁律】");
   });
 
+  it("instructs evidence-first grounding (only log what actually happened)", () => {
+    const sys = buildReactorPrompt(baseState(), [], { you: "你" })[0].content;
+    expect(sys).toContain("证据优先");
+  });
+
   it("system prompt documents establishCharacter for new persistent people", () => {
     const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[0].content).toContain("establishCharacter");

@@ -37,6 +37,16 @@ describe("validateDelta", () => {
     const r = validateDelta(baseState(), rules, { kind: "setObjectState", objectId: "nope", state: "碎了" });
     expect(r.ok).toBe(false);
   });
+  it("rejects no-op deltas that change nothing (phantom changes)", () => {
+    const s = baseState(); // glass.state="空", c1 无 condition
+    expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "空" }).ok).toBe(false);
+    expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "碎了" }).ok).toBe(true); // 真变化仍合法
+    s.roster.c1.condition = "受伤";
+    expect(validateDelta(s, rules, { kind: "setCondition", entityId: "c1", condition: "受伤" }).ok).toBe(false);
+    s.objects.glass.props = { locked: true };
+    expect(validateDelta(s, rules, { kind: "setObjectLocked", objectId: "glass", locked: true }).ok).toBe(false);
+    expect(validateDelta(s, rules, { kind: "setObjectLocked", objectId: "glass", locked: false }).ok).toBe(true);
+  });
 
   it("accepts a fresh establishLore", () => {
     const r = validateDelta(baseState(), rules, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本禁书" });

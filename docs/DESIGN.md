@@ -30,7 +30,7 @@
 2. **意图**:每个在场角色**并行**判断是否开口(speak/pass + 急切度),`selectSpeakers` 取 top-N + 破冰([`engine/intent.ts`](../src/lib/engine/intent.ts), [`select.ts`](../src/lib/engine/select.ts))。
 3. **发言**:被选中的角色**流式**说话,prompt 只含其**主观可见**的场景/记忆/关系/lore([`engine/prompt.ts`](../src/lib/engine/prompt.ts))。
 4. **导演**:God 更新张力、在**张力跃升(≥1.5)或已在高位(≥7)且仍上行**时插入**旁白**(高位但持平/衰减的回合不插,天然防刷屏)、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。
-5. **World Reactor**:LLM 读本回合发生的事(prompt 携带世界**物理 + 红线**作软约束),**提议结构化 `Delta[]`**;每个 `validateDelta`(对照规则:结构/空间 + **红线关键词硬筛**)→ 合法才 `applyDelta`(不可变更新)→ 落库([`engine/reactor.ts`](../src/lib/engine/reactor.ts), [`world/delta.ts`](../src/lib/world/delta.ts))。
+5. **World Reactor**:LLM 读本回合发生的事(prompt 携带世界**物理 + 红线**作软约束,且**证据优先**:只为近期发言里确已发生的事提议 delta,不为被提及/打算/假设的事写),**提议结构化 `Delta[]`**;每个 `validateDelta`(对照规则:结构/空间 + **红线关键词硬筛** + **空操作丢弃**:状态/体态/锁态没真变的 delta 不落库)→ 合法才 `applyDelta`(不可变更新)→ 落库([`engine/reactor.ts`](../src/lib/engine/reactor.ts), [`world/delta.ts`](../src/lib/world/delta.ts))。
 6. **记忆**:各角色把**自己见证**的写入观察,周期性**反思**([`memory/`](../src/lib/memory/))。
 
 模型从不直接写世界——它提议,引擎校验。"不能去不存在的房间"这类非法 delta 被丢弃,世界因此**有因果且永不自相矛盾**。
@@ -60,7 +60,7 @@
 | **主观记忆** | witness 作用域观察;检索按 `近期×相关×重要`;周期反思成更高层信念 | `src/lib/memory/` |
 | **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻:同 id 重惩 + **同题材近期占比软降权**)| `src/lib/taste/` |
 | **世界生成器** | 条件化(贴合/故意发散避免局部最优)产出完整可玩种子;冷启动跨题材铺开;后台预生成池 | `world/generate.ts` · `world/pregenerate.ts` |
-| **Lorebook** | 关键词触发正典注入;`establishLore` 让设定按需结晶 | `world/lore.ts` |
+| **Lorebook** | 关键词触发正典注入 + **递归级联激活**(命中条目的正文再触发它提到的条目→知识图谱式按需展开,受条数/字数预算约束);`establishLore` 让设定按需结晶 | `world/lore.ts` |
 | **展示层** | 冷开场世界卡(genre/mood/intensity/hook/cast/accent);逐字打入;开门转场;重生成上一条 | `src/app/page.tsx` · `src/app/play/page.tsx` · `DoorTransition.tsx` · `world/presentation.ts` |
 | **创作/导入** | 创作者世界表单;SillyTavern V2 角色卡(PNG tEXt)导入 | `src/app/create/` · `world/author.ts` · `import/` |
 

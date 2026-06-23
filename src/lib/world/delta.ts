@@ -99,16 +99,22 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       }
       return { ok: true };
     }
-    case "setObjectState":
-      return state.objects[d.objectId] ? { ok: true } : { ok: false, reason: `对象 ${d.objectId} 不存在` };
+    case "setObjectState": {
+      const o = state.objects[d.objectId];
+      if (!o) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if (o.state === d.state) return { ok: false, reason: `对象 ${d.objectId} 状态未变(空操作)` };
+      return { ok: true };
+    }
     case "setFlag":
       return d.key ? { ok: true } : { ok: false, reason: "flag key 为空" };
     case "advanceTime":
       return { ok: true };
-    case "setCondition":
-      return state.roster[d.entityId]
-        ? { ok: true }
-        : { ok: false, reason: `实体 ${d.entityId} 不在名册中` };
+    case "setCondition": {
+      const ent = state.roster[d.entityId];
+      if (!ent) return { ok: false, reason: `实体 ${d.entityId} 不在名册中` };
+      if (ent.condition === d.condition) return { ok: false, reason: `实体 ${d.entityId} 体态未变(空操作)` };
+      return { ok: true };
+    }
     case "establishObject": {
       if (!state.locations[d.locationId])
         return { ok: false, reason: `地点 ${d.locationId} 不存在` };
@@ -173,8 +179,12 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
         return { ok: false, reason: `${obj.name} 搬不动` };
       return { ok: true };
     }
-    case "setObjectLocked":
-      return state.objects[d.objectId] ? { ok: true } : { ok: false, reason: `对象 ${d.objectId} 不存在` };
+    case "setObjectLocked": {
+      const o = state.objects[d.objectId];
+      if (!o) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if ((o.props?.locked ?? false) === d.locked) return { ok: false, reason: `对象 ${d.objectId} 锁态未变(空操作)` };
+      return { ok: true };
+    }
     case "fleshLocation":
       if (!state.locations[d.locationId]) return { ok: false, reason: `地点 ${d.locationId} 不存在` };
       if (!d.description?.trim()) return { ok: false, reason: "充实描述不能为空" };
