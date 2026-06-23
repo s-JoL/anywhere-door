@@ -6,7 +6,9 @@ export type Delta =
   | { kind: "setFlag"; key: string; value: string | number | boolean }
   | { kind: "advanceTime"; clock?: string; lighting?: string; dayDelta?: number }
   | { kind: "setCondition"; entityId: string; condition: string }
-  | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string };
+  | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string }
+  | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
+  | { kind: "moveScene"; toLocationId: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -37,6 +39,22 @@ export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): 
         return { ok: false, reason: `地点 ${d.locationId} 不存在` };
       if (state.objects[d.id])
         return { ok: false, reason: `对象 ${d.id} 已存在` };
+      return { ok: true };
+    }
+    case "establishLocation": {
+      if (state.locations[d.id])
+        return { ok: false, reason: `地点 ${d.id} 已存在` };
+      const fromId = d.connectFrom ?? state.currentLocationId;
+      if (!state.locations[fromId])
+        return { ok: false, reason: `连接来源地点 ${fromId} 不存在` };
+      return { ok: true };
+    }
+    case "moveScene": {
+      if (!state.locations[d.toLocationId])
+        return { ok: false, reason: `目标地点 ${d.toLocationId} 不存在` };
+      const cur = state.locations[state.currentLocationId];
+      if (d.toLocationId !== state.currentLocationId && !cur?.connections.includes(d.toLocationId))
+        return { ok: false, reason: `${state.currentLocationId} 与 ${d.toLocationId} 不相连` };
       return { ok: true };
     }
   }
@@ -95,5 +113,32 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         },
       };
     }
+    case "establishLocation": {
+      const fromId = d.connectFrom ?? state.currentLocationId;
+      const fromLoc = state.locations[fromId];
+      const newLoc = {
+        id: d.id,
+        name: d.name,
+        detail: "fleshed" as const,
+        gist: d.gist ?? "",
+        description: d.description,
+        connections: [fromId],
+        presentCharacterIds: [],
+        objectIds: [],
+      };
+      const fromConns = fromLoc.connections.includes(d.id)
+        ? fromLoc.connections
+        : [...fromLoc.connections, d.id];
+      return {
+        ...state,
+        locations: {
+          ...state.locations,
+          [fromId]: { ...fromLoc, connections: fromConns },
+          [d.id]: newLoc,
+        },
+      };
+    }
+    case "moveScene":
+      return { ...state, currentLocationId: d.toLocationId };
   }
 }

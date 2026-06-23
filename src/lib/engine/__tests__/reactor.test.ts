@@ -73,7 +73,7 @@ describe("parseDeltas", () => {
     expect(result).toHaveLength(8);
   });
 
-  it("handles all 6 valid kinds", () => {
+  it("handles all 6 original valid kinds", () => {
     const text = JSON.stringify([
       { kind: "moveCharacter", characterId: "c1", toLocationId: "loc1" },
       { kind: "setObjectState", objectId: "o1", state: "broken" },
@@ -84,6 +84,56 @@ describe("parseDeltas", () => {
     ]);
     const result = parseDeltas(text);
     expect(result).toHaveLength(6);
+  });
+
+  it("accepts establishLocation kind with required fields", () => {
+    const text = JSON.stringify([
+      { kind: "establishLocation", id: "backroom", name: "里屋", gist: "昏暗内室", connectFrom: "bar" },
+    ]);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "establishLocation", id: "backroom", name: "里屋", gist: "昏暗内室", connectFrom: "bar" });
+  });
+
+  it("drops establishLocation missing required id or name", () => {
+    const text = JSON.stringify([
+      { kind: "establishLocation", name: "里屋" }, // missing id
+      { kind: "establishLocation", id: "backroom" }, // missing name
+    ]);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(0);
+  });
+
+  it("accepts moveScene kind with required toLocationId", () => {
+    const text = JSON.stringify([
+      { kind: "moveScene", toLocationId: "backroom" },
+    ]);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "moveScene", toLocationId: "backroom" });
+  });
+
+  it("drops moveScene missing toLocationId", () => {
+    const text = JSON.stringify([
+      { kind: "moveScene" }, // missing toLocationId
+    ]);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(0);
+  });
+
+  it("accepts all 8 kinds together", () => {
+    const text = JSON.stringify([
+      { kind: "moveCharacter", characterId: "c1", toLocationId: "loc1" },
+      { kind: "setObjectState", objectId: "o1", state: "broken" },
+      { kind: "setFlag", key: "done", value: true },
+      { kind: "advanceTime", clock: "深夜", lighting: "暗", dayDelta: 1 },
+      { kind: "setCondition", entityId: "you", condition: "受伤" },
+      { kind: "establishObject", id: "new-obj", name: "匕首", locationId: "bar" },
+      { kind: "establishLocation", id: "backroom", name: "里屋" },
+      { kind: "moveScene", toLocationId: "backroom" },
+    ]);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(8);
   });
 
   it("drops setCondition missing required fields", () => {
@@ -158,5 +208,22 @@ describe("react", () => {
     const state = baseState();
     const deltas = await react({ state, recentLines: [], nameById: {}, llm: proseLlm });
     expect(deltas).toEqual([]);
+  });
+
+  it("returns establishLocation + moveScene + moveCharacter from fake llm", async () => {
+    const fakeLlm = async () => ({
+      content: '[{"kind":"establishLocation","id":"back","name":"里屋","connectFrom":"bar"},{"kind":"moveScene","toLocationId":"back"},{"kind":"moveCharacter","characterId":"c-lan","toLocationId":"back"}]',
+    });
+    const state = baseState();
+    const deltas = await react({
+      state,
+      recentLines: ["你：我拽她进里屋。"],
+      nameById: { "c-lan": "阿岚", you: "你" },
+      llm: fakeLlm,
+    });
+    expect(deltas).toHaveLength(3);
+    expect(deltas[0]).toEqual({ kind: "establishLocation", id: "back", name: "里屋", connectFrom: "bar" });
+    expect(deltas[1]).toEqual({ kind: "moveScene", toLocationId: "back" });
+    expect(deltas[2]).toEqual({ kind: "moveCharacter", characterId: "c-lan", toLocationId: "back" });
   });
 });
