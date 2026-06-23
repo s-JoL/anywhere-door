@@ -11,7 +11,8 @@ export type Delta =
   | { kind: "moveScene"; toLocationId: string }
   | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
   | { kind: "establishLore"; id: string; keys: string[]; content: string }
-  | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string };
+  | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
+  | { kind: "moveObject"; objectId: string; toLocationId: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -116,10 +117,20 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       return { ok: true };
     }
     case "establishCharacter": {
-      if (!d.name) return { ok: false, reason: "角色名不能为空" };
+      if (!d.name?.trim()) return { ok: false, reason: "角色名不能为空" };
       if (state.roster[d.id]) return { ok: false, reason: `角色 ${d.id} 已存在` };
       if (!state.locations[d.locationId])
         return { ok: false, reason: `地点 ${d.locationId} 不存在` };
+      return { ok: true };
+    }
+    case "moveObject": {
+      const obj = state.objects[d.objectId];
+      if (!obj) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if (!state.locations[d.toLocationId])
+        return { ok: false, reason: `目标地点 ${d.toLocationId} 不存在` };
+      // 物理因果:显式标记不可携带的物体搬不走(默认可移动)。
+      if (obj.props?.portable === false)
+        return { ok: false, reason: `${obj.name} 搬不动` };
       return { ok: true };
     }
   }
@@ -243,6 +254,20 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
               : [...loc.presentCharacterIds, d.id],
           },
         },
+      };
+    }
+    case "moveObject": {
+      const obj = state.objects[d.objectId];
+      const locations: WorldState["locations"] = {};
+      for (const [id, loc] of Object.entries(state.locations)) {
+        const objectIds = loc.objectIds.filter((o) => o !== d.objectId);
+        if (id === d.toLocationId && !objectIds.includes(d.objectId)) objectIds.push(d.objectId);
+        locations[id] = { ...loc, objectIds };
+      }
+      return {
+        ...state,
+        objects: { ...state.objects, [d.objectId]: { ...obj, locationId: d.toLocationId } },
+        locations,
       };
     }
   }

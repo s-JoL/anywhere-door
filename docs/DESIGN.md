@@ -43,7 +43,8 @@
 
 - **`WorldRules`**(不可变):physics / setting / redLines。**红线双层强制**:① 软约束——`physics+redLines` 注入 World Reactor 的 system prompt,提议阶段就规避违规;② 硬兜底——`validateDelta` 对 delta 的自由文本字段(condition/state/lore content/disposition…)做**保守的红线关键词子串筛查**,字面命中即丢弃(散文式整句红线不会误伤合法 delta,语义约束交给软约束层)。
 - **`WorldState`**(可变):`currentLocationId`(=玩家/镜头所在)、`time`、`locations`、`objects`、`roster`(含玩家 `you` 的 `condition`)、`flags`、`tension`、`relationships`(fromId→toId→态度短语)、`lore`(`LoreEntry[]`)。
-- **`Delta`(10 种)**:`moveCharacter` · `setObjectState` · `setFlag` · `advanceTime` · `setCondition` · `establishObject` · `establishLocation` · `moveScene` · `setRelationship` · `establishLore`。后四类让世界**按需生长**(新地点/新物体/新关系/新正典),呼应 Minecraft 式"按需补细节、结晶为 canon"。
+- **`Delta`(12 种)**:`moveCharacter` · `setObjectState` · `setFlag` · `advanceTime` · `setCondition` · `establishObject` · `establishLocation` · `moveScene` · `setRelationship` · `establishLore` · `establishCharacter` · `moveObject`。`establish*` 让世界**按需生长**(新地点/新物体/新关系/新正典/新角色),呼应 Minecraft 式"按需补细节、结晶为 canon"。
+- **物理因果**:`moveObject` 让物品在地点间被拿走/递出/搬动并持久落实(改 `locationId` + 两地点 `objectIds`);`validateDelta` 强制 `props.portable === false` 的固定物**搬不动**(默认可移动)。因为 `visibleScene` 按 `objectIds` 列「可见物」,物品移动**真的改变各角色当下看到的东西**。
 - 类型定义见 [`src/lib/types.ts`](../src/lib/types.ts);delta 校验/应用见 [`world/delta.ts`](../src/lib/world/delta.ts)。
 
 ## 5. 子系统

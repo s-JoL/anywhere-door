@@ -391,4 +391,37 @@ describe("react", () => {
     expect(deltas).toHaveLength(1);
     expect(deltas[0].kind).toBe("establishCharacter");
   });
+
+  it("react: returns moveObject delta from fake llm", async () => {
+    const fakeLlm = async () => ({
+      content: '[{"kind":"moveObject","objectId":"o-glass","toLocationId":"street"}]',
+    });
+    const deltas = await react({
+      state: baseState(),
+      recentLines: ["你：我端起酒杯走向门口。"],
+      nameById: { "c-lan": "阿岚", you: "你" },
+      llm: fakeLlm,
+    });
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0]).toEqual({ kind: "moveObject", objectId: "o-glass", toLocationId: "street" });
+  });
+});
+
+describe("parseDeltas moveObject", () => {
+  it("extracts a well-formed moveObject", () => {
+    const result = parseDeltas('[{"kind":"moveObject","objectId":"o-glass","toLocationId":"street"}]');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "moveObject", objectId: "o-glass", toLocationId: "street" });
+  });
+  it("drops moveObject missing toLocationId", () => {
+    expect(parseDeltas('[{"kind":"moveObject","objectId":"o-glass"}]')).toHaveLength(0);
+  });
+});
+
+describe("buildReactorPrompt moveObject", () => {
+  it("documents moveObject in the system prompt and counts 12 kinds", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[0].content).toContain("moveObject");
+    expect(msgs[0].content).toContain("12 种");
+  });
 });
