@@ -1,6 +1,7 @@
 import { AnywhereDoorDB } from "./dexie-db";
 import type { Repository } from "./repository";
 import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
+import type { DeltaLogEntry } from "../world/delta";
 
 export class IndexedDbRepository implements Repository {
   private db = new AnywhereDoorDB();
@@ -38,5 +39,10 @@ export class IndexedDbRepository implements Repository {
   async listTasteEvents(): Promise<TasteEvent[]> {
     const rows = await this.db.tasteEvents.orderBy("at").toArray();
     return rows;
+  }
+  async appendDeltaLog(e: DeltaLogEntry) { await this.db.deltaLog.put(e); }
+  async listDeltaLog(instanceId: string): Promise<DeltaLogEntry[]> {
+    const rows = await this.db.deltaLog.where("instanceId").equals(instanceId).toArray();
+    return rows.sort((a, b) => a.at - b.at);
   }
 }

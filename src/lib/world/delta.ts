@@ -19,6 +19,25 @@ export type Delta =
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
+/** delta 的来源类别(用于事件日志归因)。 */
+export type DeltaSource = "user" | "reactor" | "flesh" | "offscreen";
+
+/**
+ * 事件日志一条:每个**经校验落库的 delta** 追加一条,记录 turn / 世界时间 / 逻辑时戳 /
+ * 触发它的玩家输入。快照是当前态的快读;日志是历史——延时回调 / 声誉 / 离场演化都读它。
+ */
+export interface DeltaLogEntry {
+  id: string;
+  instanceId: string;
+  turn: number;
+  source: DeltaSource;
+  cause: string;        // 触发本回合变化的玩家输入/动作
+  gameDay: number;
+  gameClock: string;
+  at: number;           // 单调逻辑时戳(nextTime)
+  delta: Delta;
+}
+
 /** 一条 delta 里会落进世界的自由文本字段(用于红线筛查)。 */
 function freeTextFields(d: Delta): string[] {
   switch (d.kind) {

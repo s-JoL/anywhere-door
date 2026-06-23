@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
+import type { DeltaLogEntry } from "../world/delta";
 
 export class AnywhereDoorDB extends Dexie {
   instances!: Table<WorldInstance, string>;
@@ -7,6 +8,7 @@ export class AnywhereDoorDB extends Dexie {
   memories!: Table<Memory, string>;
   seeds!: Table<WorldSeed, string>;
   tasteEvents!: Table<TasteEvent, string>;
+  deltaLog!: Table<DeltaLogEntry, string>;
   constructor(name = "anywhere-door") {
     super(name);
     this.version(1).stores({
@@ -21,6 +23,9 @@ export class AnywhereDoorDB extends Dexie {
     });
     this.version(4).stores({
       tasteEvents: "id, at, seedId",
+    });
+    this.version(5).stores({
+      deltaLog: "id, instanceId, [instanceId+turn], at",
     });
   }
 }

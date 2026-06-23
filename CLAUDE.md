@@ -118,7 +118,8 @@ epistemic integrity.
   fast-read current state; every validated delta is appended to a per-instance
   event log (`delta / turn / game-time / real-time / the line that caused it`).
   Delayed callbacks, world reputation, and off-screen evolution all depend on
-  this log. *[direction decided · event log not yet built]*
+  this log. *[built — per-instance append-only `DeltaLogEntry` (delta / turn /
+  game-time / logical-time / cause); every validated delta is logged in `turn.ts`]*
 - **Interaction-driven evolution**: the world advances only when you interact; it
   freezes when you leave (zero idle cost).
 - **BYO-key · local-first**: production is strictly bring-your-own-key; all data

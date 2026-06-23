@@ -123,6 +123,7 @@ export interface WorldInstance {
   createdAt: number;
   updatedAt: number;
   lastTurnSnapshot?: TurnSnapshot;
+  turn?: number; // 已进行的回合数(事件日志归因)
 }
 
 export interface Message {

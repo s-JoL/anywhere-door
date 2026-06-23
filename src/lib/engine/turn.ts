@@ -1,6 +1,6 @@
 import type { WorldSeed, WorldState, WorldInstance, ChatMessage, Message, TurnSnapshot } from "../types";
 import type { Repository } from "../storage";
-import type { Delta } from "../world/delta";
+import type { Delta, DeltaSource } from "../world/delta";
 import { validateDelta, applyDelta } from "../world/delta";
 import { buildCharacterPrompt, presentCharacters, stripSpeakerPrefix } from "./prompt";
 import { decideIntent } from "./intent";
@@ -122,13 +122,21 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
 
   let state = inst.state;
 
+  // 事件日志:本回合号 + 把每条落库 delta 追加到 per-instance 日志(归因 source/cause/世界时间)
+  const turn = (inst.turn ?? 0) + 1;
+  const logDelta = (delta: Delta, source: DeltaSource) =>
+    repo.appendDeltaLog({
+      id: newId("dl"), instanceId, turn, source, cause: input,
+      gameDay: state.time.day, gameClock: state.time.clock, at: nextTime(), delta,
+    });
+
   // Off-screen evolution seam (no-op today). When implemented, this advances the
   // world to reflect time spent away before the player's new action is processed.
   // TODO: compute real elapsed time when off-screen evolution is implemented
   const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway: 0, llm });
   for (const d of awayDeltas) {
     const v = validateDelta(state, seed.rules, d);
-    if (v.ok) state = applyDelta(state, d);
+    if (v.ok) { state = applyDelta(state, d); await logDelta(d, "offscreen"); }
     else console.warn(`[offscreen] 丢弃非法 delta: ${v.reason}`);
   }
 
@@ -140,7 +148,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
 
     for (const d of deltas) {
       const v = validateDelta(state, seed.rules, d);
-      if (v.ok) state = applyDelta(state, d);
+      if (v.ok) { state = applyDelta(state, d); await logDelta(d, "user"); }
       else console.warn(`[turn] 丢弃非法 delta: ${v.reason}`);
     }
 
@@ -236,6 +244,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       const v = validateDelta(state, seed.rules, d);
       if (!v.ok) { console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`); continue; }
       state = applyDelta(state, d);
+      await logDelta(d, "reactor");
       // evidence→记忆:关系调整的"凭什么"也成为当事人(fromId)的一条主观观察,进入检索与反思
       if (d.kind === "setRelationship" && d.reason?.trim()) {
         await repo.appendMemory(buildSelfMemory(d.fromId, `（我记下）${d.reason.trim()}`, 6));
@@ -248,11 +257,11 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       const fd = await fleshStubLocation(seed, here, llm);
       if (fd) {
         const v = validateDelta(state, seed.rules, fd);
-        if (v.ok) state = applyDelta(state, fd);
+        if (v.ok) { state = applyDelta(state, fd); await logDelta(fd, "flesh"); }
       }
     }
 
-    await repo.upsertInstance({ ...inst, state, lastTurnSnapshot: snapshot, updatedAt: nextTime() });
+    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime() });
 
     // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
     await maybeReflect({

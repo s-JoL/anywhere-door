@@ -169,6 +169,27 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(lan.some((m) => m.text.includes("拿走了她的剑"))).toBe(true);
   });
 
+  it("appends each applied delta to the event log with turn/source/cause, and bumps the turn counter", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-log"));
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) return { content: '[{"kind":"setObjectState","objectId":"o-glass","state":"打翻在吧台上"}]' };
+      if (sys.includes("世界环境作家")) return { content: "x" };
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: "……" };
+    };
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-log", input: "我把杯子碰翻。", llm });
+    const log = await repo.listDeltaLog("w-log");
+    const entry = log.find((e) => e.source === "reactor" && e.delta.kind === "setObjectState");
+    expect(entry).toBeDefined();
+    expect(entry?.turn).toBe(1);
+    expect(entry?.cause).toBe("我把杯子碰翻。");
+    expect(entry?.gameDay).toBe(1);
+    expect((await repo.getInstance("w-log"))?.turn).toBe(1);
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));
