@@ -13,6 +13,7 @@ const VALID_KINDS = new Set([
   "moveScene",
   "setRelationship",
   "establishLore",
+  "establishCharacter",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -46,6 +47,8 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && typeof item.disposition === "string") {
         result.push(item as Delta);
       } else if (item.kind === "establishLore" && typeof item.id === "string" && Array.isArray(item.keys) && item.keys.every((k: unknown) => typeof k === "string") && typeof item.content === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "establishCharacter" && typeof item.id === "string" && typeof item.name === "string" && typeof item.locationId === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;
@@ -96,7 +99,7 @@ export function buildReactorPrompt(
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（10 种，选用实际发生的）：
+Delta JSON 格式（11 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
@@ -107,8 +110,11 @@ Delta JSON 格式（10 种，选用实际发生的）：
 {"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
 {"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
 {"kind":"establishLore","id":"新设定id","keys":["会再次被提到的词","别名"],"content":"一句永久世界设定"}
+{"kind":"establishCharacter","id":"新角色id","name":"角色名","role":"一句话身份/定位","goal":"(可选)当前目标","locationId":"<locations中的id>"}
 
 当某个**重要且持久的世界事实**首次确立(某地的来历、一个门派/势力、一条世界规则、一个秘密的真相),用 establishLore 记成永久设定(keys 填日后会再次被提到的词)。已有设定不要重复;只记真正持久、值得日后再次被唤起的 canon,琐碎或一次性细节不要记。
+
+当剧情中出现一个**此前不存在、且会持续存在或重要的人物**时,用 establishCharacter 把他/她确立为世界的一部分(locationId 填其所在地点)——这是**世界细化出它自己的一部分,不是从外部引入**。只在确有新人物且值得持久时使用;一次性的、无名的过场路人不要确立。
 
 场景移动规则：当玩家或角色走到一个尚未存在的地方，先用 establishLocation 造出它（connectFrom 填当前地点），再用 moveScene 把镜头移过去，并用 moveCharacter 把同行的角色移过去。只在确有移动/新场景时才发。
 

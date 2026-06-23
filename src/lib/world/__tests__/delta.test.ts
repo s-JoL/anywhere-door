@@ -325,6 +325,47 @@ describe("setRelationship delta", () => {
   });
 });
 
+describe("establishCharacter", () => {
+  it("validateDelta rejects empty name", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "", locationId: "bar" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects id already in roster (covers seed characters)", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c1", name: "冒牌", locationId: "bar" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects a nonexistent location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "守卫", locationId: "nowhere" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta accepts a valid new character", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "守卫", role: "门口的守卫", locationId: "bar" });
+    expect(r.ok).toBe(true);
+  });
+  it("applyDelta adds a stub character to state.characters with role→description", () => {
+    const next = applyDelta(baseState(), { kind: "establishCharacter", id: "c-new", name: "守卫", role: "门口的守卫", goal: "盘问来客", locationId: "bar" });
+    expect(next.characters?.["c-new"]).toMatchObject({
+      id: "c-new",
+      name: "守卫",
+      description: "门口的守卫",
+      detail: "stub",
+      goal: "盘问来客",
+    });
+  });
+  it("applyDelta registers the character in roster and makes it present", () => {
+    const next = applyDelta(baseState(), { kind: "establishCharacter", id: "c-new", name: "守卫", locationId: "bar" });
+    expect(next.roster["c-new"]).toEqual({ name: "守卫" });
+    expect(next.locations.bar.presentCharacterIds).toContain("c-new");
+  });
+  it("applyDelta does NOT mutate input state", () => {
+    const s = baseState();
+    applyDelta(s, { kind: "establishCharacter", id: "c-new", name: "守卫", locationId: "bar" });
+    expect(s.characters).toBeUndefined();
+    expect(s.roster["c-new"]).toBeUndefined();
+    expect(s.locations.bar.presentCharacterIds).not.toContain("c-new");
+  });
+});
+
 describe("applyDelta (immutable)", () => {
   it("moves a character between locations without mutating input", () => {
     const s = baseState();
