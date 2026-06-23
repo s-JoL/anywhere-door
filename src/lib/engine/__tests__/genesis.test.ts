@@ -23,12 +23,14 @@ describe("entity genesis primitive (compose)", () => {
     const present = presentCharacters(DEMO_SEED, state);
     expect(present.map((c) => c.id)).toContain("c-stranger");
     const stranger = present.find((c) => c.id === "c-stranger")!;
+    expect(stranger).toBeDefined();
     expect(stranger.name).toBe("陌生人");
     expect(stranger.detail).toBe("stub");
 
     // persisted instance-privately (NOT in the frozen seed) + in roster
     expect(state.characters?.["c-stranger"]).toBeDefined();
     expect(DEMO_SEED.characters.find((c) => c.id === "c-stranger")).toBeUndefined();
+    expect(DEMO_SEED.openingState.locations["bar"].presentCharacterIds).not.toContain("c-stranger");
     expect(state.roster["c-stranger"]).toEqual({ name: "陌生人" });
   });
 
