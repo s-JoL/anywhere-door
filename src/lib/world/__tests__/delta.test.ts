@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateDelta, applyDelta, type Delta } from "../delta";
+import { validateDelta, applyDelta } from "../delta";
 import type { WorldState, WorldRules } from "../../types";
 
 const rules: WorldRules = { physics: "无超自然", setting: "现代酒馆", redLines: [] };

@@ -77,9 +77,6 @@ describe("noveltyOf", () => {
   });
 
   it("mixed (half absent/zero, half positive) → ~0.5", () => {
-    const seed = makeSeed("s1", "武侠", ["江湖"]);
-    // tags: ["genre:武侠", "mood:江湖", "intensity:charged"]
-    // 2 of 3 absent, 1 has positive weight... but let's make exactly half
     // Use a seed with 2 tags total: one positive, one absent
     const seed2 = makeSeed("s2", "武侠", []);
     // tags: ["genre:武侠", "intensity:charged"] — 2 tags
