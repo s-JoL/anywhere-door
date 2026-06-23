@@ -4,6 +4,8 @@ import {
   buildGeneratorPrompt,
   parseGeneratedSeed,
   generateWorld,
+  DIVERSE_PALETTE,
+  pickDiverseTargets,
 } from "../generate";
 import { instantiate } from "../instance";
 import type { ModelConfig } from "@/lib/types";
@@ -120,6 +122,75 @@ describe("buildGeneratorPrompt", () => {
     const all = msgs.map((m) => m.content).join("\n");
     expect(all).toContain("禁忌之城");
     expect(all).toContain("另一个");
+  });
+
+  it("always carries the anti-default-dark / no-shared-motif spread instruction", () => {
+    const all = buildGeneratorPrompt({}, "exploit", [])
+      .map((m) => m.content)
+      .join("\n");
+    // anti-default-dark
+    expect(all).toMatch(/不要默认走暗黑|不要默认.*暗黑/);
+    // no-shared-motif
+    expect(all).toMatch(/母题|第七层/);
+  });
+
+  it("honors opts.target genre/tone and opts.avoidGenres", () => {
+    const msgs = buildGeneratorPrompt({}, "exploit", [], {
+      target: { genre: "治愈日常", mood: ["温暖", "治愈"], intensity: "calm" },
+      avoidGenres: ["武侠江湖"],
+    });
+    const all = msgs.map((m) => m.content).join("\n");
+    // the requested genre is named
+    expect(all).toContain("治愈日常");
+    // it is told to avoid the over-represented genre
+    expect(all).toContain("武侠江湖");
+    // still carries the spread instruction
+    expect(all).toMatch(/不要默认走暗黑|不要默认.*暗黑/);
+    expect(all).toMatch(/母题|第七层/);
+  });
+});
+
+describe("DIVERSE_PALETTE & pickDiverseTargets", () => {
+  it("palette spans the spectrum with light/cozy AND explicit entries", () => {
+    expect(DIVERSE_PALETTE.length).toBeGreaterThanOrEqual(10);
+    const intensities = new Set(DIVERSE_PALETTE.map((p) => p.intensity));
+    expect(intensities.has("calm")).toBe(true);
+    expect(intensities.has("explicit")).toBe(true);
+    // genres are unique within the palette
+    const genres = DIVERSE_PALETTE.map((p) => p.genre);
+    expect(new Set(genres).size).toBe(genres.length);
+  });
+
+  it("pickDiverseTargets(4, []) returns 4 distinct genres incl. ≥1 calm/light", () => {
+    const picked = pickDiverseTargets(4, []);
+    expect(picked.length).toBe(4);
+    const genres = picked.map((p) => p.genre);
+    expect(new Set(genres).size).toBe(4);
+    expect(picked.some((p) => p.intensity === "calm")).toBe(true);
+  });
+
+  it("pickDiverseTargets skips genres already in existingGenres", () => {
+    const picked = pickDiverseTargets(3, ["治愈日常", "恐怖惊悚"]);
+    expect(picked.length).toBe(3);
+    const genres = picked.map((p) => p.genre);
+    expect(genres).not.toContain("治愈日常");
+    expect(genres).not.toContain("恐怖惊悚");
+    expect(new Set(genres).size).toBe(3);
+  });
+
+  it("is deterministic (no randomness)", () => {
+    const a = pickDiverseTargets(5, ["科幻冒险"]).map((p) => p.genre);
+    const b = pickDiverseTargets(5, ["科幻冒险"]).map((p) => p.genre);
+    expect(a).toEqual(b);
+  });
+
+  it("allows wrap-around repeats only after all genres are exhausted", () => {
+    const n = DIVERSE_PALETTE.length + 2;
+    const picked = pickDiverseTargets(n, []);
+    expect(picked.length).toBe(n);
+    // first full cycle is all-distinct
+    const firstCycle = picked.slice(0, DIVERSE_PALETTE.length).map((p) => p.genre);
+    expect(new Set(firstCycle).size).toBe(DIVERSE_PALETTE.length);
   });
 });
 

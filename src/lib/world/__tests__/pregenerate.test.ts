@@ -92,6 +92,44 @@ describe("ensureGeneratedPool", () => {
     expect((await repo.listSeeds()).filter((s) => s.source === "generated").length).toBe(3);
   });
 
+  it("cold start (empty profile) spreads generations across distinct genres", async () => {
+    const repo = getRepository();
+    // A fake llm that reads the requested target genre out of the prompt and
+    // echoes it back in a valid seed, so the test is deterministic.
+    let n = 0;
+    const llm = async (messages: { role: string; content: string }[]) => {
+      const all = messages.map((m) => m.content).join("\n");
+      // The prompt names the requested target genre via 「<genre>」.
+      const m = all.match(/【指定题材[^】]*】[^「]*「([^」]+)」/);
+      const genre = m ? m[1] : "故事";
+      // Read the intensity straight out of the forced-target block:
+      // "…，烈度：calm（…" / "charged（…" / "explicit（…".
+      const im = all.match(/烈度：(calm|charged|explicit)/);
+      const intensity = im ? im[1] : "charged";
+      const world = makeWorld("世界" + n++);
+      world.presentation.genre = genre;
+      world.presentation.intensity = intensity;
+      return { content: JSON.stringify(world) };
+    };
+    const added = await ensureGeneratedPool({
+      repo,
+      llm,
+      modelConfig: MODEL,
+      profile: {}, // cold
+      target: 4,
+    });
+    expect(added).toBe(4);
+    const generated = (await repo.listSeeds()).filter(
+      (s) => s.source === "generated",
+    );
+    const genres = generated.map((s) => s.presentation?.genre ?? "");
+    // distinct spread across the palette
+    expect(new Set(genres).size).toBeGreaterThanOrEqual(3);
+    // not all explicit/dark — at least one non-explicit intensity
+    const intensities = generated.map((s) => s.presentation?.intensity);
+    expect(intensities.some((i) => i !== "explicit")).toBe(true);
+  });
+
   it("returns 0 when already at target (no llm calls needed)", async () => {
     const repo = getRepository();
     let calls = 0;
