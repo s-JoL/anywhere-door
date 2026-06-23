@@ -24,6 +24,10 @@ export const DEMO_SEED: WorldSeed = {
     objects: { "o-glass": { id: "o-glass", name: "威士忌杯", detail: "fleshed", props: { portable: true }, locationId: "bar", state: "空着，杯底一圈水痕" } },
     roster: { "c-lan": { name: "阿岚" }, "c-zhou": { name: "老周" }, "c-mei": { name: "阿梅" } },
     flags: {},
+    lore: [
+      { id: "lore-wudeng", keys: ["無燈", "無燈酒馆", "酒馆"], content: "酒馆唤作『無燈』，店里有条不成文的规矩：进了门便不问来路、不提旧账，灯下说的话出了门就当没说过。" },
+      { id: "lore-saidu", keys: ["城南赌坊", "赌坊", "收账"], content: "城南赌坊掌着这座雨城半数人的欠条，放出去的债连本带利，收账的人笑得越甜，手段越狠。" },
+    ],
   },
   modelConfig: { provider: "openrouter", apiKey: "", model: "deepseek/deepseek-v4-pro", reasoningEnabled: false },
   presentation: {

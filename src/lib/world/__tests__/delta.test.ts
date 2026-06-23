@@ -37,6 +37,46 @@ describe("validateDelta", () => {
     const r = validateDelta(baseState(), rules, { kind: "setObjectState", objectId: "nope", state: "碎了" });
     expect(r.ok).toBe(false);
   });
+
+  it("accepts a fresh establishLore", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本禁书" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("rejects establishLore with a duplicate id", () => {
+    const s = baseState();
+    s.lore = [{ id: "l1", keys: ["旧"], content: "旧设定" }];
+    const r = validateDelta(s, rules, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本禁书" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects establishLore with empty keys", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLore", id: "l1", keys: [], content: "一本禁书" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects establishLore with empty content", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "" });
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe("applyDelta establishLore", () => {
+  it("appends a lore entry immutably without mutating the original", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本禁书" });
+    expect(next.lore).toEqual([{ id: "l1", keys: ["血誓录"], content: "一本禁书" }]);
+    expect(s.lore).toBeUndefined();
+    expect(next).not.toBe(s);
+  });
+
+  it("appends to existing lore preserving prior entries", () => {
+    const s = baseState();
+    s.lore = [{ id: "l0", keys: ["孤山"], content: "孤山苦寒" }];
+    const next = applyDelta(s, { kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本禁书" });
+    expect(next.lore?.map((e) => e.id)).toEqual(["l0", "l1"]);
+    expect(s.lore).toHaveLength(1); // original untouched
+  });
 });
 
 describe("setCondition", () => {

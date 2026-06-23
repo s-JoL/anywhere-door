@@ -77,6 +77,42 @@ describe("prompt", () => {
     expect(sys).not.toContain("敌视");
   });
 
+  it("injects matched lore when its key appears in the current scene", () => {
+    const c = DEMO_SEED.characters[0];
+    // 無燈酒馆 is the opening location name — use it as a lore key so it matches the visible scene.
+    const stateWithLore = {
+      ...DEMO_SEED.openingState,
+      lore: [{ id: "l1", keys: ["無燈"], content: "無燈酒馆有条规矩：不问来路。" }],
+    };
+    const msgs = buildCharacterPrompt(DEMO_SEED, stateWithLore, c, {});
+    const all = msgs.map((m) => m.content).join("\n");
+    expect(all).toContain("無燈酒馆有条规矩：不问来路。");
+  });
+
+  it("injects matched lore when its key appears in recent memory context", () => {
+    const c = DEMO_SEED.characters[0];
+    const stateWithLore = {
+      ...DEMO_SEED.openingState,
+      lore: [{ id: "l1", keys: ["血誓录"], content: "血誓录是一本禁书。" }],
+    };
+    const msgs = buildCharacterPrompt(DEMO_SEED, stateWithLore, c, {
+      recent: [{ id: "r1", charId: c.id, kind: "observation", text: "你：我手里这本血誓录是什么？", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
+    });
+    const all = msgs.map((m) => m.content).join("\n");
+    expect(all).toContain("血誓录是一本禁书。");
+  });
+
+  it("does NOT inject lore whose key is not mentioned anywhere", () => {
+    const c = DEMO_SEED.characters[0];
+    const stateWithLore = {
+      ...DEMO_SEED.openingState,
+      lore: [{ id: "l1", keys: ["飞龙在天"], content: "飞龙在天是失传的剑诀。" }],
+    };
+    const msgs = buildCharacterPrompt(DEMO_SEED, stateWithLore, c, {});
+    const all = msgs.map((m) => m.content).join("\n");
+    expect(all).not.toContain("飞龙在天是失传的剑诀。");
+  });
+
   it("stripSpeakerPrefix removes a leading self-name prefix only", () => {
     expect(stripSpeakerPrefix("阿岚", "阿岚：（擦杯子）又是你。")).toBe("（擦杯子）又是你。");
     expect(stripSpeakerPrefix("阿岚", "阿岚:hi")).toBe("hi");

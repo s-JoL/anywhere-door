@@ -61,6 +61,10 @@ const VALID_WORLD = {
     ],
     accent: "#9ec5ff",
   },
+  lore: [
+    { keys: ["断剑", "霜河剑"], content: "断剑本是霜河剑，三百年前一战折断，至今认主。" },
+    { keys: ["霜河渡口"], content: "霜河渡口曾是江湖人北上的唯一关口。" },
+  ],
 };
 
 function llmReturning(text: string) {
@@ -221,6 +225,46 @@ describe("parseGeneratedSeed", () => {
     for (const c of seed.characters) {
       expect(seed.openingState.roster[c.id]).toBeDefined();
     }
+  });
+
+  it("maps generated lore into openingState.lore with assigned ids", () => {
+    const seed = parseGeneratedSeed(JSON.stringify(VALID_WORLD), MODEL, "lore");
+    expect(seed).not.toBeNull();
+    if (!seed) return;
+    const lore = seed.openingState.lore;
+    expect(lore).toBeDefined();
+    expect(lore!.length).toBe(2);
+    expect(lore![0].id).toMatch(/^lore-/);
+    expect(lore![0].keys).toContain("断剑");
+    expect(lore![0].content.length).toBeGreaterThan(0);
+    // unique ids
+    expect(new Set(lore!.map((l) => l.id)).size).toBe(lore!.length);
+  });
+
+  it("skips malformed lore entries safely (no keys / no content)", () => {
+    const withBadLore = {
+      ...VALID_WORLD,
+      lore: [
+        { keys: ["好的"], content: "有效设定" },
+        { keys: [], content: "缺键" },
+        { keys: ["缺内容"], content: "" },
+        { content: "缺键字段" },
+        "not an object",
+      ],
+    };
+    const seed = parseGeneratedSeed(JSON.stringify(withBadLore), MODEL, "bad");
+    expect(seed).not.toBeNull();
+    expect(seed!.openingState.lore).toEqual([
+      { id: "lore-0", keys: ["好的"], content: "有效设定" },
+    ]);
+  });
+
+  it("handles a world with no lore (lore stays undefined)", () => {
+    const noLore = { ...VALID_WORLD };
+    delete (noLore as { lore?: unknown }).lore;
+    const seed = parseGeneratedSeed(JSON.stringify(noLore), MODEL, "nolore");
+    expect(seed).not.toBeNull();
+    expect(seed!.openingState.lore).toBeUndefined();
   });
 
   it("tolerates JSON wrapped in prose / code fences", () => {

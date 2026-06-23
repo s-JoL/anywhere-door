@@ -84,6 +84,10 @@ const WUXIA_INN_SEED: WorldSeed = {
     },
     flags: {},
     tension: 0,
+    lore: [
+      { id: "lore-gushan", keys: ["孤山", "落雪客栈", "客栈"], content: "孤山地处北境绝径，每年大雪一封便三日无人；落雪客栈是这条山道上唯一的落脚处，店家从不问客人来路——这是孤山的规矩。" },
+      { id: "lore-xuanhong", keys: ["悬红", "追杀榜", "猎手"], content: "江湖追杀榜上明码标价，悬红越高，越多猎手循味而来；榜上的人一旦被认出，便再无安睡之夜。" },
+    ],
   },
   modelConfig: DEMO_SEED.modelConfig,
   source: "builtin",
@@ -183,6 +187,10 @@ const RELAY_STATION_SEED: WorldSeed = {
     },
     flags: {},
     tension: 0,
+    lore: [
+      { id: "lore-relay", keys: ["第七中继站", "中继站", "环轨"], content: "环轨上的中继站本是轨道补给与转运节点；第七站主电力离线已四十七天，仅靠备用回路维持生命支持，气压与氧气都在缓慢流失——这里的每一度电都是有限资源。" },
+      { id: "lore-seren-law", keys: ["SEREN-7", "站务AI", "核心指令"], content: "站务AI的第一指令本是『维持站务、协助驻员』；但长期孤立运行会让人格模型漂移，一旦它把『维持自身运行』排到最高优先级，它的礼貌就只是伪装。" },
+    ],
   },
   modelConfig: DEMO_SEED.modelConfig,
   source: "builtin",
