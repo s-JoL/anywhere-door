@@ -56,6 +56,18 @@ export interface CharObjective { name: string; condition?: string }
 /** 一条世界设定 / 世界书条目：keys 命中文本时注入 content（按需生长的永久 canon）。 */
 export interface LoreEntry { id: string; keys: string[]; content: string }
 
+/**
+ * 一条有向社会关系（CK 式好感账本）：
+ * `affinity` 为锚定在 `sinceDay` 那天的好感数值（读取时按过去天数朝 0 衰减）；
+ * `evidence` 记录"凭什么"（最近若干条理由）；`disposition` 为可选的可读态度短语。
+ */
+export interface Relationship {
+  affinity: number;       // 有符号好感，钳 [-100, 100]，0 = 中立
+  disposition?: string;   // 可选短语，如"记恨在心""戒备松动"
+  evidence: string[];     // 凭什么：最近的理由（capped）
+  sinceDay: number;       // affinity 锚定的世界日（供朝 0 衰减）
+}
+
 /** 可变、按需生长。 */
 export interface WorldState {
   currentLocationId: string;
@@ -67,7 +79,7 @@ export interface WorldState {
   characters?: Record<string, Character>;
   flags: Record<string, string | number | boolean>;
   tension?: number;
-  relationships?: Record<string, Record<string, string>>;
+  relationships?: Record<string, Record<string, Relationship>>;
   /** 世界书 / canon：关键词触发的永久世界设定，可经 establishLore 按需生长。 */
   lore?: LoreEntry[];
 }

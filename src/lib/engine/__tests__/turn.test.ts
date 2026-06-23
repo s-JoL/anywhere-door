@@ -130,7 +130,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
     await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-social", input: "我对她微笑。", llm });
 
     const after = await repo.getInstance("w-social");
-    expect(after?.state.relationships?.["c-lan"]?.["you"]).toBe("暗生情愫");
+    expect(after?.state.relationships?.["c-lan"]?.["you"]?.disposition).toBe("暗生情愫");
   });
 
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
