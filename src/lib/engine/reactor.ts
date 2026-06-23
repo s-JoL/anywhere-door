@@ -42,7 +42,7 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && typeof item.disposition === "string") {
         result.push(item as Delta);
       }
-      if (result.length >= 8) break;
+      if (result.length >= 12) break;
     }
     return result;
   } catch {
@@ -87,6 +87,12 @@ Delta JSON 格式（9 种，选用实际发生的）：
 {"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
 
 场景移动规则：当玩家或角色走到一个尚未存在的地方，先用 establishLocation 造出它（connectFrom 填当前地点），再用 moveScene 把镜头移过去，并用 moveCharacter 把同行的角色移过去。只在确有移动/新场景时才发。
+
+【尊重玩家的自我移动】玩家对"自己去了哪里"的叙述必须被世界落实，不能被默默忽略或推翻：
+- 若玩家说自己前往某地，而该地点尚不存在 → 先 establishLocation（connectFrom 填当前地点）造出它，再 moveScene 把镜头移过去；
+- 若该地点已存在且相邻 → 直接 moveScene 过去；
+- 玩家明确带走/拽走的角色，用 moveCharacter 一并移动。
+这类"玩家自身移动"的 delta 优先级最高，务必输出，不要因别的变化挤占而漏掉。
 
 当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记下新的态度（简短中文短语，如"戒备松动""记恨在心"）。只在确有改变时发，不要每回合重复同一态度。
 
