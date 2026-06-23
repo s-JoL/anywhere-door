@@ -61,10 +61,10 @@ with it, not its substance.**
 | Axis | Status | Where it sits |
 |---|---|---|
 | 1. Existence & continuity (can't reference what doesn't exist) | ✓ mechanical (`validateDelta`) | **Core** |
-| 2. Spatial persistence (traversable; fleshed-on-visit) | partial — star topology, `stub→fleshed` unwired | **Core** |
-| 4. Social causality (relationships shift from events; private memory/secrets) | ✓ memory + relationships; relationships to gain decay/evidence | **Core** |
+| 2. Spatial persistence (traversable; fleshed-on-visit) | ✓ traversable + `stub→fleshed` wired for locations (`fleshLocation` delta, engine-triggered on first visit); objects/characters pending | **Core** |
+| 4. Social causality (relationships shift from events; private memory/secrets) | ✓ memory + CK-style relationship ledger (signed affinity + evidence + day-decay); ownership→resentment wired | **Core** |
 | 6. Canon consistency (never self-contradictory) | ✓ lore injection + `establishLore` | **Core** |
-| 3. Physical causality (locked / flammable / broken enforced) | `props` field exists but unenforced | **Selective core** — mechanize only the few drama-driving props |
+| 3. Physical causality (locked / flammable / broken enforced) | ✓ enforced for the drama-driving props: `portable` (`moveObject`) + `locked`/`gates` (doors block passage, `setObjectLocked`); flammable/broken pending | **Selective core** — mechanize only the few drama-driving props |
 | 5. Off-screen evolution (world moves while you're away) | no-op `evolveWhileAway` seam | **Roadmap** — consistent with "interaction-driven: freezes when you leave" |
 
 ## 5. The one modeling principle (entities & agency)
