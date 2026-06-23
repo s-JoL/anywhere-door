@@ -1,7 +1,8 @@
 # Entity Genesis & Surfacing — Design
 
 > **Status: design LOCKED — ready to turn into a step-by-step implementation
-> plan (docs first, then code).** Governed by `CLAUDE.md` §5; read that first.
+> plan (docs first, then code).** Governed by `AGENTS.md` §7 and the latest
+> product spec §5; read those first.
 
 ## Goal
 
@@ -10,7 +11,7 @@ appear on demand — **unfolded from the world itself, never imported from
 outside.** The hard parts are (1) framing every appearance as *the world
 detailing itself* and (2) bounding per-turn token cost as the cast grows.
 
-## Principle (from CLAUDE.md §5)
+## Principle (from AGENTS.md §7 and product spec §5)
 
 > Ambient by default; crystallize when it earns persistence. One mechanism for
 > all entities: `stub → fleshed` + `establish*`. **The world is the source —
@@ -129,6 +130,10 @@ flesh-on-visit is unwired for every type.
 
 ## See also
 
-- `CLAUDE.md` §4–§6 — axes, the one principle, technical invariants.
+- `AGENTS.md` §6–§13 — real-world axes, entity lifecycle, POV, pressure, time,
+  control layers, and technical invariants.
+- `docs/superpowers/specs/2026-06-24-overall-product-design.md` §5 — full
+  product entity lifecycle.
 - `docs/DESIGN.md` — turn flow, perception projection, bidirectional mediation.
-- `docs/ROADMAP.md` #4 (NPC autonomy / off-screen), #5 (props), #10 (autonomous genesis).
+- `docs/ROADMAP.md` — roadmap phases for entity lifecycle, character reality,
+  offstage life, and power-user surfaces.

@@ -1,5 +1,10 @@
 # Entity Genesis Primitive — Implementation Plan
 
+> **Historical implementation plan.** This plan records how the first entity
+> genesis primitive was implemented. For current product authority, read
+> `AGENTS.md` and
+> `docs/superpowers/specs/2026-06-24-overall-product-design.md` first.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let the World Reactor crystallize a brand-new, persistent character on demand (`establishCharacter`), stored instance-privately so the frozen shared seed is never mutated.
@@ -10,11 +15,11 @@
 
 ## Global Constraints
 
-- **Rules immutable · propose → validate → apply.** Characters never write state; only validated deltas mutate `WorldState` (CLAUDE.md §6).
-- **The world is the source.** A spawned character is the world *detailing itself*, not an import from outside; the door (任意门) is the player's alone (CLAUDE.md §5). No "推门进来" framing in this plan (surfacing narration is Plan 2).
+- **Rules immutable · propose → validate → apply.** Characters never write state; only validated deltas mutate `WorldState` (`AGENTS.md` §13).
+- **The world is the source.** A spawned character is the world *detailing itself*, not an import from outside; the door (任意门) is the player's alone (`AGENTS.md` §7). No "推门进来" framing in this plan (surfacing narration is Plan 2).
 - **Seed is frozen & shared.** Never write spawned characters into `seed.characters`; they live in `WorldState.characters` (instance-private).
 - **Never delete spawned characters.** Identity is stable because the instance state persists; archival (Plan 2) is a presence flag only.
-- **No regressions.** The existing suite (322 passing) must stay green: `npm test`.
+- **No regressions.** The existing suite must stay green: `npm test`.
 - All new optional fields keep existing states/tests valid (no required-field additions to `WorldState`/`Character`).
 
 ---
@@ -71,7 +76,7 @@ export interface Character {
   description: string;   // 设定（含性格）
   detail?: "stub" | "fleshed";  // 实例内按需生长的角色：stub 待充实，fleshed 已完整（seed 角色视为 fleshed）
   identity?: Identity;   // 不可变硬事实
-  goal?: string;         // 当前目标（被 God 注入主观 prompt）
+  goal?: string;         // 当前目标（被 Director/God 注入主观 prompt）
   systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
   postHistoryInstructions?: string;  // 角色覆盖末尾后置强化（支持 {{original}}）
 }
