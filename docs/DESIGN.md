@@ -71,7 +71,9 @@
 
 ## 7. 存储
 
-本地优先,IndexedDB via Dexie(库名 `anywhere-door`):instances / messages / memories / seeds / tasteEvents。Repository 接口隔离([`src/lib/storage/`](../src/lib/storage/));测试用 fake-indexeddb。无服务器数据库。
+本地优先,IndexedDB via Dexie(库名 `anywhere-door`,v5):instances / messages / memories / seeds / tasteEvents / **deltaLog**。Repository 接口隔离([`src/lib/storage/`](../src/lib/storage/));测试用 fake-indexeddb。无服务器数据库。
+
+**混合记录(§6):** 快照(`instance.state`)是当前态的快读;**事件日志**(`deltaLog` 表,`DeltaLogEntry = {turn, source, cause, gameDay, gameClock, at, delta}`)是追加式历史——`turn.ts` 把每条**经校验落库的 delta** 追加一条,标注来源(user/reactor/flesh/offscreen)与触发它的玩家输入。延时回调 / 世界声誉 / 离场演化都读它。
 
 ## 8. 技术栈
 

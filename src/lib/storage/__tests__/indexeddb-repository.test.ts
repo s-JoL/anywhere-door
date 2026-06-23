@@ -31,4 +31,19 @@ describe("IndexedDbRepository", () => {
     const list = await repo.listMessages("w1");
     expect(list.map((x) => x.id)).toEqual(["a", "b"]);
   });
+
+  it("appends and lists the per-instance delta log in append order, filtered by instance", async () => {
+    const repo = getRepository();
+    const e = (id: string, instanceId: string, turn: number, at: number) => ({
+      id, instanceId, turn, source: "reactor" as const, cause: "我推门进来",
+      gameDay: 1, gameClock: "黄昏", at,
+      delta: { kind: "setObjectState" as const, objectId: "o1", state: "打翻" },
+    });
+    await repo.appendDeltaLog(e("d2", "w1", 1, 2));
+    await repo.appendDeltaLog(e("d1", "w1", 1, 1));
+    await repo.appendDeltaLog(e("d3", "w2", 1, 3)); // other instance
+    const log = await repo.listDeltaLog("w1");
+    expect(log.map((x) => x.id)).toEqual(["d1", "d2"]); // ascending by at, only w1
+    expect(log[0].delta).toEqual({ kind: "setObjectState", objectId: "o1", state: "打翻" });
+  });
 });

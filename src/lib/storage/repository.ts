@@ -1,4 +1,5 @@
 import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
+import type { DeltaLogEntry } from "../world/delta";
 
 export interface Repository {
   getInstance(id: string): Promise<WorldInstance | undefined>;
@@ -15,4 +16,6 @@ export interface Repository {
   upsertSeed(s: WorldSeed): Promise<void>;
   recordTasteEvent(e: TasteEvent): Promise<void>;
   listTasteEvents(): Promise<TasteEvent[]>;   // ascending by at
+  appendDeltaLog(e: DeltaLogEntry): Promise<void>;
+  listDeltaLog(instanceId: string): Promise<DeltaLogEntry[]>; // ascending by at
 }
