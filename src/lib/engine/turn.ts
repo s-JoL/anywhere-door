@@ -16,6 +16,7 @@ import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
 import { react } from "./reactor";
 import { evolveWhileAway } from "../world/offscreen";
+import { fleshStubLocation } from "../world/flesh";
 
 export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
 
@@ -235,6 +236,16 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       const v = validateDelta(state, seed.rules, d);
       if (v.ok) state = applyDelta(state, d);
       else console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`);
+    }
+
+    // stub→fleshed:玩家踏入的当前地点若仍是 stub,世界当场把它充实为 fleshed
+    const here = state.locations[state.currentLocationId];
+    if (here?.detail === "stub") {
+      const fd = await fleshStubLocation(seed, here, llm);
+      if (fd) {
+        const v = validateDelta(state, seed.rules, fd);
+        if (v.ok) state = applyDelta(state, fd);
+      }
     }
 
     await repo.upsertInstance({ ...inst, state, lastTurnSnapshot: snapshot, updatedAt: nextTime() });
