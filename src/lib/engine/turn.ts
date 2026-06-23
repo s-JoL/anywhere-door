@@ -10,7 +10,7 @@ import { newId } from "../id";
 import { nextTime } from "../clock";
 import { scoreMemories } from "../memory/retrieve";
 import { keywordsOf } from "../memory/keywords";
-import { buildObservations } from "../memory/observe";
+import { buildObservations, buildSelfMemory } from "../memory/observe";
 import { shouldReflect, reflect } from "../memory/reflect";
 import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
@@ -234,8 +234,12 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
     const reactorDeltas = await react({ state, recentLines, nameById, llm, rules: seed.rules });
     for (const d of reactorDeltas) {
       const v = validateDelta(state, seed.rules, d);
-      if (v.ok) state = applyDelta(state, d);
-      else console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`);
+      if (!v.ok) { console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`); continue; }
+      state = applyDelta(state, d);
+      // evidence→记忆:关系调整的"凭什么"也成为当事人(fromId)的一条主观观察,进入检索与反思
+      if (d.kind === "setRelationship" && d.reason?.trim()) {
+        await repo.appendMemory(buildSelfMemory(d.fromId, `（我记下）${d.reason.trim()}`, 6));
+      }
     }
 
     // stub→fleshed:玩家踏入的当前地点若仍是 stub,世界当场把它充实为 fleshed

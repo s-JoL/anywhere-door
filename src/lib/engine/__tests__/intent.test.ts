@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseIntent, decideIntent } from "../intent";
+import { parseIntent, decideIntent, affinityEagernessBoost } from "../intent";
 import { DEMO_SEED } from "../../world/seed-demo";
-import type { ChatMessage } from "../../types";
+import type { ChatMessage, WorldState } from "../../types";
 
 describe("parseIntent", () => {
   it("parses a valid intent JSON", () => {
@@ -41,5 +41,37 @@ describe("decideIntent", () => {
       llm: badLlm,
     });
     expect(r2).toEqual({ action: "pass", eagerness: 0 });
+  });
+});
+
+describe("affinityEagernessBoost (社会因果→发言意图)", () => {
+  function stateWithRel(affinity: number, toId = "you"): WorldState {
+    return {
+      ...DEMO_SEED.openingState,
+      relationships: { "c-lan": { [toId]: { affinity, evidence: [], sinceDay: 1 } } },
+    };
+  }
+  it("is 0 when the character has no relationships", () => {
+    expect(affinityEagernessBoost(DEMO_SEED.openingState, "c-lan")).toBe(0);
+  });
+  it("grows with the magnitude of feeling toward a PRESENT party (love or hate)", () => {
+    const hi = affinityEagernessBoost(stateWithRel(-90), "c-lan");
+    const lo = affinityEagernessBoost(stateWithRel(-10), "c-lan");
+    expect(hi).toBeGreaterThan(lo);
+    expect(hi).toBeGreaterThan(0);
+  });
+  it("ignores feeling toward an ABSENT party", () => {
+    expect(affinityEagernessBoost(stateWithRel(-90, "ghost-absent"), "c-lan")).toBe(0);
+  });
+});
+
+describe("decideIntent: affinity nudges eagerness", () => {
+  it("makes an emotionally-invested character keener to grab the floor", async () => {
+    const c = DEMO_SEED.characters[0]; // c-lan
+    const llm = async (_m: ChatMessage[]) => ({ content: '{"action":"speak","eagerness":0.3}' });
+    const plain = await decideIntent({ seed: DEMO_SEED, state: DEMO_SEED.openingState, character: c, recent: [], llm });
+    const charged: WorldState = { ...DEMO_SEED.openingState, relationships: { "c-lan": { you: { affinity: -100, evidence: [], sinceDay: 1 } } } };
+    const hot = await decideIntent({ seed: DEMO_SEED, state: charged, character: c, recent: [], llm });
+    expect(hot.eagerness).toBeGreaterThan(plain.eagerness);
   });
 });

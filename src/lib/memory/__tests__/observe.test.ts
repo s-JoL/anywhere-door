@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { buildObservations, defaultImportance } from "../observe";
+import { buildObservations, defaultImportance, buildSelfMemory } from "../observe";
 import type { WorldState } from "../../types";
+
+describe("buildSelfMemory (evidence→记忆)", () => {
+  it("builds an observation memory for one character with keywords and importance", () => {
+    const m = buildSelfMemory("c-lan", "（我记下）那人拿走了我的剑", 6);
+    expect(m.charId).toBe("c-lan");
+    expect(m.kind).toBe("observation");
+    expect(m.text).toContain("拿走了我的剑");
+    expect(m.importance).toBe(6);
+    expect(Array.isArray(m.keywords)).toBe(true);
+  });
+});
 
 function state(): WorldState {
   return {
