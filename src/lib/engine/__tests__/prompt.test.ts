@@ -45,6 +45,38 @@ describe("prompt", () => {
     expect(msgs.some((m) => m.content.includes("老周：你又来啦"))).toBe(true);
   });
 
+  it("buildCharacterPrompt: injects disposition for present targets", () => {
+    const c = DEMO_SEED.characters[0]; // c-lan
+    const stateWithRel = {
+      ...DEMO_SEED.openingState,
+      relationships: { "c-lan": { "you": "记恨在心" } },
+    };
+    const msgs = buildCharacterPrompt(DEMO_SEED, stateWithRel, c, {});
+    const sys = msgs[0].content;
+    expect(sys).toContain("记恨在心");
+    expect(sys).toContain("你（玩家）");
+  });
+
+  it("buildCharacterPrompt: does NOT inject disposition for absent targets", () => {
+    const c = DEMO_SEED.characters[0]; // c-lan
+    // c-zhou IS present in openingState (both c-lan and c-zhou are in bar)
+    // We need c-zhou to NOT be present — create a modified state
+    const stateWithoutZhou = {
+      ...DEMO_SEED.openingState,
+      locations: {
+        ...DEMO_SEED.openingState.locations,
+        bar: {
+          ...DEMO_SEED.openingState.locations["bar"],
+          presentCharacterIds: ["c-lan"], // c-zhou removed from bar
+        },
+      },
+      relationships: { "c-lan": { "c-zhou": "敌视" } },
+    };
+    const msgs = buildCharacterPrompt(DEMO_SEED, stateWithoutZhou, c, {});
+    const sys = msgs[0].content;
+    expect(sys).not.toContain("敌视");
+  });
+
   it("stripSpeakerPrefix removes a leading self-name prefix only", () => {
     expect(stripSpeakerPrefix("阿岚", "阿岚：（擦杯子）又是你。")).toBe("（擦杯子）又是你。");
     expect(stripSpeakerPrefix("阿岚", "阿岚:hi")).toBe("hi");

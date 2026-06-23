@@ -186,6 +186,75 @@ describe("moveScene", () => {
   });
 });
 
+describe("setRelationship delta", () => {
+  function relBaseState(): WorldState {
+    return {
+      currentLocationId: "bar",
+      time: { day: 1, clock: "黄昏", lighting: "暖橙" },
+      locations: {
+        bar: { id: "bar", name: "酒馆", detail: "fleshed", gist: "", connections: [], presentCharacterIds: ["c-lan", "you"], objectIds: [] },
+      },
+      objects: {},
+      roster: { "c-lan": { name: "兰" }, "you": { name: "你" } },
+      flags: {},
+    };
+  }
+
+  it("validate: accepts valid setRelationship", () => {
+    const d = { kind: "setRelationship" as const, fromId: "c-lan", toId: "you", disposition: "戒备松动" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(true);
+  });
+
+  it("validate: rejects unknown fromId", () => {
+    const d = { kind: "setRelationship" as const, fromId: "ghost", toId: "you", disposition: "x" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(false);
+  });
+
+  it("validate: rejects unknown toId", () => {
+    const d = { kind: "setRelationship" as const, fromId: "c-lan", toId: "ghost", disposition: "x" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(false);
+  });
+
+  it("validate: rejects self-relation", () => {
+    const d = { kind: "setRelationship" as const, fromId: "c-lan", toId: "c-lan", disposition: "x" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(false);
+  });
+
+  it("validate: rejects empty disposition", () => {
+    const d = { kind: "setRelationship" as const, fromId: "c-lan", toId: "you", disposition: "" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(false);
+  });
+
+  it("validate: accepts you→c-lan", () => {
+    const d = { kind: "setRelationship" as const, fromId: "you", toId: "c-lan", disposition: "暗生情愫" };
+    const r = validateDelta(relBaseState(), rules, d);
+    expect(r.ok).toBe(true);
+  });
+
+  it("applyDelta: sets relationship immutably", () => {
+    const start: WorldState = { ...relBaseState(), relationships: undefined };
+    const result = applyDelta(start, { kind: "setRelationship", fromId: "c-lan", toId: "you", disposition: "记恨在心" });
+    expect(result.relationships?.["c-lan"]?.["you"]).toBe("记恨在心");
+    expect(start.relationships).toBeUndefined();
+  });
+
+  it("applyDelta: preserves existing relationships", () => {
+    const start: WorldState = {
+      ...relBaseState(),
+      roster: { "c-lan": { name: "兰" }, "you": { name: "你" }, "c-zhou": { name: "周" } },
+      relationships: { "c-lan": { "you": "戒备" } },
+    };
+    const result = applyDelta(start, { kind: "setRelationship", fromId: "c-lan", toId: "c-zhou", disposition: "欠了人情" });
+    expect(result.relationships?.["c-lan"]?.["you"]).toBe("戒备");
+    expect(result.relationships?.["c-lan"]?.["c-zhou"]).toBe("欠了人情");
+  });
+});
+
 describe("applyDelta (immutable)", () => {
   it("moves a character between locations without mutating input", () => {
     const s = baseState();

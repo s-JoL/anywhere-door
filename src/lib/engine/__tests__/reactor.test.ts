@@ -121,6 +121,23 @@ describe("parseDeltas", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("parseDeltas: accepts setRelationship", () => {
+    const text = '[{"kind":"setRelationship","fromId":"c-lan","toId":"you","disposition":"戒备松动"}]';
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].kind).toBe("setRelationship");
+    const d = result[0] as { kind: "setRelationship"; fromId: string; toId: string; disposition: string };
+    expect(d.fromId).toBe("c-lan");
+    expect(d.toId).toBe("you");
+    expect(d.disposition).toBe("戒备松动");
+  });
+
+  it("parseDeltas: rejects setRelationship missing disposition", () => {
+    const text = '[{"kind":"setRelationship","fromId":"c-lan","toId":"you"}]';
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(0);
+  });
+
   it("accepts all 8 kinds together", () => {
     const text = JSON.stringify([
       { kind: "moveCharacter", characterId: "c1", toLocationId: "loc1" },
@@ -208,6 +225,21 @@ describe("react", () => {
     const state = baseState();
     const deltas = await react({ state, recentLines: [], nameById: {}, llm: proseLlm });
     expect(deltas).toEqual([]);
+  });
+
+  it("react: returns setRelationship delta", async () => {
+    const fakeLlm = async () => ({
+      content: '[{"kind":"setRelationship","fromId":"c-lan","toId":"you","disposition":"戒备松动"}]',
+    });
+    const state = baseState();
+    const deltas = await react({
+      state,
+      recentLines: [],
+      nameById: { "c-lan": "阿岚", you: "你" },
+      llm: fakeLlm,
+    });
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0].kind).toBe("setRelationship");
   });
 
   it("returns establishLocation + moveScene + moveCharacter from fake llm", async () => {

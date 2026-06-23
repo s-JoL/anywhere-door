@@ -11,6 +11,7 @@ const VALID_KINDS = new Set([
   "establishObject",
   "establishLocation",
   "moveScene",
+  "setRelationship",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -37,6 +38,8 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "establishLocation" && typeof item.id === "string" && typeof item.name === "string") {
         result.push(item as Delta);
       } else if (item.kind === "moveScene" && typeof item.toLocationId === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && typeof item.disposition === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 8) break;
@@ -72,7 +75,7 @@ export function buildReactorPrompt(
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（8 种，选用实际发生的）：
+Delta JSON 格式（9 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
@@ -81,19 +84,39 @@ Delta JSON 格式（8 种，选用实际发生的）：
 {"kind":"establishObject","id":"新id","name":"物品名","locationId":"<locations中的id>","state":"初始状态"}
 {"kind":"establishLocation","id":"新地点id","name":"地点名","gist":"一句话描述","connectFrom":"<当前地点id>"}
 {"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
+{"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
 
 场景移动规则：当玩家或角色走到一个尚未存在的地方，先用 establishLocation 造出它（connectFrom 填当前地点），再用 moveScene 把镜头移过去，并用 moveCharacter 把同行的角色移过去。只在确有移动/新场景时才发。
+
+当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记下新的态度（简短中文短语，如"戒备松动""记恨在心"）。只在确有改变时发，不要每回合重复同一态度。
 
 只输出 JSON 数组，不要其他文字。`;
 
   const loc = state.locations[state.currentLocationId];
   const connections = loc?.connections.map((id) => `${id}(${state.locations[id]?.name ?? id})`).join("、") ?? "";
+
+  const relationshipSummary = (() => {
+    if (!state.relationships) return "";
+    const lines: string[] = [];
+    for (const [fromId, targets] of Object.entries(state.relationships)) {
+      const fromName = nameById[fromId] ?? state.roster[fromId]?.name ?? fromId;
+      for (const [toId, disp] of Object.entries(targets)) {
+        const toName = nameById[toId] ?? state.roster[toId]?.name ?? toId;
+        lines.push(`  ${fromName}→${toName}: ${disp}`);
+      }
+    }
+    return lines.join("\n");
+  })();
+
   const user = `【当前场景】${loc?.name ?? state.currentLocationId}（id: ${state.currentLocationId}）
 【相邻地点】${connections || "（无）"}
 【时间】第${state.time.day}天 ${state.time.clock}，${state.time.lighting}
 
 【角色名册】（id: 名字，括号内为当前体态条件）
 ${rosterList || "（无）"}
+
+【当前人物关系】（fromName→toName: 态度，空表示无已记录态度）
+${relationshipSummary || "（无）"}
 
 【场景内物品】（id: 名字，括号内为当前状态）
 ${objectList || "（无）"}

@@ -113,6 +113,26 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.locations["bar"]?.presentCharacterIds).not.toContain("c-lan");
   });
 
+  it("turn applies setRelationship delta", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-social"));
+
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) {
+        return { content: '[{"kind":"setRelationship","fromId":"c-lan","toId":"you","disposition":"暗生情愫"}]' };
+      }
+      if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
+      return { content: "……" };
+    };
+
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-social", input: "我对她微笑。", llm });
+
+    const after = await repo.getInstance("w-social");
+    expect(after?.state.relationships?.["c-lan"]?.["you"]).toBe("暗生情愫");
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));
