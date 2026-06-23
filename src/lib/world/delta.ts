@@ -11,12 +11,48 @@ export type Delta =
   | { kind: "moveScene"; toLocationId: string }
   | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
   | { kind: "establishLore"; id: string; keys: string[]; content: string }
-  | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string };
+  | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
+  | { kind: "moveObject"; objectId: string; toLocationId: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
-/** 只守不可变规则与结构完整性；状态本身自由变化。 */
-export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): Validation {
+/** 一条 delta 里会落进世界的自由文本字段(用于红线筛查)。 */
+function freeTextFields(d: Delta): string[] {
+  switch (d.kind) {
+    case "setObjectState": return [d.state];
+    case "setCondition": return [d.condition];
+    case "establishObject": return [d.name, d.state ?? ""];
+    case "establishLocation": return [d.name, d.gist ?? "", d.description ?? ""];
+    case "setRelationship": return [d.disposition];
+    case "establishLore": return [d.content, ...d.keys];
+    case "setFlag": return typeof d.value === "string" ? [d.value] : [];
+    default: return [];
+  }
+}
+
+/**
+ * 红线兜底:对 delta 的自由文本做保守的关键词子串筛查。
+ * 只在红线词条**字面命中**时拦截 —— 散文式红线(整句)不会误伤合法 delta,
+ * 语义层面的约束交给 reactor prompt(软约束)。
+ */
+function screenRedLines(redLines: string[] | undefined, d: Delta): Validation {
+  if (!redLines?.length) return { ok: true };
+  const fields = freeTextFields(d).filter(Boolean).map((s) => s.toLowerCase());
+  if (fields.length === 0) return { ok: true };
+  for (const raw of redLines) {
+    const line = raw.trim().toLowerCase();
+    if (!line) continue;
+    for (const f of fields) {
+      if (f.includes(line)) return { ok: false, reason: `触犯红线「${raw}」` };
+    }
+  }
+  return { ok: true };
+}
+
+/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。 */
+export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): Validation {
+  const screened = screenRedLines(rules.redLines, d);
+  if (!screened.ok) return screened;
   switch (d.kind) {
     case "moveCharacter": {
       if (!state.roster[d.characterId]) return { ok: false, reason: `角色 ${d.characterId} 不存在` };
@@ -81,10 +117,20 @@ export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): 
       return { ok: true };
     }
     case "establishCharacter": {
-      if (!d.name) return { ok: false, reason: "角色名不能为空" };
+      if (!d.name?.trim()) return { ok: false, reason: "角色名不能为空" };
       if (state.roster[d.id]) return { ok: false, reason: `角色 ${d.id} 已存在` };
       if (!state.locations[d.locationId])
         return { ok: false, reason: `地点 ${d.locationId} 不存在` };
+      return { ok: true };
+    }
+    case "moveObject": {
+      const obj = state.objects[d.objectId];
+      if (!obj) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if (!state.locations[d.toLocationId])
+        return { ok: false, reason: `目标地点 ${d.toLocationId} 不存在` };
+      // 物理因果:显式标记不可携带的物体搬不走(默认可移动)。
+      if (obj.props?.portable === false)
+        return { ok: false, reason: `${obj.name} 搬不动` };
       return { ok: true };
     }
   }
@@ -208,6 +254,20 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
               : [...loc.presentCharacterIds, d.id],
           },
         },
+      };
+    }
+    case "moveObject": {
+      const obj = state.objects[d.objectId];
+      const locations: WorldState["locations"] = {};
+      for (const [id, loc] of Object.entries(state.locations)) {
+        const objectIds = loc.objectIds.filter((o) => o !== d.objectId);
+        if (id === d.toLocationId && !objectIds.includes(d.objectId)) objectIds.push(d.objectId);
+        locations[id] = { ...loc, objectIds };
+      }
+      return {
+        ...state,
+        objects: { ...state.objects, [d.objectId]: { ...obj, locationId: d.toLocationId } },
+        locations,
       };
     }
   }

@@ -29,8 +29,8 @@
 1. **(线下演化 seam,no-op)** 预留:回来时按离开时长补演化([`world/offscreen.ts`](../src/lib/world/offscreen.ts))。
 2. **意图**:每个在场角色**并行**判断是否开口(speak/pass + 急切度),`selectSpeakers` 取 top-N + 破冰([`engine/intent.ts`](../src/lib/engine/intent.ts), [`select.ts`](../src/lib/engine/select.ts))。
 3. **发言**:被选中的角色**流式**说话,prompt 只含其**主观可见**的场景/记忆/关系/lore([`engine/prompt.ts`](../src/lib/engine/prompt.ts))。
-4. **导演**:God 更新张力、必要时插入**旁白**、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。
-5. **World Reactor**:LLM 读本回合发生的事,**提议结构化 `Delta[]`**;每个 `validateDelta`(对照规则)→ 合法才 `applyDelta`(不可变更新)→ 落库([`engine/reactor.ts`](../src/lib/engine/reactor.ts), [`world/delta.ts`](../src/lib/world/delta.ts))。
+4. **导演**:God 更新张力、在**张力跃升(≥1.5)或已在高位(≥7)且仍上行**时插入**旁白**(高位但持平/衰减的回合不插,天然防刷屏)、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。
+5. **World Reactor**:LLM 读本回合发生的事(prompt 携带世界**物理 + 红线**作软约束),**提议结构化 `Delta[]`**;每个 `validateDelta`(对照规则:结构/空间 + **红线关键词硬筛**)→ 合法才 `applyDelta`(不可变更新)→ 落库([`engine/reactor.ts`](../src/lib/engine/reactor.ts), [`world/delta.ts`](../src/lib/world/delta.ts))。
 6. **记忆**:各角色把**自己见证**的写入观察,周期性**反思**([`memory/`](../src/lib/memory/))。
 
 模型从不直接写世界——它提议,引擎校验。"不能去不存在的房间"这类非法 delta 被丢弃,世界因此**有因果且永不自相矛盾**。
@@ -43,9 +43,10 @@
 
 ## 4. 世界模型
 
-- **`WorldRules`**(不可变):physics / setting / redLines。
+- **`WorldRules`**(不可变):physics / setting / redLines。**红线双层强制**:① 软约束——`physics+redLines` 注入 World Reactor 的 system prompt,提议阶段就规避违规;② 硬兜底——`validateDelta` 对 delta 的自由文本字段(condition/state/lore content/disposition…)做**保守的红线关键词子串筛查**,字面命中即丢弃(散文式整句红线不会误伤合法 delta,语义约束交给软约束层)。
 - **`WorldState`**(可变):`currentLocationId`(=玩家/镜头所在)、`time`、`locations`、`objects`、`roster`(含玩家 `you` 的 `condition`)、`flags`、`tension`、`relationships`(fromId→toId→态度短语)、`lore`(`LoreEntry[]`)。
-- **`Delta`(10 种)**:`moveCharacter` · `setObjectState` · `setFlag` · `advanceTime` · `setCondition` · `establishObject` · `establishLocation` · `moveScene` · `setRelationship` · `establishLore`。后四类让世界**按需生长**(新地点/新物体/新关系/新正典),呼应 Minecraft 式"按需补细节、结晶为 canon"。
+- **`Delta`(12 种)**:`moveCharacter` · `setObjectState` · `setFlag` · `advanceTime` · `setCondition` · `establishObject` · `establishLocation` · `moveScene` · `setRelationship` · `establishLore` · `establishCharacter` · `moveObject`。`establish*` 让世界**按需生长**(新地点/新物体/新关系/新正典/新角色),呼应 Minecraft 式"按需补细节、结晶为 canon"。
+- **物理因果**:`moveObject` 让物品在地点间被拿走/递出/搬动并持久落实(改 `locationId` + 两地点 `objectIds`);`validateDelta` 强制 `props.portable === false` 的固定物**搬不动**(默认可移动)。因为 `visibleScene` 按 `objectIds` 列「可见物」,物品移动**真的改变各角色当下看到的东西**。
 - 类型定义见 [`src/lib/types.ts`](../src/lib/types.ts);delta 校验/应用见 [`world/delta.ts`](../src/lib/world/delta.ts)。
 
 ## 5. 子系统
@@ -53,9 +54,9 @@
 | 子系统 | 当前实现 | 代码 |
 |---|---|---|
 | **God 引擎** | 角色自决发言(并行意图+选人)、主观记忆+反思、导演(张力/旁白/引入角色) | `src/lib/engine/` |
-| **World Reactor** | LLM 提议 delta → 校验 → 落库;玩家身体、可游走空间、社会后果都由此驱动 | `engine/reactor.ts` · `world/delta.ts` |
+| **World Reactor** | LLM 提议 delta → 校验(结构/空间 + 红线关键词硬筛)→ 落库;prompt 携物理+红线作软约束;玩家身体、可游走空间、社会后果都由此驱动 | `engine/reactor.ts` · `world/delta.ts` |
 | **主观记忆** | witness 作用域观察;检索按 `近期×相关×重要`;周期反思成更高层信念 | `src/lib/memory/` |
-| **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻)| `src/lib/taste/` |
+| **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻:同 id 重惩 + **同题材近期占比软降权**)| `src/lib/taste/` |
 | **世界生成器** | 条件化(贴合/故意发散避免局部最优)产出完整可玩种子;冷启动跨题材铺开;后台预生成池 | `world/generate.ts` · `world/pregenerate.ts` |
 | **Lorebook** | 关键词触发正典注入;`establishLore` 让设定按需结晶 | `world/lore.ts` |
 | **展示层** | 冷开场世界卡(genre/mood/intensity/hook/cast/accent);逐字打入;开门转场;重生成上一条 | `src/app/page.tsx` · `src/app/play/page.tsx` · `DoorTransition.tsx` · `world/presentation.ts` |

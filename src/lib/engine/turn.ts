@@ -230,7 +230,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       });
     const nameById: Record<string, string> = {};
     for (const [id, obj] of Object.entries(state.roster)) nameById[id] = obj.name;
-    const reactorDeltas = await react({ state, recentLines, nameById, llm });
+    const reactorDeltas = await react({ state, recentLines, nameById, llm, rules: seed.rules });
     for (const d of reactorDeltas) {
       const v = validateDelta(state, seed.rules, d);
       if (v.ok) state = applyDelta(state, d);

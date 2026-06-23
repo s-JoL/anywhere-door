@@ -61,6 +61,36 @@ describe("validateDelta", () => {
   });
 });
 
+describe("validateDelta red-line screen", () => {
+  const banned: WorldRules = { physics: "无超自然", setting: "现代酒馆", redLines: ["死亡", "魔法"] };
+
+  it("rejects a setCondition whose free text literally contains a red-line term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "setCondition", entityId: "c1", condition: "中枪后死亡" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects establishLore content that hits a red-line term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "establishLore", id: "l1", keys: ["秘术"], content: "她会魔法" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects setObjectState carrying a banned term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "setObjectState", objectId: "glass", state: "被魔法点燃" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("allows an otherwise-valid delta when red lines are prose that does not literally match", () => {
+    const prose: WorldRules = { physics: "无超自然", setting: "现代酒馆", redLines: ["任何角色都不会真正死亡"] };
+    const r = validateDelta(baseState(), prose, { kind: "setCondition", entityId: "c1", condition: "疲惫不堪" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("does not fire when red lines are empty (existing behavior unchanged)", () => {
+    const r = validateDelta(baseState(), rules, { kind: "setCondition", entityId: "c1", condition: "死亡的气息" });
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe("applyDelta establishLore", () => {
   it("appends a lore entry immutably without mutating the original", () => {
     const s = baseState();
@@ -300,6 +330,10 @@ describe("establishCharacter", () => {
     const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "", locationId: "bar" });
     expect(r.ok).toBe(false);
   });
+  it("validateDelta rejects a whitespace-only name", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "   ", locationId: "bar" });
+    expect(r.ok).toBe(false);
+  });
   it("validateDelta rejects id already in roster (covers seed characters)", () => {
     const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c1", name: "冒牌", locationId: "bar" });
     expect(r.ok).toBe(false);
@@ -359,5 +393,44 @@ describe("applyDelta (immutable)", () => {
     const s = baseState();
     applyDelta(s, { kind: "setObjectState", objectId: "glass", state: "满" });
     expect(s.objects.glass.state).toBe("空");
+  });
+});
+
+describe("moveObject delta (物理因果: 物体可移动 + portable 强制)", () => {
+  it("validateDelta accepts relocating a movable object to an existing location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+  it("validateDelta rejects a nonexistent object", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "ghost", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects a nonexistent target location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "nowhere" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects moving an object marked portable:false", () => {
+    const s = baseState();
+    s.objects.glass.props = { portable: false };
+    const r = validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta allows moving when portable is unset (default movable)", () => {
+    const s = baseState();
+    s.objects.glass.props = {};
+    const r = validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("applyDelta relocates the object and migrates objectIds across both locations, immutably", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(next.objects.glass.locationId).toBe("street");
+    expect(next.locations.bar.objectIds).toEqual([]);
+    expect(next.locations.street.objectIds).toEqual(["glass"]);
+    // original untouched
+    expect(s.objects.glass.locationId).toBe("bar");
+    expect(s.locations.bar.objectIds).toEqual(["glass"]);
+    expect(next).not.toBe(s);
   });
 });
