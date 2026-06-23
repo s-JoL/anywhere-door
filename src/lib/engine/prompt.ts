@@ -17,15 +17,17 @@ export function presentCharacters(seed: WorldSeed, state: WorldState): Character
     .filter((c): c is Character => !!c);
 }
 
-/** 该角色**主观可见**的当前场景描述（不含他人内心/秘密）。 */
-export function visibleScene(state: WorldState, self: Character): string {
+/** 该角色**主观可见**的当前场景描述（不含他人内心/秘密）。`charById` 提供在场他人的硬事实(性别)以正确指代。 */
+export function visibleScene(state: WorldState, self: Character, charById?: Map<string, Character>): string {
   const loc = state.locations[state.currentLocationId];
   const others = loc.presentCharacterIds
     .filter((id) => id !== self.id)
     .map((id) => {
       const name = state.roster[id]?.name ?? id;
+      const gender = charById?.get(id)?.identity?.gender; // 让发言者知道别人的性别,避免代词漂移
       const cond = state.roster[id]?.condition;
-      return cond ? `${name}（${cond}）` : name;
+      const tags = [gender, cond].filter(Boolean).join("，");
+      return tags ? `${name}（${tags}）` : name;
     })
     .join("、");
   const objs = loc.objectIds
@@ -109,7 +111,11 @@ export function buildCharacterPrompt(
 
   // Lorebook: surface canon whose keys are on-stage (scene + recent/observed memory)
   // so the world stays consistent. In-character world context — NOT the uncensoring layer.
-  const scene = visibleScene(state, character);
+  // 在场他人的硬事实(供正确指代:他/她)——seed 角色 ∪ 实例新建角色
+  const charById = new Map<string, Character>();
+  for (const c of seed.characters) charById.set(c.id, c);
+  for (const [id, c] of Object.entries(state.characters ?? {})) charById.set(id, c);
+  const scene = visibleScene(state, character, charById);
   const loreHaystack = [
     scene,
     ...(ctx.recent ?? []).map((m) => m.text),

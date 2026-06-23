@@ -78,6 +78,20 @@ describe("prompt", () => {
     expect(sys).not.toContain("敌视");
   });
 
+  it("surfaces present others' gender in the scene so pronouns don't drift", () => {
+    const c = DEMO_SEED.characters[0]; // c-lan(阿岚, 女)与 c-zhou(老周, 男)同在酒馆
+    const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {});
+    const scene = msgs[msgs.length - 1].content; // tail: 【此刻所见】...
+    expect(scene).toContain("老周（男"); // 在场他人标出性别
+  });
+
+  it("preset instructs woven action prose and clear referents (反碎片化 + 指代规范)", () => {
+    const c = DEMO_SEED.characters[0];
+    const sys = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {})[0].content;
+    expect(sys).toContain("编织");  // 动作神态编织成连贯文字,不拆成多个并列括号
+    expect(sys).toContain("指代");  // 你/名字/与性别一致的代词
+  });
+
   it("injects matched lore when its key appears in the current scene", () => {
     const c = DEMO_SEED.characters[0];
     // 無燈酒馆 is the opening location name — use it as a lore key so it matches the visible scene.
