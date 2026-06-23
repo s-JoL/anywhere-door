@@ -9,7 +9,8 @@ export type Delta =
   | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string }
   | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
   | { kind: "moveScene"; toLocationId: string }
-  | { kind: "setRelationship"; fromId: string; toId: string; disposition: string };
+  | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
+  | { kind: "establishLore"; id: string; keys: string[]; content: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -67,6 +68,15 @@ export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): 
         return { ok: false, reason: "不能对自身建立关系" };
       if (!d.disposition)
         return { ok: false, reason: "态度描述不能为空" };
+      return { ok: true };
+    }
+    case "establishLore": {
+      if ((state.lore ?? []).some((e) => e.id === d.id))
+        return { ok: false, reason: `世界设定 ${d.id} 已存在` };
+      if (!Array.isArray(d.keys) || d.keys.length === 0)
+        return { ok: false, reason: "世界设定关键词不能为空" };
+      if (!d.content)
+        return { ok: false, reason: "世界设定内容不能为空" };
       return { ok: true };
     }
   }
@@ -162,6 +172,11 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
             [d.toId]: d.disposition,
           },
         },
+      };
+    case "establishLore":
+      return {
+        ...state,
+        lore: [...(state.lore ?? []), { id: d.id, keys: d.keys, content: d.content }],
       };
   }
 }

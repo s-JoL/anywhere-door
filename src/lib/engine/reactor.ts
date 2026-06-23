@@ -12,13 +12,17 @@ const VALID_KINDS = new Set([
   "establishLocation",
   "moveScene",
   "setRelationship",
+  "establishLore",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
   try {
-    const match = text.match(/\[[\s\S]*?\]/);
-    if (!match) return [];
-    const arr = JSON.parse(match[0]);
+    // Greedy from first '[' to last ']' so nested arrays (e.g. establishLore.keys)
+    // don't truncate the outer array at the first inner ']'.
+    const start = text.indexOf("[");
+    const end = text.lastIndexOf("]");
+    if (start < 0 || end <= start) return [];
+    const arr = JSON.parse(text.slice(start, end + 1));
     if (!Array.isArray(arr)) return [];
     const result: Delta[] = [];
     for (const item of arr) {
@@ -40,6 +44,8 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "moveScene" && typeof item.toLocationId === "string") {
         result.push(item as Delta);
       } else if (item.kind === "setRelationship" && typeof item.fromId === "string" && typeof item.toId === "string" && typeof item.disposition === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "establishLore" && typeof item.id === "string" && Array.isArray(item.keys) && item.keys.every((k: unknown) => typeof k === "string") && typeof item.content === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;
@@ -75,7 +81,7 @@ export function buildReactorPrompt(
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（9 种，选用实际发生的）：
+Delta JSON 格式（10 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
@@ -85,6 +91,9 @@ Delta JSON 格式（9 种，选用实际发生的）：
 {"kind":"establishLocation","id":"新地点id","name":"地点名","gist":"一句话描述","connectFrom":"<当前地点id>"}
 {"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
 {"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
+{"kind":"establishLore","id":"新设定id","keys":["会再次被提到的词","别名"],"content":"一句永久世界设定"}
+
+当某个**重要且持久的世界事实**首次确立(某地的来历、一个门派/势力、一条世界规则、一个秘密的真相),用 establishLore 记成永久设定(keys 填日后会再次被提到的词)。已有设定不要重复;只记真正持久、值得日后再次被唤起的 canon,琐碎或一次性细节不要记。
 
 场景移动规则：当玩家或角色走到一个尚未存在的地方，先用 establishLocation 造出它（connectFrom 填当前地点），再用 moveScene 把镜头移过去，并用 moveCharacter 把同行的角色移过去。只在确有移动/新场景时才发。
 
@@ -114,9 +123,17 @@ Delta JSON 格式（9 种，选用实际发生的）：
     return lines.join("\n");
   })();
 
+  const loreKeys = (state.lore ?? [])
+    .map((e) => e.keys.filter(Boolean).join("/"))
+    .filter(Boolean)
+    .join("、");
+
   const user = `【当前场景】${loc?.name ?? state.currentLocationId}（id: ${state.currentLocationId}）
 【相邻地点】${connections || "（无）"}
 【时间】第${state.time.day}天 ${state.time.clock}，${state.time.lighting}
+
+【已有世界设定关键词】（这些 canon 已存在，不要用 establishLore 重复）
+${loreKeys || "（无）"}
 
 【角色名册】（id: 名字，括号内为当前体态条件）
 ${rosterList || "（无）"}

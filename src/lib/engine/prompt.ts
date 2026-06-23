@@ -1,5 +1,6 @@
 import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
 import { fillPlaceholders, applyOriginal, RP_PRESET, POST_HISTORY_REINFORCEMENT } from "./preset";
+import { retrieveLore, formatLore } from "../world/lore";
 
 /** 去掉角色误加在开头的「自己名字：」前缀。 */
 export function stripSpeakerPrefix(name: string, text: string): string {
@@ -103,8 +104,19 @@ export function buildCharacterPrompt(
     ? fillPlaceholders(applyOriginal(character.postHistoryInstructions, POST_HISTORY_REINFORCEMENT), vars)
     : fillPlaceholders(POST_HISTORY_REINFORCEMENT, vars);
 
+  // Lorebook: surface canon whose keys are on-stage (scene + recent/observed memory)
+  // so the world stays consistent. In-character world context — NOT the uncensoring layer.
+  const scene = visibleScene(state, character);
+  const loreHaystack = [
+    scene,
+    ...(ctx.recent ?? []).map((m) => m.text),
+    ...(ctx.memories ?? []).map((m) => m.text),
+  ].join("\n");
+  const loreBlock = formatLore(retrieveLore(loreHaystack, state.lore));
+
   const tail = [
-    `【此刻所见】\n${visibleScene(state, character)}`,
+    `【此刻所见】\n${scene}`,
+    loreBlock,
     reinforcement,
   ].filter(Boolean).join("\n\n");
 

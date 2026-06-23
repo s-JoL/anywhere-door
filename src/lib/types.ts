@@ -52,6 +52,9 @@ export interface WorldObject {
 /** 角色的客观事实投影（秘密/内心不在此）。 */
 export interface CharObjective { name: string; condition?: string }
 
+/** 一条世界设定 / 世界书条目：keys 命中文本时注入 content（按需生长的永久 canon）。 */
+export interface LoreEntry { id: string; keys: string[]; content: string }
+
 /** 可变、按需生长。 */
 export interface WorldState {
   currentLocationId: string;
@@ -62,6 +65,8 @@ export interface WorldState {
   flags: Record<string, string | number | boolean>;
   tension?: number;
   relationships?: Record<string, Record<string, string>>;
+  /** 世界书 / canon：关键词触发的永久世界设定，可经 establishLore 按需生长。 */
+  lore?: LoreEntry[];
 }
 
 export interface WorldPresentation {

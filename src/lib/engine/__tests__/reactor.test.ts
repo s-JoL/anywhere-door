@@ -188,6 +188,22 @@ describe("parseDeltas", () => {
     const result = parseDeltas(text);
     expect(result).toHaveLength(0);
   });
+
+  it("accepts establishLore kind with required fields", () => {
+    const text = '[{"kind":"establishLore","id":"l1","keys":["血誓录"],"content":"一本记载血誓的禁书"}]';
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本记载血誓的禁书" });
+  });
+
+  it("drops establishLore missing id/content or with non-array keys", () => {
+    const text = JSON.stringify([
+      { kind: "establishLore", keys: ["x"], content: "c" }, // missing id
+      { kind: "establishLore", id: "l1", keys: ["x"] }, // missing content
+      { kind: "establishLore", id: "l2", keys: "notarray", content: "c" }, // keys not array
+    ]);
+    expect(parseDeltas(text)).toHaveLength(0);
+  });
 });
 
 describe("buildReactorPrompt", () => {
@@ -217,6 +233,18 @@ describe("buildReactorPrompt", () => {
   it("system prompt contains player self-movement guidance", () => {
     const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[0].content).toContain("尊重玩家的自我移动");
+  });
+
+  it("system prompt explains establishLore for permanent world facts", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[0].content).toContain("establishLore");
+  });
+
+  it("user message lists existing lore keys so they aren't duplicated", () => {
+    const state = baseState();
+    state.lore = [{ id: "l1", keys: ["血誓录", "禁书"], content: "一本禁书" }];
+    const msgs = buildReactorPrompt(state, [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[1].content).toContain("血誓录");
   });
 });
 
@@ -269,6 +297,21 @@ describe("react", () => {
     });
     expect(deltas).toHaveLength(1);
     expect(deltas[0].kind).toBe("setRelationship");
+  });
+
+  it("react: returns establishLore delta from fake llm", async () => {
+    const fakeLlm = async () => ({
+      content: '[{"kind":"establishLore","id":"l1","keys":["血誓录"],"content":"一本记载血誓的禁书"}]',
+    });
+    const state = baseState();
+    const deltas = await react({
+      state,
+      recentLines: ["阿岚：那本血誓录是禁书。"],
+      nameById: { "c-lan": "阿岚", you: "你" },
+      llm: fakeLlm,
+    });
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0]).toEqual({ kind: "establishLore", id: "l1", keys: ["血誓录"], content: "一本记载血誓的禁书" });
   });
 
   it("returns establishLocation + moveScene + moveCharacter from fake llm", async () => {
