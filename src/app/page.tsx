@@ -7,7 +7,9 @@ import { parseCardFile, cardToSeed } from "@/lib/import/character-card";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { derivePresentation } from "@/lib/world/presentation";
 import { useDoorEnter } from "@/app/DoorTransition";
-import { recordEnter, recordAuthor } from "@/lib/taste/record";
+import { recordEnter, recordAuthor, recordSkip } from "@/lib/taste/record";
+import { computeTasteProfile } from "@/lib/taste/profile";
+import { rankFeed } from "@/lib/taste/rank";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -323,8 +325,23 @@ export default function Home() {
   const containerRef = useRef<HTMLElement | null>(null);
   const { enter, Overlay } = useDoorEnter();
 
+  // Phase 3: skip tracking refs
+  const skippedRef   = useRef<Set<string>>(new Set());       // guards double-recording
+  const enteredRef   = useRef<Set<string>>(new Set());       // entered seeds must NOT record skip
+  const dwellTimers  = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const dwellFiredRef = useRef<Set<string>>(new Set());      // seeds whose 1.2s timer fired
+  const lastFocusRef  = useRef<string | null>(null);         // seedId currently focused
+
   async function refreshSeeds() {
-    setSeeds(await getRepository().listSeeds());
+    const repo = getRepository();
+    const rawSeeds = await repo.listSeeds();
+    const events   = await repo.listTasteEvents();
+    const profile  = computeTasteProfile(events, Date.now());
+    const recentlySeen = new Set(
+      events.slice(-10).map((e) => e.seedId),
+    );
+    const ranked = rankFeed(rawSeeds, profile, recentlySeen);
+    setSeeds(ranked);
   }
 
   useEffect(() => {
@@ -332,9 +349,10 @@ export default function Home() {
       await ensureBuiltinSeeds();
       await refreshSeeds();
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // IntersectionObserver: track which panel is ≥50% visible → focusedIndex
+  // IntersectionObserver: track which panel is ≥50% visible → focusedIndex + skip signal
   const panelRefs = useRef<(HTMLElement | null)[]>([]);
 
   const setRef = useCallback((el: HTMLElement | null, i: number) => {
@@ -347,14 +365,63 @@ export default function Home() {
     const observers: IntersectionObserver[] = [];
     panelRefs.current.forEach((el, i) => {
       if (!el) return;
+      const seed = seeds[i];
       const obs = new IntersectionObserver(
-        ([entry]) => { if (entry.isIntersecting) setFocusedIndex(i); },
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setFocusedIndex(i);
+
+            // Phase 3: start dwell timer for this seed
+            if (!dwellTimers.current.has(seed.id)) {
+              const t = setTimeout(() => {
+                dwellFiredRef.current.add(seed.id);
+                dwellTimers.current.delete(seed.id);
+              }, 1200);
+              dwellTimers.current.set(seed.id, t);
+            }
+
+            // Record skip for the previously-focused seed if it dwelled ≥1.2s
+            const prev = lastFocusRef.current;
+            if (prev && prev !== seed.id) {
+              const prevTimer = dwellTimers.current.get(prev);
+              if (prevTimer !== undefined) {
+                clearTimeout(prevTimer);
+                dwellTimers.current.delete(prev);
+              }
+              if (
+                dwellFiredRef.current.has(prev) &&
+                !enteredRef.current.has(prev) &&
+                !skippedRef.current.has(prev)
+              ) {
+                const prevSeed = seeds.find((s) => s.id === prev);
+                if (prevSeed) {
+                  skippedRef.current.add(prev);
+                  recordSkip(getRepository(), prevSeed);
+                }
+              }
+            }
+
+            lastFocusRef.current = seed.id;
+          } else {
+            // Panel scrolled out — clear any pending dwell timer
+            const t = dwellTimers.current.get(seed.id);
+            if (t !== undefined) {
+              clearTimeout(t);
+              dwellTimers.current.delete(seed.id);
+            }
+          }
+        },
         { threshold: 0.5, root: containerRef.current },
       );
       obs.observe(el);
       observers.push(obs);
     });
-    return () => observers.forEach((o) => o.disconnect());
+    return () => {
+      observers.forEach((o) => o.disconnect());
+      // Clean up all pending dwell timers on unmount
+      dwellTimers.current.forEach((t) => clearTimeout(t));
+      dwellTimers.current.clear();
+    };
   }, [seeds]);
 
   return (
@@ -365,12 +432,13 @@ export default function Home() {
       <Overlay />
       {seeds.map((seed, i) => (
         <div key={seed.id} ref={(el) => setRef(el, i)}>
-          {/* Phase 3: wire skip from feed viewport dwell-time */}
           <WorldPanel
             seed={seed}
             isFirst={i === 0}
             isFocused={focusedIndex === i}
             onEnter={(id) => {
+              // Mark as entered so skip is NOT recorded for this seed
+              enteredRef.current.add(id);
               const s = seeds.find((s) => s.id === id);
               if (s) recordEnter(getRepository(), s);
               enter(`/play?world=${id}`);
