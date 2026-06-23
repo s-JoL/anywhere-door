@@ -67,6 +67,37 @@ describe("retrieveLore", () => {
   });
 });
 
+describe("retrieveLore recursive (cascading) activation", () => {
+  const GRAPH: LoreEntry[] = [
+    { id: "king", keys: ["国王"], content: "老国王久病，权力旁落到首都的摄政手中。" },
+    { id: "capital", keys: ["首都"], content: "首都名为白石城，城中有一座血誓塔。" },
+    { id: "tower", keys: ["血誓塔"], content: "血誓塔是立誓之地。" },
+    { id: "sea", keys: ["海"], content: "远方有海，与此无关。" },
+  ];
+
+  it("cascades: a matched entry's content activates the entries it mentions (knowledge graph)", () => {
+    const out = retrieveLore("有人提到了国王。", GRAPH, { maxDepth: 3 });
+    expect(out.map((e) => e.id)).toEqual(["king", "capital", "tower"]); // 海 不被触发
+  });
+
+  it("maxDepth 0 disables cascading (direct match only)", () => {
+    const out = retrieveLore("有人提到了国王。", GRAPH, { maxDepth: 0 });
+    expect(out.map((e) => e.id)).toEqual(["king"]);
+  });
+
+  it("charBudget caps total injected content", () => {
+    const out = retrieveLore("有人提到了国王。", GRAPH, { maxDepth: 3, charBudget: 25 });
+    expect(out.length).toBeLessThan(3); // 预算装不下整条级联链
+    expect(out[0].id).toBe("king");
+  });
+
+  it("legacy number cap still works", () => {
+    const out = retrieveLore("有人提到了国王。", GRAPH, 2);
+    expect(out.length).toBeLessThanOrEqual(2);
+    expect(out[0].id).toBe("king");
+  });
+});
+
 describe("formatLore", () => {
   it("renders keys and content for non-empty entries", () => {
     const out = formatLore([LORE[0], LORE[2]]);
