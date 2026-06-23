@@ -5,6 +5,7 @@ import type { CharDraft, WorldDraft } from "@/lib/world/author";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { getRepository } from "@/lib/storage";
 import { useDoorEnter } from "@/app/DoorTransition";
+import { recordAuthor } from "@/lib/taste/record";
 
 interface CharCard {
   name: string;
@@ -91,6 +92,7 @@ export default function CreatePage() {
     }
     try {
       await getRepository().upsertSeed(seed);
+      recordAuthor(getRepository(), seed);  // fire-and-forget
       enter("/play?world=" + seed.id);
     } catch {
       setError("保存失败，请重试");

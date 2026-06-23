@@ -1,11 +1,12 @@
 import Dexie, { type Table } from "dexie";
-import type { WorldInstance, Message, Memory, WorldSeed } from "../types";
+import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
 
 export class ReveriesDB extends Dexie {
   instances!: Table<WorldInstance, string>;
   messages!: Table<Message, string>;
   memories!: Table<Memory, string>;
   seeds!: Table<WorldSeed, string>;
+  tasteEvents!: Table<TasteEvent, string>;
   constructor(name = "the-reveries") {
     super(name);
     this.version(1).stores({
@@ -17,6 +18,9 @@ export class ReveriesDB extends Dexie {
     });
     this.version(3).stores({
       seeds: "id, createdAt",
+    });
+    this.version(4).stores({
+      tasteEvents: "id, at, seedId",
     });
   }
 }

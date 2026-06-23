@@ -119,3 +119,6 @@ export interface Memory {
   /** 反思记忆的来源记忆 id 列表（仅 kind:"reflection" 有值）。 */
   evidence?: string[];
 }
+
+export type TasteEventKind = "enter" | "dwell" | "author" | "skip";
+export interface TasteEvent { id: string; kind: TasteEventKind; seedId: string; tags: string[]; at: number; }
