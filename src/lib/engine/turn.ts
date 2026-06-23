@@ -130,10 +130,9 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       gameDay: state.time.day, gameClock: state.time.clock, at: nextTime(), delta,
     });
 
-  // Off-screen evolution seam (no-op today). When implemented, this advances the
-  // world to reflect time spent away before the player's new action is processed.
-  // TODO: compute real elapsed time when off-screen evolution is implemented
-  const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway: 0, llm });
+  // 离场演化:玩家回来时,按离开时长懒补这段时间里合理发生的平静变化(交互驱动:离开即冻结)
+  const msAway = inst.lastSeenAt ? Math.max(0, Date.now() - inst.lastSeenAt) : 0;
+  const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway, llm });
   for (const d of awayDeltas) {
     const v = validateDelta(state, seed.rules, d);
     if (v.ok) { state = applyDelta(state, d); await logDelta(d, "offscreen"); }
@@ -261,7 +260,7 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       }
     }
 
-    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime() });
+    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now() });
 
     // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
     await maybeReflect({

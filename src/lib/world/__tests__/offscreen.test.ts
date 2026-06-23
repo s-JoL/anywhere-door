@@ -1,99 +1,49 @@
 import { describe, it, expect } from "vitest";
-import { evolveWhileAway, type OffscreenContext } from "../offscreen";
-import type { WorldSeed, WorldState, WorldRules } from "@/lib/types";
+import { evolveWhileAway, buildOffscreenPrompt, type OffscreenContext } from "../offscreen";
+import type { WorldSeed, WorldState, WorldRules, ChatMessage } from "@/lib/types";
 
-describe("offscreen evolution seam", () => {
-  // Minimal context for testing
-  const minimalRules: WorldRules = {
-    physics: "standard",
-    setting: "test setting",
-    redLines: [],
-  };
+const rules: WorldRules = { physics: "无超自然", setting: "test", redLines: [] };
+const state: WorldState = {
+  currentLocationId: "loc1",
+  time: { day: 1, clock: "12:00", lighting: "day" },
+  locations: { loc1: { id: "loc1", name: "测试地", detail: "fleshed", gist: "一处测试地点", connections: [], presentCharacterIds: ["c1"], objectIds: [] } },
+  objects: {},
+  roster: { c1: { name: "阿岚" } },
+  flags: {},
+};
+const seed = { id: "s1", title: "T", worldview: "雨夜霓虹城", rules, openingState: state, characters: [], modelConfig: { provider: "openrouter", apiKey: "", model: "x", reasoningEnabled: false } } as WorldSeed;
 
-  const minimalState: WorldState = {
-    currentLocationId: "loc1",
-    time: { day: 1, clock: "12:00", lighting: "day" },
-    locations: {
-      loc1: {
-        id: "loc1",
-        name: "Test Location",
-        detail: "fleshed",
-        gist: "A test location",
-        connections: [],
-        presentCharacterIds: [],
-        objectIds: [],
-      },
-    },
-    objects: {},
-    roster: {},
-    flags: {},
-  };
+const HOUR = 3_600_000;
+const deltaLlm = async (_m: ChatMessage[]) => ({ content: '[{"kind":"advanceTime","clock":"黄昏","dayDelta":0},{"kind":"setCondition","entityId":"c1","condition":"打了个盹，眼神松了些"}]' });
 
-  const minimalSeed: WorldSeed = {
-    id: "seed1",
-    title: "Test Seed",
-    worldview: "test",
-    rules: minimalRules,
-    openingState: minimalState,
-    characters: [],
-    modelConfig: {
-      provider: "openrouter",
-      apiKey: "",
-      model: "test",
-      reasoningEnabled: false,
-    },
-  };
+describe("evolveWhileAway (离场演化)", () => {
+  function ctx(over: Partial<OffscreenContext>): OffscreenContext {
+    return { seed, state, rules, msAway: 0, ...over };
+  }
 
-  it("should return empty array (no-op) for any context", async () => {
-    const ctx: OffscreenContext = {
-      seed: minimalSeed,
-      state: minimalState,
-      rules: minimalRules,
-      msAway: 0,
-    };
-    const deltas = await evolveWhileAway(ctx);
-    expect(deltas).toEqual([]);
+  it("does nothing when there is no llm", async () => {
+    expect(await evolveWhileAway(ctx({ msAway: 24 * HOUR }))).toEqual([]);
   });
-
-  it("should return empty array even with non-zero msAway", async () => {
-    const ctx: OffscreenContext = {
-      seed: minimalSeed,
-      state: minimalState,
-      rules: minimalRules,
-      msAway: 3600000, // 1 hour
-    };
-    const deltas = await evolveWhileAway(ctx);
-    expect(deltas).toEqual([]);
+  it("does nothing when the player was away less than the threshold", async () => {
+    expect(await evolveWhileAway(ctx({ msAway: 10 * 60_000, llm: deltaLlm }))).toEqual([]); // 10 min
   });
-
-  it("should return empty array even with llm function provided", async () => {
-    const ctx: OffscreenContext = {
-      seed: minimalSeed,
-      state: minimalState,
-      rules: minimalRules,
-      msAway: 0,
-      llm: async () => ({ content: "test" }),
-    };
-    const deltas = await evolveWhileAway(ctx);
-    expect(deltas).toEqual([]);
+  it("proposes plausible deltas when away long enough", async () => {
+    const deltas = await evolveWhileAway(ctx({ msAway: 5 * HOUR, llm: deltaLlm }));
+    expect(deltas.length).toBeGreaterThan(0);
+    expect(deltas.some((d) => d.kind === "setCondition")).toBe(true);
   });
+  it("returns [] when the llm yields no parseable deltas", async () => {
+    expect(await evolveWhileAway(ctx({ msAway: 5 * HOUR, llm: async () => ({ content: "一切如常。" }) }))).toEqual([]);
+  });
+  it("returns [] on llm error (graceful)", async () => {
+    expect(await evolveWhileAway(ctx({ msAway: 5 * HOUR, llm: async () => { throw new Error("x"); } }))).toEqual([]);
+  });
+});
 
-  it("seam documents the interface contract for future implementation", async () => {
-    // This test ensures that the OffscreenContext interface is well-formed
-    // and documents what will be needed when off-screen evolution is implemented
-    const ctx: OffscreenContext = {
-      seed: minimalSeed,
-      state: minimalState,
-      rules: minimalRules,
-      msAway: 86400000, // 24 hours
-      llm: async (_messages, onContent) => {
-        onContent?.("streaming content");
-        return { content: "result" };
-      },
-    };
-    expect(ctx.msAway).toBe(86400000);
-    expect(ctx.llm).toBeDefined();
-    const deltas = await evolveWhileAway(ctx);
-    expect(deltas).toEqual([]);
+describe("buildOffscreenPrompt", () => {
+  it("includes worldview and the hours-away figure", () => {
+    const all = buildOffscreenPrompt(seed, state, 7).map((m) => m.content).join("\n");
+    expect(all).toContain("雨夜霓虹城");
+    expect(all).toContain("7");
   });
 });
