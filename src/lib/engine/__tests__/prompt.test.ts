@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildCharacterPrompt, presentCharacters, stripSpeakerPrefix } from "../prompt";
 import { DEMO_SEED } from "../../world/seed-demo";
+import type { Character, WorldState } from "../../types";
 
 describe("prompt", () => {
   it("present characters are those in the current location", () => {
@@ -118,5 +119,25 @@ describe("prompt", () => {
     expect(stripSpeakerPrefix("阿岚", "阿岚:hi")).toBe("hi");
     expect(stripSpeakerPrefix("阿岚", "（没有前缀）正常说话")).toBe("（没有前缀）正常说话");
     expect(stripSpeakerPrefix("阿岚", "老周：这跟阿岚无关")).toBe("老周：这跟阿岚无关"); // 不误删别人/正文
+  });
+});
+
+describe("presentCharacters — instance-private characters", () => {
+  it("resolves ids from state.characters as well as seed.characters", () => {
+    const spawned: Character = { id: "c-stranger", name: "陌生人", description: "角落里的人", detail: "stub" };
+    const state: WorldState = {
+      ...DEMO_SEED.openingState,
+      characters: { "c-stranger": spawned },
+      locations: {
+        ...DEMO_SEED.openingState.locations,
+        bar: {
+          ...DEMO_SEED.openingState.locations.bar,
+          presentCharacterIds: [...DEMO_SEED.openingState.locations.bar.presentCharacterIds, "c-stranger"],
+        },
+      },
+    };
+    const present = presentCharacters(DEMO_SEED, state);
+    expect(present.map((c) => c.id)).toContain("c-stranger"); // instance-private resolved
+    expect(present.map((c) => c.id)).toContain("c-lan");        // seed character still resolved
   });
 });
