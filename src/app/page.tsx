@@ -12,6 +12,7 @@ import { computeTasteProfile } from "@/lib/taste/profile";
 import { rankFeed } from "@/lib/taste/rank";
 import { ensureGeneratedPool } from "@/lib/world/pregenerate";
 import { streamChat } from "@/lib/llm/stream";
+import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -365,8 +366,9 @@ export default function Home() {
           const events = await repo.listTasteEvents();
           const profile = computeTasteProfile(events, Date.now());
           // Effective model config: global user config if present, else DEMO_SEED's
-          // (apiKey:"" → server env in dev). No global config store yet.
-          const modelConfig = DEMO_SEED.modelConfig;
+          // (apiKey:"" → server env in dev). DEMO_SEED is builtin, so resolveModelConfig
+          // returns the user's config when set, otherwise DEMO_SEED.modelConfig exactly.
+          const modelConfig = resolveModelConfig(DEMO_SEED, getUserConfig());
           await ensureGeneratedPool({
             repo,
             modelConfig,
@@ -459,6 +461,15 @@ export default function Home() {
       className="h-[100dvh] w-full overflow-y-auto overscroll-none snap-y snap-mandatory"
     >
       <Overlay />
+      {/* 低调的设置入口：固定在右上角，不参与 snap 流，不拦截滚动手势 */}
+      <Link
+        href="/settings"
+        aria-label="模型设置"
+        className="fixed right-4 z-30 flex h-9 w-9 items-center justify-center rounded-full text-[16px] text-[var(--smoke)] opacity-55 transition hover:opacity-100"
+        style={{ top: "max(0.9rem, env(safe-area-inset-top))" }}
+      >
+        ⚙
+      </Link>
       {seeds.map((seed, i) => (
         <div key={seed.id} ref={(el) => setRef(el, i)}>
           <WorldPanel

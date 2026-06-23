@@ -7,6 +7,8 @@ import { runTurn, type TurnEvent } from "@/lib/engine/turn";
 import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { recordDwell } from "@/lib/taste/record";
+import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
+import Link from "next/link";
 import type { Message, WorldSeed, WorldState } from "@/lib/types";
 
 type Item = {
@@ -46,6 +48,7 @@ function PlayInner() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [needsKey, setNeedsKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const streamingId = useRef<string | null>(null);
@@ -116,14 +119,16 @@ function PlayInner() {
     setInput("");
     setBusy(true);
     setErr("");
+    setNeedsKey(false);
     setItems((xs) => [...xs, { id: `u-${Date.now()}`, kind: "user", content: text }]);
     try {
+      const cfg = resolveModelConfig(seed, getUserConfig());
       await runTurn({
         seed,
         repo: getRepository(),
         instanceId,
         input: text,
-        llm: (msgs, onContent) => streamChat({ cfg: seed.modelConfig, messages: msgs, onContent }),
+        llm: (msgs, onContent) => streamChat({ cfg, messages: msgs, onContent }),
         onEvent,
       });
       await reload(instanceId, nameOf);
@@ -135,7 +140,12 @@ function PlayInner() {
         }
       }
     } catch (e) {
-      setErr(`这一刻没能继续：${(e as Error).message}`);
+      const msg = (e as Error).message ?? "";
+      if (/missing api key/i.test(msg) || /upstream 40[0-3]/i.test(msg)) {
+        setNeedsKey(true);
+      } else {
+        setErr(`这一刻没能继续：${msg}`);
+      }
     } finally {
       streamingId.current = null;
       setBusy(false);
@@ -222,6 +232,14 @@ function PlayInner() {
           <div className="breathe self-center text-[12px] tracking-[0.3em] text-[var(--smoke)]">世界在低语 · · ·</div>
         )}
         {err && <div className="self-center text-center text-[13px] text-[var(--rose)]">{err}</div>}
+        {needsKey && (
+          <div className="self-center text-center text-[13px] text-[var(--smoke)]">
+            还没配置模型 key ——{" "}
+            <Link href="/settings" className="text-[var(--lamp)] underline underline-offset-4">
+              去设置
+            </Link>
+          </div>
+        )}
         {items.length === 0 && !busy && (
           <div className="breathe mt-10 self-center text-center text-[13px] text-[var(--smoke)]">推门进入這個世界…</div>
         )}
