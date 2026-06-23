@@ -43,11 +43,15 @@ export interface MaybeDirectArgs {
   llm: LlmFn;
 }
 
-/** 节拍决策：张力明显上升、或攒到较高时，插一条世界旁白。返回旁白 Message 或 null。 */
+/** 张力到此即算"高位"。 */
+const HIGH_TENSION = 7;
+
+/** 节拍决策：张力明显跃升、或已在高位且仍在上行时，插一条世界旁白。返回旁白 Message 或 null。 */
 export async function maybeDirect(args: MaybeDirectArgs): Promise<Message | null> {
   const { instanceId, state, recentLines, tensionBefore, tensionAfter, llm } = args;
-  const rose = tensionAfter - tensionBefore >= 1.5;
-  if (!rose) return null; // 只在张力真实跃升时插旁白，避免高位时每回合刷屏
+  const rose = tensionAfter - tensionBefore >= 1.5;          // 明显跃升
+  const climbingHigh = tensionAfter >= HIGH_TENSION && tensionAfter > tensionBefore; // 高位仍在上行
+  if (!rose && !climbingHigh) return null; // 高位但持平/衰减的回合不插，天然防刷屏
   const line = await directorNarrate({ state, recentLines, llm });
   if (!line) return null;
   return { id: newId("n"), instanceId, role: "system", speakerId: null, content: line, narration: true, createdAt: nextTime() };

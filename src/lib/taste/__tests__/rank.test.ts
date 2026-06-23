@@ -198,4 +198,29 @@ describe("rankFeed", () => {
     // Deterministic: same inputs → same outputs
     expect(result1.map((s) => s.id)).toEqual(result2.map((s) => s.id));
   });
+
+  // (g) Category freshness (防腻 by genre, not just exact id):
+  // wuxia2 is NOT in recentlySeen by id, but the recent feed was all 武侠.
+  // Its slight taste affinity wins pos0 normally, but the category-staleness
+  // penalty should flip a fresh-genre seed (urban) ahead of it.
+  it("(g) category freshness: a tag-stale seed ranks below a fresh-genre seed", () => {
+    const profile: Record<string, number> = { "genre:武侠": 1 };
+    const recentTags: Record<string, number> = {
+      "genre:武侠": 1, "mood:江湖": 1, "mood:侠义": 1,
+    };
+    const seeds = [wuxia2, urban];
+    // Baseline (no recentTags): affinity puts wuxia2 first
+    expect(rankFeed(seeds, profile, new Set())[0].id).toBe("wuxia-2");
+    // With category freshness: urban (fresh genre) overtakes the stale wuxia
+    const result = rankFeed(seeds, profile, new Set(), { recentTags });
+    expect(result[0].id).toBe("urban-1");
+  });
+
+  // (h) recentTags is optional & backward compatible — omitting it changes nothing
+  it("(h) omitting recentTags preserves prior ranking", () => {
+    const profile: Record<string, number> = { "genre:武侠": 1 };
+    const a = rankFeed([wuxia2, urban], profile, new Set());
+    const b = rankFeed([wuxia2, urban], profile, new Set(), {});
+    expect(a.map((s) => s.id)).toEqual(b.map((s) => s.id));
+  });
 });

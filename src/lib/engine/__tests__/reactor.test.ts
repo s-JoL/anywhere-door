@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { parseDeltas, buildReactorPrompt, react } from "../reactor";
-import type { WorldState } from "../../types";
+import type { WorldState, WorldRules } from "../../types";
+
+const RULES: WorldRules = {
+  physics: "没有任何超自然力量",
+  setting: "赛博雨夜的霓虹城",
+  redLines: ["任何角色都不会真正死亡", "不描写未成年人"],
+};
 
 function baseState(): WorldState {
   return {
@@ -246,6 +252,18 @@ describe("buildReactorPrompt", () => {
     const msgs = buildReactorPrompt(state, [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[1].content).toContain("血誓录");
   });
+
+  it("injects world physics and red lines into the system prompt when rules are given", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" }, RULES);
+    expect(msgs[0].content).toContain("没有任何超自然力量");
+    expect(msgs[0].content).toContain("任何角色都不会真正死亡");
+    expect(msgs[0].content).toContain("不描写未成年人");
+  });
+
+  it("omits the world-law block when no rules are supplied", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { you: "你" });
+    expect(msgs[0].content).not.toContain("【世界铁律】");
+  });
 });
 
 describe("react", () => {
@@ -263,6 +281,14 @@ describe("react", () => {
     expect(deltas).toHaveLength(2);
     expect(deltas[0]).toEqual({ kind: "setObjectState", objectId: "o-glass", state: "打翻在吧台上" });
     expect(deltas[1]).toEqual({ kind: "setCondition", entityId: "you", condition: "浑身湿透" });
+  });
+
+  it("forwards world physics and red lines into the prompt it sends the llm", async () => {
+    let captured = "";
+    const llm = async (m: { role: string; content: string }[]) => { captured = m[0].content; return { content: "[]" }; };
+    await react({ state: baseState(), recentLines: [], nameById: {}, llm, rules: RULES });
+    expect(captured).toContain("任何角色都不会真正死亡");
+    expect(captured).toContain("没有任何超自然力量");
   });
 
   it("returns [] on llm error", async () => {

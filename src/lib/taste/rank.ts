@@ -39,7 +39,13 @@ export function noveltyOf(seed: WorldSeed, profile: Record<string, number>): num
 export interface RankOpts {
   exploreEvery?: number; // default 4 — every Nth slot (1-based) is explore
   mmrLambda?: number;    // default 0.5 — diversity penalty weight
-  freshPenalty?: number; // default 0.5 — subtracted from base score for recently-seen seeds
+  freshPenalty?: number; // default 0.5 — subtracted from base score for recently-seen seeds (exact id)
+  /**
+   * Category-level 防腻: tag → recent prevalence in [0,1] across recently-seen seeds.
+   * A seed sharing tags with the recent feed is damped even if its own id is fresh.
+   */
+  recentTags?: Record<string, number>;
+  catFreshPenalty?: number; // default 0.5 — weight of the category-staleness penalty
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +60,8 @@ export function rankFeed(
   const exploreEvery = opts?.exploreEvery ?? 4;
   const mmrLambda    = opts?.mmrLambda    ?? 0.5;
   const freshPenalty = opts?.freshPenalty ?? 0.5;
+  const recentTags   = opts?.recentTags;
+  const catFreshPenalty = opts?.catFreshPenalty ?? 0.5;
 
   if (seeds.length === 0) return [];
 
@@ -63,9 +71,15 @@ export function rankFeed(
   const noveltyCache = new Map<string, number>();
 
   for (const seed of seeds) {
-    const b = scoreSeed(seed, profile) - (recentlySeen.has(seed.id) ? freshPenalty : 0);
+    const tags = tagsOfSeed(seed);
+    let b = scoreSeed(seed, profile) - (recentlySeen.has(seed.id) ? freshPenalty : 0);
+    if (recentTags && tags.length > 0) {
+      // Mean recent-prevalence over this seed's tags → category staleness penalty.
+      const overlap = tags.reduce((acc, t) => acc + (recentTags[t] ?? 0), 0) / tags.length;
+      b -= catFreshPenalty * overlap;
+    }
     baseScore.set(seed.id, b);
-    tagCache.set(seed.id, tagsOfSeed(seed));
+    tagCache.set(seed.id, tags);
     noveltyCache.set(seed.id, noveltyOf(seed, profile));
   }
 
