@@ -492,3 +492,29 @@ describe("locked passage (上锁的门挡路)", () => {
     expect(validateDelta(next, rules, { kind: "moveScene", toLocationId: "street" }).ok).toBe(false);
   });
 });
+
+describe("fleshLocation delta (stub→fleshed 懒充实)", () => {
+  it("validateDelta accepts fleshing an existing location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "fleshLocation", locationId: "street", description: "湿漉漉的霓虹长街，雨水在裂缝里聚成一条条细河" });
+    expect(r.ok).toBe(true);
+  });
+  it("validateDelta rejects fleshing a nonexistent location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "fleshLocation", locationId: "nowhere", description: "x" });
+    expect(r.ok).toBe(false);
+  });
+  it("applyDelta sets description and marks the location fleshed, immutably", () => {
+    const s = baseState();
+    expect(s.locations.street.detail).toBe("stub"); // precondition
+    const next = applyDelta(s, { kind: "fleshLocation", locationId: "street", description: "霓虹长街", gist: "雨夜长街" });
+    expect(next.locations.street.description).toBe("霓虹长街");
+    expect(next.locations.street.gist).toBe("雨夜长街");
+    expect(next.locations.street.detail).toBe("fleshed");
+    // original untouched
+    expect(s.locations.street.detail).toBe("stub");
+    expect(s.locations.street.description).toBeUndefined();
+  });
+  it("applyDelta keeps the prior gist when none is given", () => {
+    const next = applyDelta(baseState(), { kind: "fleshLocation", locationId: "street", description: "霓虹长街" });
+    expect(next.locations.street.gist).toBe("湿漉漉的街"); // 原 gist 保留
+  });
+});

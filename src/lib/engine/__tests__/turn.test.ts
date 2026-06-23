@@ -133,6 +133,26 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.relationships?.["c-lan"]?.["you"]?.disposition).toBe("暗生情愫");
   });
 
+  it("fleshes the current stub location at end of turn (stub→fleshed)", async () => {
+    const repo = getRepository();
+    const inst = instantiate(DEMO_SEED, 1, "w-flesh");
+    const cur = inst.state.currentLocationId;
+    inst.state.locations[cur] = { ...inst.state.locations[cur], detail: "stub", description: undefined };
+    await repo.upsertInstance(inst);
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界环境作家")) return { content: "霉味与旧木的私室，烛火在穿堂风里乱跳。" };
+      if (sys.includes("世界状态记录器")) return { content: "[]" };
+      if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+      return { content: "……" };
+    };
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-flesh", input: "我打量四周。", llm });
+    const after = await repo.getInstance("w-flesh");
+    expect(after?.state.locations[cur].detail).toBe("fleshed");
+    expect(after?.state.locations[cur].description).toContain("私室");
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));

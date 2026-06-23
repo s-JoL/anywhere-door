@@ -14,7 +14,8 @@ export type Delta =
   | { kind: "establishLore"; id: string; keys: string[]; content: string }
   | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
   | { kind: "moveObject"; objectId: string; toLocationId: string }
-  | { kind: "setObjectLocked"; objectId: string; locked: boolean };
+  | { kind: "setObjectLocked"; objectId: string; locked: boolean }
+  | { kind: "fleshLocation"; locationId: string; description: string; gist?: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -155,6 +156,10 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
     }
     case "setObjectLocked":
       return state.objects[d.objectId] ? { ok: true } : { ok: false, reason: `对象 ${d.objectId} 不存在` };
+    case "fleshLocation":
+      if (!state.locations[d.locationId]) return { ok: false, reason: `地点 ${d.locationId} 不存在` };
+      if (!d.description?.trim()) return { ok: false, reason: "充实描述不能为空" };
+      return { ok: true };
   }
 }
 
@@ -304,6 +309,16 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
       return {
         ...state,
         objects: { ...state.objects, [d.objectId]: { ...obj, props: { ...obj.props, locked: d.locked } } },
+      };
+    }
+    case "fleshLocation": {
+      const loc = state.locations[d.locationId];
+      return {
+        ...state,
+        locations: {
+          ...state.locations,
+          [d.locationId]: { ...loc, description: d.description, gist: d.gist ?? loc.gist, detail: "fleshed" },
+        },
       };
     }
   }
