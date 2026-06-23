@@ -66,11 +66,35 @@ describe("parseDeltas", () => {
     expect(result[0].kind).toBe("setFlag");
   });
 
-  it("caps at 8 deltas", () => {
-    const items = Array.from({ length: 10 }, (_, i) => ({ kind: "setFlag", key: `k${i}`, value: true }));
+  it("caps at 12 deltas", () => {
+    const items = Array.from({ length: 15 }, (_, i) => ({ kind: "setFlag", key: `k${i}`, value: true }));
     const text = JSON.stringify(items);
     const result = parseDeltas(text);
-    expect(result).toHaveLength(8);
+    expect(result).toHaveLength(12);
+  });
+
+  it("keeps all 12 movement deltas in a busy turn (establishLocation+moveScene+moveCharacter not dropped)", () => {
+    const items = [
+      { kind: "establishLocation", id: "backroom", name: "里屋", gist: "昏暗内室", connectFrom: "bar" },
+      { kind: "moveScene", toLocationId: "backroom" },
+      { kind: "moveCharacter", characterId: "c-lan", toLocationId: "backroom" },
+      { kind: "moveCharacter", characterId: "c-bob", toLocationId: "backroom" },
+      { kind: "setCondition", entityId: "you", condition: "紧张" },
+      { kind: "setRelationship", fromId: "c-lan", toId: "you", disposition: "戒备松动" },
+      { kind: "setFlag", key: "door_closed", value: true },
+      { kind: "setObjectState", objectId: "o-glass", state: "倒扣桌上" },
+      { kind: "advanceTime", clock: "深夜", lighting: "暗", dayDelta: 0 },
+      { kind: "establishObject", id: "o-chair", name: "椅子", locationId: "backroom" },
+      { kind: "setFlag", key: "scene_entered", value: true },
+      { kind: "setCondition", entityId: "c-lan", condition: "警觉" },
+    ];
+    const text = JSON.stringify(items);
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(12);
+    // Verify movement deltas are present (not dropped by cap)
+    expect(result.find((d) => d.kind === "establishLocation")).toBeDefined();
+    expect(result.find((d) => d.kind === "moveScene")).toBeDefined();
+    expect(result.filter((d) => d.kind === "moveCharacter")).toHaveLength(2);
   });
 
   it("handles all 6 original valid kinds", () => {
@@ -188,6 +212,11 @@ describe("buildReactorPrompt", () => {
     state.roster["you"] = { name: "你", condition: "浑身湿透" };
     const msgs = buildReactorPrompt(state, [], { you: "你" });
     expect(msgs[1].content).toContain("浑身湿透");
+  });
+
+  it("system prompt contains player self-movement guidance", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[0].content).toContain("尊重玩家的自我移动");
   });
 });
 
