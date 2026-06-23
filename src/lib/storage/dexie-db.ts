@@ -1,13 +1,13 @@
 import Dexie, { type Table } from "dexie";
 import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
 
-export class ReveriesDB extends Dexie {
+export class AnywhereDoorDB extends Dexie {
   instances!: Table<WorldInstance, string>;
   messages!: Table<Message, string>;
   memories!: Table<Memory, string>;
   seeds!: Table<WorldSeed, string>;
   tasteEvents!: Table<TasteEvent, string>;
-  constructor(name = "the-reveries") {
+  constructor(name = "anywhere-door") {
     super(name);
     this.version(1).stores({
       instances: "id, seedId, updatedAt",

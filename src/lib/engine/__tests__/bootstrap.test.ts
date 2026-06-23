@@ -7,7 +7,7 @@ import { BUILTIN_SEEDS } from "../../world/seeds-builtin";
 describe("bootstrap", () => {
   beforeEach(() => {
     resetRepository();
-    indexedDB.deleteDatabase("the-reveries");
+    indexedDB.deleteDatabase("anywhere-door");
   });
 
   describe("ensureDemoInstance (legacy compat)", () => {

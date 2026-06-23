@@ -42,7 +42,7 @@ function makeWorld(title: string) {
 describe("ensureGeneratedPool", () => {
   beforeEach(() => {
     resetRepository();
-    indexedDB.deleteDatabase("the-reveries");
+    indexedDB.deleteDatabase("anywhere-door");
   });
 
   it("adds target generated seeds on an empty pool with a valid llm", async () => {

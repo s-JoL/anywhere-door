@@ -9,7 +9,7 @@ function evt(id: string, at: number): TasteEvent {
 describe("taste event storage", () => {
   beforeEach(() => {
     resetRepository();
-    indexedDB.deleteDatabase("the-reveries");
+    indexedDB.deleteDatabase("anywhere-door");
   });
 
   it("recordTasteEvent then listTasteEvents returns event ascending by at", async () => {
