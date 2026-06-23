@@ -164,7 +164,7 @@ npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 充实 · 离场 · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/`(观察 · 检索 · 反思 · 传话)· `src/lib/storage/`(IndexedDB · 事件日志)· `src/app/`(feed · play · settings)。
-设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
+设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`](docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md)(世界 runtime / agent 架构)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
 
 ---
 

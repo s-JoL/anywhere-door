@@ -3,6 +3,8 @@
 > 本文描述**当前已实现的技术架构**。产品原则与取舍权威见
 > [`../AGENTS.md`](../AGENTS.md);最新整体产品设计见
 > [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](superpowers/specs/2026-06-24-overall-product-design.md);
+> 目标世界 runtime / agent 架构见
+> [`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`](superpowers/specs/2026-06-24-world-runtime-technical-design.md);
 > 从当前实现走向最新产品形态的路线见 [`ROADMAP.md`](ROADMAP.md)。
 >
 > 如果本文与 `AGENTS.md` 或最新产品 spec 冲突,以更高层产品文档为准;
@@ -27,6 +29,32 @@
 - **规则不可变 · 状态可变**:世界有一层不可变 `WorldRules`(物理/设定/红线),其上是可变 `WorldState`;LLM 永不直接改状态,只**提议**变化、经校验后落库。
 - **自带 key · 本地优先**:平台零推理成本、零数据库;隐私归用户。
 - **不设限**:走向由你与模型共同决定。
+
+## 2.5 目标 Runtime Spine
+
+当前实现的 `runTurn` 仍是一个偏集中的 orchestrator。后续开发不应另起一套
+循环,而应从它拆出目标 runtime spec 锁定的模块边界:
+
+```text
+TurnOrchestrator
+-> InputRouter
+-> WorldKernel
+-> ContextAssembler
+-> PerceptionResolver
+-> Director
+-> AgentRuntime
+-> Reactor
+-> Materializer
+-> MemoryBeliefSystem
+-> OffstageReconciler
+-> StudioRuntime
+```
+
+这些模块的职责以
+[`2026-06-24-world-runtime-technical-design.md`](superpowers/specs/2026-06-24-world-runtime-technical-design.md)
+为准。本文下方描述的是当前代码事实:多数职责还集中在
+[`src/lib/engine/turn.ts`](../src/lib/engine/turn.ts)、prompt、reactor、
+world/delta 和 memory helpers 中。
 
 ## 3. 回合循环(核心)
 
@@ -64,6 +92,7 @@
 | **Director/God 引擎** | 角色自决发言(并行意图+选人)、主观记忆+反思、导演(张力/旁白/引入角色) | `src/lib/engine/` |
 | **World Reactor** | LLM 提议 delta → 校验(结构/空间 + 红线关键词硬筛)→ 落库;prompt 携物理+红线作软约束;玩家身体、可游走空间、社会后果都由此驱动 | `engine/reactor.ts` · `world/delta.ts` |
 | **主观记忆** | witness 作用域观察;检索按 `近期×相关×重要`;周期反思成更高层信念 | `src/lib/memory/` |
+| **目标 runtime 边界** | 未来从当前 `runTurn` 拆出的 WorldKernel / ContextAssembler / PerceptionResolver / AgentRuntime / MemoryBeliefSystem 等模块;职责已锁定,实现分阶段推进 | `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` |
 | **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻:同 id 重惩 + **同题材近期占比软降权**)| `src/lib/taste/` |
 | **世界生成器** | 条件化(贴合/故意发散避免局部最优)产出完整可玩种子;冷启动跨题材铺开;后台预生成池 | `world/generate.ts` · `world/pregenerate.ts` |
 | **Lorebook** | 关键词触发正典注入 + **递归级联激活**(命中条目的正文再触发它提到的条目→知识图谱式按需展开,受条数/字数预算约束);`establishLore` 让设定按需结晶 | `world/lore.ts` |

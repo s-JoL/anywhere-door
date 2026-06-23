@@ -8,9 +8,11 @@ replace the charter.
 1. `AGENTS.md` — highest authority: essence, product form, invariants.
 2. `docs/superpowers/specs/2026-06-24-overall-product-design.md` — latest full
    product design.
-3. `docs/DESIGN.md` — current implementation architecture.
-4. `docs/ROADMAP.md` — staged implementation direction.
-5. `docs/entity-genesis-design.md` — entity genesis and surfacing details.
+3. `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
+   target world-runtime / agent architecture.
+4. `docs/DESIGN.md` — current implementation architecture.
+5. `docs/ROADMAP.md` — staged implementation direction.
+6. `docs/entity-genesis-design.md` — entity genesis and surfacing details.
 
 Older `.superpowers/sdd/*` reports and implementation plans are historical
 evidence. Do not treat them as product authority when they conflict with the
@@ -37,6 +39,12 @@ files above.
   behavior sequences and balance exploit / bridge / explore / diversity.
 - **Consequence Mode is default.** No idle server simulation; reconcile plausible
   offstage consequences when the user returns.
+- **Turn-scoped layered runtime.** Do not add an always-running simulation loop
+  as the default. Split runtime work into Director, capped active character
+  agents, Reactor, Materializer, Memory/Belief, Offstage Reconciler, and a
+  WorldKernel write gate.
+- **WorldKernel owns durable state.** Any persistent world change should be a
+  typed delta or equivalent validated operation with log evidence.
 - **Power controls are channel-isolated.** Player Mode, Director Notes, Scene
   Contract, and God/Studio Mode must not blur into each other.
 - **Local-first / BYO-key.** Production uses user-provided model keys and browser
@@ -62,6 +70,8 @@ files above.
 - Prefer existing engine paths: `runTurn`, Director/Reactor prompts,
   `Delta` types, `validateDelta`, `applyDelta`, storage repositories, and
   memory helpers.
+- When changing the turn loop, follow the runtime spec. Extract boundaries from
+  the current `runTurn`; do not create a second competing runtime.
 - Add new world changes as typed deltas unless there is a strong reason not to.
 - Keep generated content and durable state separate. Prose can suggest; deltas
   commit.
@@ -78,6 +88,8 @@ files above.
 
 - `AGENTS.md` is the charter. Update it only when the principle itself changes.
 - The latest product spec is the complete product-design reference.
+- The world-runtime technical spec is the complete agent/runtime architecture
+  reference.
 - `docs/DESIGN.md` describes current architecture and may lag vision by design.
 - `docs/ROADMAP.md` explains the gap between current code and latest product
   direction.

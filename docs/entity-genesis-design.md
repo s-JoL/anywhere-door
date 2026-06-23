@@ -2,7 +2,9 @@
 
 > **Status: design LOCKED — ready to turn into a step-by-step implementation
 > plan (docs first, then code).** Governed by `AGENTS.md` §7 and the latest
-> product spec §5; read those first.
+> product spec §5; runtime boundaries are governed by
+> `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`.
+> Read those first.
 
 ## Goal
 
@@ -134,6 +136,9 @@ flesh-on-visit is unwired for every type.
   control layers, and technical invariants.
 - `docs/superpowers/specs/2026-06-24-overall-product-design.md` §5 — full
   product entity lifecycle.
+- `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
+  Materializer, Director casting, AgentRuntime, and PerceptionResolver
+  boundaries.
 - `docs/DESIGN.md` — turn flow, perception projection, bidirectional mediation.
 - `docs/ROADMAP.md` — roadmap phases for entity lifecycle, character reality,
   offstage life, and power-user surfaces.
