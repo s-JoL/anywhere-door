@@ -2,7 +2,11 @@
 
 Date: 2026-06-24
 
-Status: product design approved for written review; not an implementation plan.
+Status: product design locked as the v1 product baseline; not an
+implementation plan.
+
+Runtime architecture baseline:
+`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`.
 
 ## 1. Product North Star
 
@@ -656,9 +660,9 @@ Key source links:
 - Sudowrite: https://sudowrite.com/
 - Inworld: https://inworld.ai/
 
-## 27. Open Product Questions For User Review
+## 27. Locked Product Defaults
 
-The design currently recommends these defaults:
+The design locks these defaults for v1 development:
 
 1. Users without a key can browse example/static doors, but live generation and live play require BYO key.
 2. Users can actively "summon a door" in addition to swiping the feed.
@@ -666,4 +670,6 @@ The design currently recommends these defaults:
 4. World Atlas and Context Inspector are advanced surfaces, not default play surfaces.
 5. Public sharing starts with seeds/doors only; private branches remain local by default.
 
-These should be explicitly approved or changed before implementation planning.
+Changing any of these defaults later should update `AGENTS.md`, this product
+spec, the world-runtime technical spec when relevant, and `docs/ROADMAP.md` in
+the same change.

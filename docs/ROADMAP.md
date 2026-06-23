@@ -2,7 +2,8 @@
 
 - **日期**: 2026-06-24
 - **状态**: aligned to `AGENTS.md` and
-  `docs/superpowers/specs/2026-06-24-overall-product-design.md`.
+  `docs/superpowers/specs/2026-06-24-overall-product-design.md` plus
+  `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`.
 - **职责**: 描述从当前实现走向最新产品设计的路径。本文不是承诺清单;
   实现状态以代码与 `docs/DESIGN.md` 为准。
 
@@ -39,6 +40,29 @@
 These are foundations, not the whole product. The next work should make them
 feel coherent to users.
 
+## 2.5 Runtime Architecture Spine
+
+Before broad product expansion, extract the current monolithic `runTurn` into
+the target turn-scoped layered runtime:
+
+1. **WorldKernel**: one durable-state write gate for validated deltas, rejection
+   reasons, and delta-log evidence.
+2. **ContextAssembler / PerceptionResolver**: typed context packs and subjective
+   character projections.
+3. **Director Casting**: active-agent cap, ambient cast, pressure selection, and
+   world-native surfacing.
+4. **AgentRuntime**: explicit character cognition
+   `perceive -> retrieve -> intent -> speak/act -> observe`.
+5. **MemoryBeliefSystem**: observations, hearsay, beliefs, secrets, reflections,
+   and relationship evidence as distinguishable records.
+6. **OffstageReconciler + Pressure Lines**: bounded Consequence Mode with
+   diegetic signs.
+7. **StudioRuntime instrumentation**: traces for Context Inspector, Director
+   Notes, Scene Contract, God Edit, and timeline tools.
+
+This spine is the preferred order for implementation planning. Product features
+below should build on it instead of inventing local prompt-only shortcuts.
+
 ## 3. Phase 1 — Make The MVP Feel Like A Private Living-World Browser
 
 Goal: every first session proves "this is a real world", and every return makes
@@ -63,6 +87,8 @@ the world feel personal.
 ### 3.3 Pressure Lines
 
 - Add semi-hidden pressure lines to generation and runtime prompts.
+- Represent pressure lines in structured state before making them a visible UI
+  feature.
 - Surface pressure diegetically: rumor, changed object, avoidance, message,
   absence, altered location, or returning detail.
 - Avoid quest-log UI by default.
@@ -94,6 +120,8 @@ stay channel-isolated.
 
 - Represent private beliefs, wrong beliefs, secrets, goals, and witnessed facts
   more explicitly.
+- Route character context through `PerceptionResolver` so limited POV is tested,
+  not only prompted.
 - Make characters respond to what they plausibly know, not what the engine knows.
 - Strengthen social causality: different characters should judge the same action
   through different values.
@@ -156,6 +184,8 @@ without breaking immersion for default users.
 
 - Studio/debug view for prompts, visible state, injected lore, active memories,
   selected speakers, and proposed deltas.
+- Also show rejected deltas, active agents vs ambient cast, witness scope,
+  provenance, and canon-vs-belief differences as the runtime spine exposes them.
 - Must be hidden from the default play surface.
 
 ### 4.6 Director Profiles

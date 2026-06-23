@@ -9,10 +9,12 @@
 > 1. `AGENTS.md` — project charter and non-negotiable principles.
 > 2. `docs/superpowers/specs/2026-06-24-overall-product-design.md` — latest
 >    full product design.
-> 3. `docs/DESIGN.md` — current implementation architecture.
-> 4. `docs/ROADMAP.md` — staged path from current implementation to the latest
+> 3. `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
+>    target world-runtime / agent architecture.
+> 4. `docs/DESIGN.md` — current implementation architecture.
+> 5. `docs/ROADMAP.md` — staged path from current implementation to the latest
 >    product design.
-> 5. `docs/entity-genesis-design.md` — detailed entity genesis and surfacing
+> 6. `docs/entity-genesis-design.md` — detailed entity genesis and surfacing
 >    design.
 >
 > Historical plans and `.superpowers/sdd/*` reports are useful evidence, but
@@ -284,6 +286,16 @@ work should avoid blocking them:
   `WorldState` mutates and grows on demand.
 - **Propose -> validate -> apply.** Reactor/Director/LLM proposals become real
   only after validation.
+- **Turn-scoped layered runtime.** Default world execution is interaction-driven:
+  one locked turn invokes Director, selected character agents, Reactor,
+  Materializer, Memory/Belief, and Offstage Reconciler in a bounded sequence.
+  Always-running simulation is a later mode, not the default architecture.
+- **WorldKernel is the durable-state writer.** Characters, Director, Reactor,
+  God Mode, and offstage logic may propose changes, but durable world mutation
+  goes through the typed delta gate and event log.
+- **Characters receive subjective projections.** Character agents never read raw
+  `WorldState`; they receive what they can see, hear, remember, infer, believe,
+  or were told.
 - **Record = snapshot + append-only delta log.** The snapshot is the fast current
   state; every committed delta is logged with turn, game time, real time, source,
   and cause.
@@ -319,6 +331,8 @@ Useful commands:
 
 - Read this file before product or architecture decisions.
 - Use the latest product spec for product details, not older plans.
+- Use the world-runtime technical spec for agent/runtime architecture; do not
+  invent a competing turn loop in implementation notes.
 - Keep `docs/DESIGN.md` factual about current implementation.
 - Keep `docs/ROADMAP.md` honest about what is implemented, next, later, and not
   now.
