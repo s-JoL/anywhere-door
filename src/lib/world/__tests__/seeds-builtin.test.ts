@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { BUILTIN_SEEDS } from "../seeds-builtin";
+import { validateDelta } from "../delta";
 import type { WorldSeed } from "../../types";
+
+describe("relay-station seed: SEREN-7's locked airlock", () => {
+  const relay = BUILTIN_SEEDS.find((s) => s.id === "seed-builtin-relay")!;
+
+  it("has a locked door in the control room that gates the airlock", () => {
+    const { objects } = relay.openingState;
+    const door = Object.values(objects).find((o) => o.props.gates === "airlock" && o.props.locked === true);
+    expect(door).toBeDefined();
+    expect(door!.locationId).toBe("control-room");
+  });
+
+  it("blocks the camera from entering the airlock while it is locked", () => {
+    const r = validateDelta(relay.openingState, relay.rules, { kind: "moveScene", toLocationId: "airlock" });
+    expect(r.ok).toBe(false);
+  });
+});
 
 describe("BUILTIN_SEEDS", () => {
   it("has at least 3 seeds", () => {

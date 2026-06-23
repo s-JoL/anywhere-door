@@ -434,3 +434,48 @@ describe("moveObject delta (物理因果: 物体可移动 + portable 强制)", (
     expect(next).not.toBe(s);
   });
 });
+
+describe("locked passage (上锁的门挡路)", () => {
+  // a state where bar has a locked door gating the way to street
+  function withDoor(locked: boolean, gates = "street"): WorldState {
+    const s = baseState();
+    s.objects.door = { id: "door", name: "铁门", detail: "fleshed", props: { locked, gates }, locationId: "bar" };
+    s.locations.bar.objectIds = [...s.locations.bar.objectIds, "door"];
+    return s;
+  }
+
+  it("validateDelta rejects moveScene through a locked door", () => {
+    const r = validateDelta(withDoor(true), rules, { kind: "moveScene", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects moveCharacter through a locked door", () => {
+    const r = validateDelta(withDoor(true), rules, { kind: "moveCharacter", characterId: "c1", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta allows passage once the door is unlocked", () => {
+    expect(validateDelta(withDoor(false), rules, { kind: "moveScene", toLocationId: "street" }).ok).toBe(true);
+    expect(validateDelta(withDoor(false), rules, { kind: "moveCharacter", characterId: "c1", toLocationId: "street" }).ok).toBe(true);
+  });
+  it("a locked door gating a DIFFERENT exit does not block this passage", () => {
+    const r = validateDelta(withDoor(true, "elsewhere"), rules, { kind: "moveScene", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("validateDelta setObjectLocked: accepts existing object, rejects missing", () => {
+    expect(validateDelta(withDoor(true), rules, { kind: "setObjectLocked", objectId: "door", locked: false }).ok).toBe(true);
+    expect(validateDelta(baseState(), rules, { kind: "setObjectLocked", objectId: "ghost", locked: false }).ok).toBe(false);
+  });
+  it("applyDelta setObjectLocked toggles props.locked immutably", () => {
+    const s = withDoor(true);
+    const next = applyDelta(s, { kind: "setObjectLocked", objectId: "door", locked: false });
+    expect(next.objects.door.props.locked).toBe(false);
+    expect(s.objects.door.props.locked).toBe(true); // original untouched
+  });
+
+  it("establishObject can birth a locked door with gates", () => {
+    const next = applyDelta(baseState(), { kind: "establishObject", id: "gate", name: "气闸", locationId: "bar", locked: true, gates: "street" });
+    expect(next.objects.gate.props).toMatchObject({ locked: true, gates: "street" });
+    // and it actually blocks passage
+    expect(validateDelta(next, rules, { kind: "moveScene", toLocationId: "street" }).ok).toBe(false);
+  });
+});

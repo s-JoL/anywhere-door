@@ -419,9 +419,38 @@ describe("parseDeltas moveObject", () => {
 });
 
 describe("buildReactorPrompt moveObject", () => {
-  it("documents moveObject in the system prompt and counts 12 kinds", () => {
+  it("documents moveObject in the system prompt and counts 13 kinds", () => {
     const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[0].content).toContain("moveObject");
-    expect(msgs[0].content).toContain("12 种");
+    expect(msgs[0].content).toContain("13 种");
+  });
+});
+
+describe("parseDeltas setObjectLocked", () => {
+  it("extracts a well-formed setObjectLocked", () => {
+    const result = parseDeltas('[{"kind":"setObjectLocked","objectId":"door","locked":false}]');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "setObjectLocked", objectId: "door", locked: false });
+  });
+  it("drops setObjectLocked with a non-boolean locked", () => {
+    expect(parseDeltas('[{"kind":"setObjectLocked","objectId":"door","locked":"yes"}]')).toHaveLength(0);
+  });
+  it("preserves locked+gates on an establishObject (locked door birth)", () => {
+    const result = parseDeltas('[{"kind":"establishObject","id":"gate","name":"气闸","locationId":"bar","locked":true,"gates":"street"}]');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ kind: "establishObject", id: "gate", locked: true, gates: "street" });
+  });
+});
+
+describe("react + prompt: setObjectLocked", () => {
+  it("react returns a setObjectLocked delta from fake llm", async () => {
+    const fakeLlm = async () => ({ content: '[{"kind":"setObjectLocked","objectId":"o-glass","locked":true}]' });
+    const deltas = await react({ state: baseState(), recentLines: ["你：我锁上门。"], nameById: { you: "你" }, llm: fakeLlm });
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0]).toEqual({ kind: "setObjectLocked", objectId: "o-glass", locked: true });
+  });
+  it("system prompt documents setObjectLocked", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { you: "你" });
+    expect(msgs[0].content).toContain("setObjectLocked");
   });
 });
