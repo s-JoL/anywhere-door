@@ -15,6 +15,7 @@ const VALID_KINDS = new Set([
   "establishLore",
   "establishCharacter",
   "moveObject",
+  "setObjectLocked",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -52,6 +53,8 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "establishCharacter" && typeof item.id === "string" && typeof item.name === "string" && typeof item.locationId === "string") {
         result.push(item as Delta);
       } else if (item.kind === "moveObject" && typeof item.objectId === "string" && typeof item.toLocationId === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "setObjectLocked" && typeof item.objectId === "string" && typeof item.locked === "boolean") {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;
@@ -102,19 +105,22 @@ export function buildReactorPrompt(
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（12 种，选用实际发生的）：
+Delta JSON 格式（13 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
 {"kind":"advanceTime","clock":"深夜","lighting":"幽蓝","dayDelta":0}
 {"kind":"setCondition","entityId":"<roster中的id，含you>","condition":"外显体态描述"}
-{"kind":"establishObject","id":"新id","name":"物品名","locationId":"<locations中的id>","state":"初始状态"}
+{"kind":"establishObject","id":"新id","name":"物品名","locationId":"<locations中的id>","state":"初始状态","locked":true,"gates":"<这扇门/障碍把守通往的locations中的id，仅门类物体填>"}
 {"kind":"establishLocation","id":"新地点id","name":"地点名","gist":"一句话描述","connectFrom":"<当前地点id>"}
 {"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
 {"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
 {"kind":"establishLore","id":"新设定id","keys":["会再次被提到的词","别名"],"content":"一句永久世界设定"}
 {"kind":"establishCharacter","id":"新角色id","name":"角色名","role":"一句话身份/定位","goal":"(可选)当前目标","locationId":"<locations中的id>"}
 {"kind":"moveObject","objectId":"<objects中的id>","toLocationId":"<locations中的id>"}
+{"kind":"setObjectLocked","objectId":"<objects中的id>","locked":false}
+
+当出现一扇会挡路的门/闸/障碍时,把它作为物体确立(establishObject 填 gates=它把守通往的地点id、locked=是否锁着);上锁的门会**阻止角色或镜头**穿过它通往 gates 指向的地点。门被打开/撬开/解锁时用 setObjectLocked 把 locked 置为 false,被重新锁上则置 true。只在门的开合确实发生时才发。
 
 当物品在场景间被拿走/递出/搬动(玩家或角色把某物带去另一地点、递到他人所在处)时,用 moveObject 把它的所在地落实。注意:被标记搬不动的固定物(吧台、舱壁等)不能移动,别发。只在物品确实换了地点时才发。
 

@@ -142,7 +142,7 @@ const RELAY_STATION_SEED: WorldSeed = {
         description: "弧形控制台三分之二的屏幕已经黑了，剩下的几块显示着生命支持数据：氧气23.1%，气压98.4kPa，温度16℃。扬声器在角落里亮着一个绿点，代表SEREN-7在线。凯尔把工具袋放在地上，但没有放开它的提带。",
         connections: ["corridor", "airlock"],
         presentCharacterIds: ["c-seren", "c-kael"],
-        objectIds: ["o-datacore", "o-toolkit"],
+        objectIds: ["o-datacore", "o-toolkit", "o-airlock-hatch"],
       },
       corridor: {
         id: "corridor",
@@ -179,6 +179,14 @@ const RELAY_STATION_SEED: WorldSeed = {
         props: { portable: true, owner: "c-kael" },
         locationId: "control-room",
         state: "挂在凯尔右肩，提带被他握在手里",
+      },
+      "o-airlock-hatch": {
+        id: "o-airlock-hatch",
+        name: "气闸内门",
+        detail: "fleshed",
+        props: { portable: false, locked: true, gates: "airlock" },
+        locationId: "control-room",
+        state: "厚重的合金舱门，指示灯红，SEREN-7 锁定中——除非它松手，没人能进气闸",
       },
     },
     roster: {

@@ -45,7 +45,7 @@ export interface WorldObject {
   id: string;
   name: string;
   detail: "stub" | "fleshed";
-  props: { portable?: boolean; locked?: boolean; owner?: string; [k: string]: unknown };
+  props: { portable?: boolean; locked?: boolean; owner?: string; gates?: string; [k: string]: unknown };
   locationId: string;
   state?: string;
 }

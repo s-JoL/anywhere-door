@@ -6,13 +6,14 @@ export type Delta =
   | { kind: "setFlag"; key: string; value: string | number | boolean }
   | { kind: "advanceTime"; clock?: string; lighting?: string; dayDelta?: number }
   | { kind: "setCondition"; entityId: string; condition: string }
-  | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string }
+  | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string; locked?: boolean; gates?: string }
   | { kind: "establishLocation"; id: string; name: string; gist?: string; description?: string; connectFrom?: string }
   | { kind: "moveScene"; toLocationId: string }
   | { kind: "setRelationship"; fromId: string; toId: string; disposition: string }
   | { kind: "establishLore"; id: string; keys: string[]; content: string }
   | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
-  | { kind: "moveObject"; objectId: string; toLocationId: string };
+  | { kind: "moveObject"; objectId: string; toLocationId: string }
+  | { kind: "setObjectLocked"; objectId: string; locked: boolean };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -49,6 +50,16 @@ function screenRedLines(redLines: string[] | undefined, d: Delta): Validation {
   return { ok: true };
 }
 
+/** 物理因果:from 地点里是否有一扇上锁、且把守通往 toId 的门。返回挡路的门(或 null)。 */
+function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][string] | undefined, toId: string) {
+  if (!from) return null;
+  for (const oid of from.objectIds) {
+    const o = state.objects[oid];
+    if (o?.props?.locked === true && o.props.gates === toId) return o;
+  }
+  return null;
+}
+
 /** 守不可变红线、结构完整性与空间规则；状态本身自由变化。 */
 export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): Validation {
   const screened = screenRedLines(rules.redLines, d);
@@ -61,6 +72,10 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       if (!state.locations[d.toLocationId]) return { ok: false, reason: `目标场景 ${d.toLocationId} 不存在` };
       if (!here.connections.includes(d.toLocationId) && here.id !== d.toLocationId)
         return { ok: false, reason: `${here.id} 与 ${d.toLocationId} 不相连` };
+      {
+        const door = lockedDoorBlocking(state, here, d.toLocationId);
+        if (door) return { ok: false, reason: `${door.name} 锁着，过不去` };
+      }
       return { ok: true };
     }
     case "setObjectState":
@@ -94,6 +109,10 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       const cur = state.locations[state.currentLocationId];
       if (d.toLocationId !== state.currentLocationId && !cur?.connections.includes(d.toLocationId))
         return { ok: false, reason: `${state.currentLocationId} 与 ${d.toLocationId} 不相连` };
+      {
+        const door = lockedDoorBlocking(state, cur, d.toLocationId);
+        if (door) return { ok: false, reason: `${door.name} 锁着，过不去` };
+      }
       return { ok: true };
     }
     case "setRelationship": {
@@ -133,6 +152,8 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
         return { ok: false, reason: `${obj.name} 搬不动` };
       return { ok: true };
     }
+    case "setObjectLocked":
+      return state.objects[d.objectId] ? { ok: true } : { ok: false, reason: `对象 ${d.objectId} 不存在` };
   }
 }
 
@@ -176,7 +197,10 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         id: d.id,
         name: d.name,
         detail: "fleshed" as const,
-        props: {},
+        props: {
+          ...(d.locked !== undefined ? { locked: d.locked } : {}),
+          ...(d.gates ? { gates: d.gates } : {}),
+        },
         locationId: d.locationId,
         state: d.state,
       };
@@ -268,6 +292,13 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         ...state,
         objects: { ...state.objects, [d.objectId]: { ...obj, locationId: d.toLocationId } },
         locations,
+      };
+    }
+    case "setObjectLocked": {
+      const obj = state.objects[d.objectId];
+      return {
+        ...state,
+        objects: { ...state.objects, [d.objectId]: { ...obj, props: { ...obj.props, locked: d.locked } } },
       };
     }
   }
