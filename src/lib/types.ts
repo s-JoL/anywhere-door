@@ -83,7 +83,7 @@ export interface WorldSeed {
   characters: Character[];
   modelConfig: ModelConfig;
   createdAt?: number;
-  source?: "builtin" | "imported" | "created";
+  source?: "builtin" | "imported" | "created" | "generated";
   presentation?: WorldPresentation;
 }
 
