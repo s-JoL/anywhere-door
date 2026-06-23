@@ -72,6 +72,26 @@ body {
 @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @keyframes breathe { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.85; } }
 
+/* Door-opening transition: two panels part from the center revealing warm lamp light */
+@keyframes door-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes door-right {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+@keyframes door-light {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Settle animation for arriving in a world */
+@keyframes door-arrive {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
 .rise { animation: rise 0.5s ease both; }
 .pulse { animation: pulse 2.6s ease-in-out infinite; }
 .breathe { animation: breathe 1.7s ease-in-out infinite; }
@@ -79,6 +99,7 @@ body {
   background: linear-gradient(90deg, transparent 38%, rgba(240, 195, 107, 0.16) 50%, transparent 62%);
   background-size: 220% 100%; animation: sweep 1.7s ease both;
 }
+.door-arrive { animation: door-arrive 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 
 /* 沉浸输入 */
 .field {
@@ -94,5 +115,5 @@ body {
 .glass-bar { background: rgba(8, 11, 17, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .rise, .pulse, .breathe, .sweep, .caret::after { animation: none !important; }
+  .rise, .pulse, .breathe, .sweep, .caret::after, .door-arrive { animation: none !important; }
 }

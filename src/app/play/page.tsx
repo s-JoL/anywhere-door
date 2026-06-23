@@ -145,14 +145,14 @@ function PlayInner() {
   const waitingForFirst = busy && streamingId.current === null;
 
   return (
-    <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col">
+    <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col door-arrive">
       {/* 世界状态条 */}
       <header
         className="glass-bar relative z-10 shrink-0 border-b border-[var(--line)] px-4 pb-2.5"
         style={{ paddingTop: "max(0.7rem, env(safe-area-inset-top))" }}
       >
         <div className="flex items-center justify-between">
-          <div className="eyebrow">浮生 · THE REVERIES</div>
+          <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
           {world && (
             <div className="flex items-center gap-1.5 text-[10.5px] text-[var(--smoke)]">
               <span className="presence-dot pulse" style={{ background: tensionColor(world.tension ?? 0), boxShadow: `0 0 9px ${tensionColor(world.tension ?? 0)}` }} />

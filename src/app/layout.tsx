@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 
-export const metadata = { title: "浮生 / The Reveries" };
+export const metadata = { title: "任意门 / Anywhere Door" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
