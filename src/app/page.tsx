@@ -10,6 +10,8 @@ import { useDoorEnter } from "@/app/DoorTransition";
 import { recordEnter, recordAuthor, recordSkip } from "@/lib/taste/record";
 import { computeTasteProfile } from "@/lib/taste/profile";
 import { rankFeed } from "@/lib/taste/rank";
+import { ensureGeneratedPool } from "@/lib/world/pregenerate";
+import { streamChat } from "@/lib/llm/stream";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -344,10 +346,37 @@ export default function Home() {
     setSeeds(ranked);
   }
 
+  // Guard: only top up the generated pool once per mount.
+  const pregenStartedRef = useRef(false);
+
   useEffect(() => {
     (async () => {
       await ensureBuiltinSeeds();
       await refreshSeeds();
+
+      // Phase 4: top up the AI-generated world pool in the BACKGROUND.
+      // Do NOT await before painting the feed; do NOT reshuffle live —
+      // new worlds appear on the next mount/refresh.
+      if (pregenStartedRef.current) return;
+      pregenStartedRef.current = true;
+      (async () => {
+        try {
+          const repo = getRepository();
+          const events = await repo.listTasteEvents();
+          const profile = computeTasteProfile(events, Date.now());
+          // Effective model config: global user config if present, else DEMO_SEED's
+          // (apiKey:"" → server env in dev). No global config store yet.
+          const modelConfig = DEMO_SEED.modelConfig;
+          await ensureGeneratedPool({
+            repo,
+            modelConfig,
+            profile,
+            llm: (msgs) => streamChat({ cfg: modelConfig, messages: msgs }),
+          });
+        } catch {
+          // Safe-degrade: background generation must never break the feed.
+        }
+      })();
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
