@@ -20,14 +20,27 @@ export function visibleScene(state: WorldState, self: Character): string {
   const loc = state.locations[state.currentLocationId];
   const others = loc.presentCharacterIds
     .filter((id) => id !== self.id)
-    .map((id) => state.roster[id]?.name ?? id)
+    .map((id) => {
+      const name = state.roster[id]?.name ?? id;
+      const cond = state.roster[id]?.condition;
+      return cond ? `${name}（${cond}）` : name;
+    })
     .join("、");
-  const objs = loc.objectIds.map((id) => state.objects[id]?.name).filter(Boolean).join("、");
+  const objs = loc.objectIds
+    .map((id) => {
+      const o = state.objects[id];
+      if (!o) return null;
+      return o.state ? `${o.name}（${o.state}）` : o.name;
+    })
+    .filter(Boolean)
+    .join("、");
+  const playerCondition = state.roster["you"]?.condition;
   return [
     `地点：${loc.name}——${loc.description ?? loc.gist}`,
     `时间：第${state.time.day}天 ${state.time.clock}，${state.time.lighting}`,
     others ? `在场：${others}` : "",
     objs ? `可见物：${objs}` : "",
+    playerCondition ? `你此刻：${playerCondition}` : "",
   ].filter(Boolean).join("\n");
 }
 

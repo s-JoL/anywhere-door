@@ -50,7 +50,7 @@ export interface WorldObject {
 }
 
 /** 角色的客观事实投影（秘密/内心不在此）。 */
-export interface CharObjective { name: string }
+export interface CharObjective { name: string; condition?: string }
 
 /** 可变、按需生长。 */
 export interface WorldState {

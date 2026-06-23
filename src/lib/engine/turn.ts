@@ -14,6 +14,7 @@ import { buildObservations } from "../memory/observe";
 import { shouldReflect, reflect } from "../memory/reflect";
 import { updateTension, maybeDirect } from "./director";
 import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
+import { react } from "./reactor";
 
 export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
 
@@ -61,8 +62,13 @@ export async function maybeReflect({ repo, charIds, characterNameById, llm }: Ma
 
 /** 多发言者自由发言回合：用户消息 → 校验并应用 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
 export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm, onEvent }: RunTurnArgs): Promise<void> {
-  const inst = await repo.getInstance(instanceId);
+  let inst = await repo.getInstance(instanceId);
   if (!inst) throw new Error(`实例 ${instanceId} 不存在`);
+
+  // 确保玩家 "you" 在名册中（供 reactor/prompts 使用），但绝不加入 presentCharacterIds
+  if (!inst.state.roster["you"]) {
+    inst = { ...inst, state: { ...inst.state, roster: { ...inst.state.roster, you: { name: "你" } } } };
+  }
 
   const userMsg: Message = { id: newId("m"), instanceId, role: "user", speakerId: null, content: input, createdAt: nextTime() };
   await repo.appendMessage(userMsg);
@@ -148,6 +154,24 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       await repo.appendMessage(introBeat);
       onEvent?.({ type: "narration", id: introBeat.id, content: introBeat.content });
     }
+  }
+
+  // 世界反应器：LLM 提议结构化 delta，逐条验证后应用，持久化到 state
+  const allMsgsForReactor = await repo.listMessages(instanceId);
+  const recentLines = allMsgsForReactor
+    .filter((m) => m.role !== "system")
+    .slice(-8)
+    .map((m) => {
+      const speakerName = m.speakerId ? (state.roster[m.speakerId]?.name ?? m.speakerId) : "你";
+      return `${speakerName}：${m.content}`;
+    });
+  const nameById: Record<string, string> = {};
+  for (const [id, obj] of Object.entries(state.roster)) nameById[id] = obj.name;
+  const reactorDeltas = await react({ state, recentLines, nameById, llm });
+  for (const d of reactorDeltas) {
+    const v = validateDelta(state, seed.rules, d);
+    if (v.ok) state = applyDelta(state, d);
+    else console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`);
   }
 
   await repo.upsertInstance({ ...inst, state, updatedAt: nextTime() });
