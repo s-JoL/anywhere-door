@@ -6,6 +6,7 @@ import { ensureDemoSeed, ensureInstanceForSeed } from "@/lib/engine/bootstrap";
 import { runTurn, type TurnEvent } from "@/lib/engine/turn";
 import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
+import { recordDwell } from "@/lib/taste/record";
 import type { Message, WorldSeed, WorldState } from "@/lib/types";
 
 type Item = {
@@ -48,6 +49,8 @@ function PlayInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const streamingId = useRef<string | null>(null);
+  const turnCountRef = useRef(0);
+  const dwellFiredRef = useRef(false);
 
   const nameOf = useCallback(
     (id: string | null | undefined) =>
@@ -124,6 +127,13 @@ function PlayInner() {
         onEvent,
       });
       await reload(instanceId, nameOf);
+      if (!dwellFiredRef.current) {
+        turnCountRef.current += 1;
+        if (turnCountRef.current >= 3) {
+          dwellFiredRef.current = true;
+          recordDwell(getRepository(), seed);
+        }
+      }
     } catch (e) {
       setErr(`这一刻没能继续：${(e as Error).message}`);
     } finally {

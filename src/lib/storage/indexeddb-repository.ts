@@ -1,6 +1,6 @@
 import { ReveriesDB } from "./dexie-db";
 import type { Repository } from "./repository";
-import type { WorldInstance, Message, Memory, WorldSeed } from "../types";
+import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
 
 export class IndexedDbRepository implements Repository {
   private db = new ReveriesDB();
@@ -22,4 +22,9 @@ export class IndexedDbRepository implements Repository {
     return rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   }
   async upsertSeed(s: WorldSeed) { await this.db.seeds.put(s); }
+  async recordTasteEvent(e: TasteEvent) { await this.db.tasteEvents.put(e); }
+  async listTasteEvents(): Promise<TasteEvent[]> {
+    const rows = await this.db.tasteEvents.orderBy("at").toArray();
+    return rows;
+  }
 }

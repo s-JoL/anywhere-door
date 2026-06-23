@@ -7,6 +7,7 @@ import { parseCardFile, cardToSeed } from "@/lib/import/character-card";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { derivePresentation } from "@/lib/world/presentation";
 import { useDoorEnter } from "@/app/DoorTransition";
+import { recordEnter, recordAuthor } from "@/lib/taste/record";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -252,6 +253,7 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
       const seed = cardToSeed(card, DEMO_SEED.modelConfig, Date.now(), suffix);
       if (!seed) { setImportError("这张卡读不出来，换一张试试"); return; }
       await getRepository().upsertSeed(seed);
+      recordAuthor(getRepository(), seed);
       onImportSuccess();
     } catch {
       setImportError("这张卡读不出来，换一张试试");
@@ -363,11 +365,16 @@ export default function Home() {
       <Overlay />
       {seeds.map((seed, i) => (
         <div key={seed.id} ref={(el) => setRef(el, i)}>
+          {/* Phase 3: wire skip from feed viewport dwell-time */}
           <WorldPanel
             seed={seed}
             isFirst={i === 0}
             isFocused={focusedIndex === i}
-            onEnter={(id) => enter(`/play?world=${id}`)}
+            onEnter={(id) => {
+              const s = seeds.find((s) => s.id === id);
+              if (s) recordEnter(getRepository(), s);
+              enter(`/play?world=${id}`);
+            }}
           />
         </div>
       ))}
