@@ -204,6 +204,22 @@ describe("parseDeltas", () => {
     ]);
     expect(parseDeltas(text)).toHaveLength(0);
   });
+
+  it("accepts establishCharacter with required fields", () => {
+    const text = '[{"kind":"establishCharacter","id":"c-guard","name":"守卫","role":"门口的守卫","locationId":"bar"}]';
+    const result = parseDeltas(text);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({ kind: "establishCharacter", id: "c-guard", name: "守卫", role: "门口的守卫", locationId: "bar" });
+  });
+
+  it("drops establishCharacter missing id/name/locationId", () => {
+    const text = JSON.stringify([
+      { kind: "establishCharacter", name: "守卫", locationId: "bar" }, // missing id
+      { kind: "establishCharacter", id: "c-guard", locationId: "bar" }, // missing name
+      { kind: "establishCharacter", id: "c-guard", name: "守卫" },       // missing locationId
+    ]);
+    expect(parseDeltas(text)).toHaveLength(0);
+  });
 });
 
 describe("buildReactorPrompt", () => {
@@ -245,6 +261,11 @@ describe("buildReactorPrompt", () => {
     state.lore = [{ id: "l1", keys: ["血誓录", "禁书"], content: "一本禁书" }];
     const msgs = buildReactorPrompt(state, [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[1].content).toContain("血誓录");
+  });
+
+  it("system prompt documents establishCharacter for new persistent people", () => {
+    const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
+    expect(msgs[0].content).toContain("establishCharacter");
   });
 });
 
@@ -329,5 +350,19 @@ describe("react", () => {
     expect(deltas[0]).toEqual({ kind: "establishLocation", id: "back", name: "里屋", connectFrom: "bar" });
     expect(deltas[1]).toEqual({ kind: "moveScene", toLocationId: "back" });
     expect(deltas[2]).toEqual({ kind: "moveCharacter", characterId: "c-lan", toLocationId: "back" });
+  });
+
+  it("react: returns establishCharacter delta from fake llm", async () => {
+    const fakeLlm = async () => ({
+      content: '[{"kind":"establishCharacter","id":"c-guard","name":"守卫","role":"门口的守卫","locationId":"bar"}]',
+    });
+    const deltas = await react({
+      state: baseState(),
+      recentLines: ["你：门口那个守卫是谁？"],
+      nameById: { "c-lan": "阿岚", you: "你" },
+      llm: fakeLlm,
+    });
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0].kind).toBe("establishCharacter");
   });
 });
