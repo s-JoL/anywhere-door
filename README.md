@@ -134,7 +134,7 @@ npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/` · `src/app/`(feed · play · settings)。
-设计与研究文档:[`docs/superpowers/specs/`](docs/superpowers/specs/) · [`docs/research/`](docs/research/)。
+设计与架构(单一事实来源):[`docs/DESIGN.md`](docs/DESIGN.md) · 前瞻路线:[`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
 ---
 
@@ -146,7 +146,7 @@ npm run typecheck
 
 ## ✦ 路线图(节选)
 
-线下世界演化(离开后世界懒推进,回来补演化 —— 接口已留)· 世界级声誉/消息传开 · NPC 自治议程 · 系统化物体属性(可燃/上锁…)· 延时回调(早期选择隔很久不经意地重现)· 多人共享世界。详见 [差距分析](docs/research/2026-06-23-gap-analysis-vs-first-principle.md)。
+线下世界演化(离开后世界懒推进,回来补演化 —— 接口已留)· 世界级声誉/消息传开 · NPC 自治议程 · 系统化物体属性(可燃/上锁…)· 延时回调(早期选择隔很久不经意地重现)· 多人共享世界。详见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
 ## ✦ 致谢 & License
 
