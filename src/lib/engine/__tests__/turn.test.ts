@@ -80,6 +80,39 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.roster["you"]?.condition).toBe("浑身湿透");
   });
 
+  it("walkable space: reactor establishLocation + moveScene + moveCharacter updates state end-to-end", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-walk"));
+
+    // Fake LLM: reactor prompt → 3 deltas (establish 里屋, move scene, bring 阿岚)
+    // Other prompts → speak JSON or short line
+    const llm = async (messages: ChatMessage[]) => {
+      const sys = messages[0]?.content ?? "";
+      const last = messages[messages.length - 1]?.content ?? "";
+      if (sys.includes("世界状态记录器")) {
+        return {
+          content: '[{"kind":"establishLocation","id":"back","name":"里屋","connectFrom":"bar"},{"kind":"moveScene","toLocationId":"back"},{"kind":"moveCharacter","characterId":"c-lan","toLocationId":"back"}]',
+        };
+      }
+      if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
+      return { content: "……" };
+    };
+
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-walk", input: "我拽她进里屋。", llm });
+
+    const after = await repo.getInstance("w-walk");
+    // New location exists and is bidirectionally connected
+    expect(after?.state.locations["back"]).toBeDefined();
+    expect(after?.state.locations["back"]?.name).toBe("里屋");
+    expect(after?.state.locations["back"]?.connections).toContain("bar");
+    expect(after?.state.locations["bar"]?.connections).toContain("back");
+    // Scene moved to 里屋
+    expect(after?.state.currentLocationId).toBe("back");
+    // 阿岚 moved to 里屋
+    expect(after?.state.locations["back"]?.presentCharacterIds).toContain("c-lan");
+    expect(after?.state.locations["bar"]?.presentCharacterIds).not.toContain("c-lan");
+  });
+
   it("emits speaker-start/delta/speaker-end events and persists reply with same id", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w3"));

@@ -100,6 +100,92 @@ describe("establishObject", () => {
   });
 });
 
+describe("establishLocation", () => {
+  it("validateDelta rejects if id already exists in locations", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLocation", id: "bar", name: "酒馆" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects if connectFrom location does not exist", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLocation", id: "backroom", name: "里屋", connectFrom: "nowhere" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta accepts valid new location (connectFrom defaults to currentLocationId)", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLocation", id: "backroom", name: "里屋" });
+    expect(r.ok).toBe(true);
+  });
+  it("validateDelta accepts valid new location with explicit connectFrom", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishLocation", id: "backroom", name: "里屋", connectFrom: "street" });
+    expect(r.ok).toBe(true);
+  });
+  it("applyDelta adds new location with correct fields", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "establishLocation", id: "backroom", name: "里屋", gist: "昏暗内室", description: "破旧木床和一扇窗" });
+    expect(next.locations["backroom"]).toMatchObject({
+      id: "backroom",
+      name: "里屋",
+      detail: "fleshed",
+      gist: "昏暗内室",
+      description: "破旧木床和一扇窗",
+      presentCharacterIds: [],
+      objectIds: [],
+    });
+    expect(next.locations["backroom"].connections).toContain("bar");
+  });
+  it("applyDelta adds bidirectional connection (from → new AND new → from)", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "establishLocation", id: "backroom", name: "里屋", connectFrom: "bar" });
+    expect(next.locations["backroom"].connections).toContain("bar");
+    expect(next.locations["bar"].connections).toContain("backroom");
+  });
+  it("applyDelta does not duplicate connection if already present", () => {
+    const s = baseState();
+    // Apply twice — second time won't push dup because validateDelta rejects existing id,
+    // but test that the connections array has no duplicates after a single apply
+    const next = applyDelta(s, { kind: "establishLocation", id: "backroom", name: "里屋" });
+    const barConns = next.locations["bar"].connections.filter((c) => c === "backroom");
+    expect(barConns).toHaveLength(1);
+  });
+  it("applyDelta does NOT mutate input state", () => {
+    const s = baseState();
+    const originalConns = [...s.locations.bar.connections];
+    applyDelta(s, { kind: "establishLocation", id: "backroom", name: "里屋" });
+    expect(s.locations.bar.connections).toEqual(originalConns);
+    expect(s.locations["backroom"]).toBeUndefined();
+  });
+});
+
+describe("moveScene", () => {
+  it("validateDelta rejects if toLocationId does not exist", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveScene", toLocationId: "nowhere" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects if toLocationId is not connected to current location", () => {
+    const s = baseState();
+    // Add an unconnected location
+    s.locations["isolated"] = { id: "isolated", name: "孤岛", detail: "stub", gist: "", connections: [], presentCharacterIds: [], objectIds: [] };
+    const r = validateDelta(s, rules, { kind: "moveScene", toLocationId: "isolated" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta accepts moving to the current location (no-op)", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveScene", toLocationId: "bar" });
+    expect(r.ok).toBe(true);
+  });
+  it("validateDelta accepts moving to a connected location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveScene", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+  it("applyDelta sets currentLocationId", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "moveScene", toLocationId: "street" });
+    expect(next.currentLocationId).toBe("street");
+  });
+  it("applyDelta does NOT mutate input state", () => {
+    const s = baseState();
+    applyDelta(s, { kind: "moveScene", toLocationId: "street" });
+    expect(s.currentLocationId).toBe("bar");
+  });
+});
+
 describe("applyDelta (immutable)", () => {
   it("moves a character between locations without mutating input", () => {
     const s = baseState();

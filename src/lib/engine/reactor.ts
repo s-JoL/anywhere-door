@@ -9,6 +9,8 @@ const VALID_KINDS = new Set([
   "advanceTime",
   "setCondition",
   "establishObject",
+  "establishLocation",
+  "moveScene",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -31,6 +33,10 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "setCondition" && typeof item.entityId === "string" && typeof item.condition === "string") {
         result.push(item as Delta);
       } else if (item.kind === "establishObject" && typeof item.id === "string" && typeof item.name === "string" && typeof item.locationId === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "establishLocation" && typeof item.id === "string" && typeof item.name === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "moveScene" && typeof item.toLocationId === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 8) break;
@@ -61,23 +67,29 @@ export function buildReactorPrompt(
 
   const system = `你是世界状态记录器（World State Recorder）。
 你的职责：阅读最近发生的事件，输出一个 JSON 数组，记录其中真实、可被外部观察到的世界状态变化。
-只记录客观事实（角色移动位置、物品状态变化、角色/玩家的外显体态条件、时间推移、新出现的重要道具被发现）。
+只记录客观事实（角色移动位置、物品状态变化、角色/玩家的外显体态条件、时间推移、新出现的重要道具被发现、场景转移）。
 不记录内心想法、情绪、对话本身。
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（6 种，选用实际发生的）：
+Delta JSON 格式（8 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
 {"kind":"advanceTime","clock":"深夜","lighting":"幽蓝","dayDelta":0}
 {"kind":"setCondition","entityId":"<roster中的id，含you>","condition":"外显体态描述"}
 {"kind":"establishObject","id":"新id","name":"物品名","locationId":"<locations中的id>","state":"初始状态"}
+{"kind":"establishLocation","id":"新地点id","name":"地点名","gist":"一句话描述","connectFrom":"<当前地点id>"}
+{"kind":"moveScene","toLocationId":"<locations中已存在的id>"}
+
+场景移动规则：当玩家或角色走到一个尚未存在的地方，先用 establishLocation 造出它（connectFrom 填当前地点），再用 moveScene 把镜头移过去，并用 moveCharacter 把同行的角色移过去。只在确有移动/新场景时才发。
 
 只输出 JSON 数组，不要其他文字。`;
 
   const loc = state.locations[state.currentLocationId];
-  const user = `【当前场景】${loc?.name ?? state.currentLocationId}
+  const connections = loc?.connections.map((id) => `${id}(${state.locations[id]?.name ?? id})`).join("、") ?? "";
+  const user = `【当前场景】${loc?.name ?? state.currentLocationId}（id: ${state.currentLocationId}）
+【相邻地点】${connections || "（无）"}
 【时间】第${state.time.day}天 ${state.time.clock}，${state.time.lighting}
 
 【角色名册】（id: 名字，括号内为当前体态条件）
