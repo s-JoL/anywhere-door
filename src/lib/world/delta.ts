@@ -14,8 +14,43 @@ export type Delta =
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
-/** 只守不可变规则与结构完整性；状态本身自由变化。 */
-export function validateDelta(state: WorldState, _rules: WorldRules, d: Delta): Validation {
+/** 一条 delta 里会落进世界的自由文本字段(用于红线筛查)。 */
+function freeTextFields(d: Delta): string[] {
+  switch (d.kind) {
+    case "setObjectState": return [d.state];
+    case "setCondition": return [d.condition];
+    case "establishObject": return [d.name, d.state ?? ""];
+    case "establishLocation": return [d.name, d.gist ?? "", d.description ?? ""];
+    case "setRelationship": return [d.disposition];
+    case "establishLore": return [d.content, ...d.keys];
+    case "setFlag": return typeof d.value === "string" ? [d.value] : [];
+    default: return [];
+  }
+}
+
+/**
+ * 红线兜底:对 delta 的自由文本做保守的关键词子串筛查。
+ * 只在红线词条**字面命中**时拦截 —— 散文式红线(整句)不会误伤合法 delta,
+ * 语义层面的约束交给 reactor prompt(软约束)。
+ */
+function screenRedLines(redLines: string[] | undefined, d: Delta): Validation {
+  if (!redLines?.length) return { ok: true };
+  const fields = freeTextFields(d).filter(Boolean).map((s) => s.toLowerCase());
+  if (fields.length === 0) return { ok: true };
+  for (const raw of redLines) {
+    const line = raw.trim().toLowerCase();
+    if (!line) continue;
+    for (const f of fields) {
+      if (f.includes(line)) return { ok: false, reason: `触犯红线「${raw}」` };
+    }
+  }
+  return { ok: true };
+}
+
+/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。 */
+export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): Validation {
+  const screened = screenRedLines(rules.redLines, d);
+  if (!screened.ok) return screened;
   switch (d.kind) {
     case "moveCharacter": {
       if (!state.roster[d.characterId]) return { ok: false, reason: `角色 ${d.characterId} 不存在` };

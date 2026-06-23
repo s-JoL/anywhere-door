@@ -61,6 +61,36 @@ describe("validateDelta", () => {
   });
 });
 
+describe("validateDelta red-line screen", () => {
+  const banned: WorldRules = { physics: "无超自然", setting: "现代酒馆", redLines: ["死亡", "魔法"] };
+
+  it("rejects a setCondition whose free text literally contains a red-line term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "setCondition", entityId: "c1", condition: "中枪后死亡" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects establishLore content that hits a red-line term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "establishLore", id: "l1", keys: ["秘术"], content: "她会魔法" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("rejects setObjectState carrying a banned term", () => {
+    const r = validateDelta(baseState(), banned, { kind: "setObjectState", objectId: "glass", state: "被魔法点燃" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("allows an otherwise-valid delta when red lines are prose that does not literally match", () => {
+    const prose: WorldRules = { physics: "无超自然", setting: "现代酒馆", redLines: ["任何角色都不会真正死亡"] };
+    const r = validateDelta(baseState(), prose, { kind: "setCondition", entityId: "c1", condition: "疲惫不堪" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("does not fire when red lines are empty (existing behavior unchanged)", () => {
+    const r = validateDelta(baseState(), rules, { kind: "setCondition", entityId: "c1", condition: "死亡的气息" });
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe("applyDelta establishLore", () => {
   it("appends a lore entry immutably without mutating the original", () => {
     const s = baseState();

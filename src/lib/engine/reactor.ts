@@ -1,4 +1,4 @@
-import type { WorldState, ChatMessage } from "../types";
+import type { WorldState, ChatMessage, WorldRules } from "../types";
 import type { Delta } from "../world/delta";
 import type { LlmFn } from "./turn";
 
@@ -56,10 +56,25 @@ export function parseDeltas(text: string): Delta[] {
   }
 }
 
+/** 把世界不可变规则(物理 + 红线)渲染成一段铁律前言；无内容时返回空串。 */
+function worldLawBlock(rules?: WorldRules): string {
+  if (!rules) return "";
+  const parts: string[] = [];
+  if (rules.physics?.trim()) parts.push(`【世界物理】${rules.physics.trim()}`);
+  if (rules.redLines?.length) {
+    parts.push(
+      `【世界铁律·红线】以下绝不可被违反；任何会导致违反的状态变化都不要提议：\n` +
+        rules.redLines.map((r) => `- ${r}`).join("\n"),
+    );
+  }
+  return parts.length ? parts.join("\n") + "\n\n" : "";
+}
+
 export function buildReactorPrompt(
   state: WorldState,
   recentLines: string[],
   nameById: Record<string, string>,
+  rules?: WorldRules,
 ): ChatMessage[] {
   const rosterList = Object.entries(nameById)
     .map(([id, name]) => {
@@ -74,7 +89,7 @@ export function buildReactorPrompt(
     .map(([id, l]) => `  ${id}: ${l.name}`)
     .join("\n");
 
-  const system = `你是世界状态记录器（World State Recorder）。
+  const system = `${worldLawBlock(rules)}你是世界状态记录器（World State Recorder）。
 你的职责：阅读最近发生的事件，输出一个 JSON 数组，记录其中真实、可被外部观察到的世界状态变化。
 只记录客观事实（角色移动位置、物品状态变化、角色/玩家的外显体态条件、时间推移、新出现的重要道具被发现、场景转移）。
 不记录内心想法、情绪、对话本身。
@@ -163,9 +178,10 @@ export async function react(args: {
   recentLines: string[];
   nameById: Record<string, string>;
   llm: LlmFn;
+  rules?: WorldRules;
 }): Promise<Delta[]> {
   try {
-    const msgs = buildReactorPrompt(args.state, args.recentLines, args.nameById);
+    const msgs = buildReactorPrompt(args.state, args.recentLines, args.nameById, args.rules);
     const { content } = await args.llm(msgs);
     return parseDeltas(content);
   } catch {
