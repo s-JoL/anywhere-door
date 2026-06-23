@@ -330,6 +330,10 @@ describe("establishCharacter", () => {
     const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "", locationId: "bar" });
     expect(r.ok).toBe(false);
   });
+  it("validateDelta rejects a whitespace-only name", () => {
+    const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c-new", name: "   ", locationId: "bar" });
+    expect(r.ok).toBe(false);
+  });
   it("validateDelta rejects id already in roster (covers seed characters)", () => {
     const r = validateDelta(baseState(), rules, { kind: "establishCharacter", id: "c1", name: "冒牌", locationId: "bar" });
     expect(r.ok).toBe(false);
@@ -389,5 +393,44 @@ describe("applyDelta (immutable)", () => {
     const s = baseState();
     applyDelta(s, { kind: "setObjectState", objectId: "glass", state: "满" });
     expect(s.objects.glass.state).toBe("空");
+  });
+});
+
+describe("moveObject delta (物理因果: 物体可移动 + portable 强制)", () => {
+  it("validateDelta accepts relocating a movable object to an existing location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+  it("validateDelta rejects a nonexistent object", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "ghost", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects a nonexistent target location", () => {
+    const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "nowhere" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta rejects moving an object marked portable:false", () => {
+    const s = baseState();
+    s.objects.glass.props = { portable: false };
+    const r = validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(false);
+  });
+  it("validateDelta allows moving when portable is unset (default movable)", () => {
+    const s = baseState();
+    s.objects.glass.props = {};
+    const r = validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(r.ok).toBe(true);
+  });
+
+  it("applyDelta relocates the object and migrates objectIds across both locations, immutably", () => {
+    const s = baseState();
+    const next = applyDelta(s, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
+    expect(next.objects.glass.locationId).toBe("street");
+    expect(next.locations.bar.objectIds).toEqual([]);
+    expect(next.locations.street.objectIds).toEqual(["glass"]);
+    // original untouched
+    expect(s.objects.glass.locationId).toBe("bar");
+    expect(s.locations.bar.objectIds).toEqual(["glass"]);
+    expect(next).not.toBe(s);
   });
 });
