@@ -10,6 +10,7 @@ import { useDoorEnter } from "@/app/DoorTransition";
 import { recordEnter, recordAuthor, recordSkip } from "@/lib/taste/record";
 import { computeTasteProfile } from "@/lib/taste/profile";
 import { rankFeed } from "@/lib/taste/rank";
+import { tagsOfSeed } from "@/lib/taste/tags";
 import { ensureGeneratedPool } from "@/lib/world/pregenerate";
 import { streamChat } from "@/lib/llm/stream";
 import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
@@ -342,7 +343,17 @@ export default function Home() {
     const recentlySeen = new Set(
       events.slice(-10).map((e) => e.seedId),
     );
-    const ranked = rankFeed(rawSeeds, profile, recentlySeen);
+    // Category-level 防腻: tag prevalence across the recently-seen seeds, in [0,1].
+    const recentSeeds = rawSeeds.filter((s) => recentlySeen.has(s.id));
+    const recentTags: Record<string, number> = {};
+    if (recentSeeds.length > 0) {
+      for (const s of recentSeeds) {
+        for (const t of tagsOfSeed(s)) {
+          recentTags[t] = (recentTags[t] ?? 0) + 1 / recentSeeds.length;
+        }
+      }
+    }
+    const ranked = rankFeed(rawSeeds, profile, recentlySeen, { recentTags });
     setSeeds(ranked);
   }
 

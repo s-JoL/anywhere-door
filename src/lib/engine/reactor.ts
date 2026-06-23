@@ -1,4 +1,4 @@
-import type { WorldState, ChatMessage } from "../types";
+import type { WorldState, ChatMessage, WorldRules } from "../types";
 import type { Delta } from "../world/delta";
 import type { LlmFn } from "./turn";
 
@@ -14,6 +14,7 @@ const VALID_KINDS = new Set([
   "setRelationship",
   "establishLore",
   "establishCharacter",
+  "moveObject",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -50,6 +51,8 @@ export function parseDeltas(text: string): Delta[] {
         result.push(item as Delta);
       } else if (item.kind === "establishCharacter" && typeof item.id === "string" && typeof item.name === "string" && typeof item.locationId === "string") {
         result.push(item as Delta);
+      } else if (item.kind === "moveObject" && typeof item.objectId === "string" && typeof item.toLocationId === "string") {
+        result.push(item as Delta);
       }
       if (result.length >= 12) break;
     }
@@ -59,10 +62,25 @@ export function parseDeltas(text: string): Delta[] {
   }
 }
 
+/** 把世界不可变规则(物理 + 红线)渲染成一段铁律前言；无内容时返回空串。 */
+function worldLawBlock(rules?: WorldRules): string {
+  if (!rules) return "";
+  const parts: string[] = [];
+  if (rules.physics?.trim()) parts.push(`【世界物理】${rules.physics.trim()}`);
+  if (rules.redLines?.length) {
+    parts.push(
+      `【世界铁律·红线】以下绝不可被违反；任何会导致违反的状态变化都不要提议：\n` +
+        rules.redLines.map((r) => `- ${r}`).join("\n"),
+    );
+  }
+  return parts.length ? parts.join("\n") + "\n\n" : "";
+}
+
 export function buildReactorPrompt(
   state: WorldState,
   recentLines: string[],
   nameById: Record<string, string>,
+  rules?: WorldRules,
 ): ChatMessage[] {
   const rosterList = Object.entries(nameById)
     .map(([id, name]) => {
@@ -77,14 +95,14 @@ export function buildReactorPrompt(
     .map(([id, l]) => `  ${id}: ${l.name}`)
     .join("\n");
 
-  const system = `你是世界状态记录器（World State Recorder）。
+  const system = `${worldLawBlock(rules)}你是世界状态记录器（World State Recorder）。
 你的职责：阅读最近发生的事件，输出一个 JSON 数组，记录其中真实、可被外部观察到的世界状态变化。
 只记录客观事实（角色移动位置、物品状态变化、角色/玩家的外显体态条件、时间推移、新出现的重要道具被发现、场景转移）。
 不记录内心想法、情绪、对话本身。
 如果什么都没有结构性变化，输出 []。
 不要凭空发明，只记录对话中实际发生的事。
 
-Delta JSON 格式（11 种，选用实际发生的）：
+Delta JSON 格式（12 种，选用实际发生的）：
 {"kind":"moveCharacter","characterId":"<roster中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectState","objectId":"<objects中的id>","state":"新状态描述"}
 {"kind":"setFlag","key":"旗标名","value":true}
@@ -96,6 +114,9 @@ Delta JSON 格式（11 种，选用实际发生的）：
 {"kind":"setRelationship","fromId":"<roster中的id>","toId":"<roster中的id>","disposition":"简短中文态度短语"}
 {"kind":"establishLore","id":"新设定id","keys":["会再次被提到的词","别名"],"content":"一句永久世界设定"}
 {"kind":"establishCharacter","id":"新角色id","name":"角色名","role":"一句话身份/定位","goal":"(可选)当前目标","locationId":"<locations中的id>"}
+{"kind":"moveObject","objectId":"<objects中的id>","toLocationId":"<locations中的id>"}
+
+当物品在场景间被拿走/递出/搬动(玩家或角色把某物带去另一地点、递到他人所在处)时,用 moveObject 把它的所在地落实。注意:被标记搬不动的固定物(吧台、舱壁等)不能移动,别发。只在物品确实换了地点时才发。
 
 当某个**重要且持久的世界事实**首次确立(某地的来历、一个门派/势力、一条世界规则、一个秘密的真相),用 establishLore 记成永久设定(keys 填日后会再次被提到的词)。已有设定不要重复;只记真正持久、值得日后再次被唤起的 canon,琐碎或一次性细节不要记。
 
@@ -106,7 +127,7 @@ Delta JSON 格式（11 种，选用实际发生的）：
 【尊重玩家的自我移动】玩家对"自己去了哪里"的叙述必须被世界落实，不能被默默忽略或推翻：
 - 若玩家说自己前往某地，而该地点尚不存在 → 先 establishLocation（connectFrom 填当前地点）造出它，再 moveScene 把镜头移过去；
 - 若该地点已存在且相邻 → 直接 moveScene 过去；
-- 玩家明确带走/拽走的角色，用 moveCharacter 一并移动。
+- 玩家明确带走/拽走的角色，用 moveCharacter 一并移动；玩家明确拿走/带走的物品，用 moveObject 一并移动到新地点。
 这类"玩家自身移动"的 delta 优先级最高，务必输出，不要因别的变化挤占而漏掉。
 
 当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记下新的态度（简短中文短语，如"戒备松动""记恨在心"）。只在确有改变时发，不要每回合重复同一态度。
@@ -169,9 +190,10 @@ export async function react(args: {
   recentLines: string[];
   nameById: Record<string, string>;
   llm: LlmFn;
+  rules?: WorldRules;
 }): Promise<Delta[]> {
   try {
-    const msgs = buildReactorPrompt(args.state, args.recentLines, args.nameById);
+    const msgs = buildReactorPrompt(args.state, args.recentLines, args.nameById, args.rules);
     const { content } = await args.llm(msgs);
     return parseDeltas(content);
   } catch {
