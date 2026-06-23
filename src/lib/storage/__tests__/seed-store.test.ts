@@ -31,7 +31,7 @@ function makeSeed(id: string, createdAt: number): WorldSeed {
 describe("seed store", () => {
   beforeEach(() => {
     resetRepository();
-    indexedDB.deleteDatabase("the-reveries");
+    indexedDB.deleteDatabase("anywhere-door");
   });
 
   it("upserts and gets a seed", async () => {

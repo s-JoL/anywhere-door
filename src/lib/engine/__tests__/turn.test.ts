@@ -29,7 +29,7 @@ function makeStreamingLlm() {
 }
 
 describe("runTurn (multi-speaker free-speech)", () => {
-  beforeEach(() => { resetRepository(); indexedDB.deleteDatabase("the-reveries"); });
+  beforeEach(() => { resetRepository(); indexedDB.deleteDatabase("anywhere-door"); });
 
   it("lets present characters speak autonomously and records witness-scoped observations", async () => {
     const repo = getRepository();

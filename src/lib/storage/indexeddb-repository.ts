@@ -1,9 +1,9 @@
-import { ReveriesDB } from "./dexie-db";
+import { AnywhereDoorDB } from "./dexie-db";
 import type { Repository } from "./repository";
 import type { WorldInstance, Message, Memory, WorldSeed, TasteEvent } from "../types";
 
 export class IndexedDbRepository implements Repository {
-  private db = new ReveriesDB();
+  private db = new AnywhereDoorDB();
   async getInstance(id: string) { return this.db.instances.get(id); }
   async upsertInstance(i: WorldInstance) { await this.db.instances.put(i); }
   async listMessages(instanceId: string): Promise<Message[]> {

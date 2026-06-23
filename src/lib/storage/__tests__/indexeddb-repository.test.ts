@@ -13,7 +13,7 @@ describe("IndexedDbRepository", () => {
   beforeEach(async () => {
     // 重置单例并删除数据库以隔离用例
     resetRepository();
-    indexedDB.deleteDatabase("the-reveries");
+    indexedDB.deleteDatabase("anywhere-door");
   });
 
   it("upserts and gets an instance", async () => {

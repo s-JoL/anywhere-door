@@ -7,7 +7,7 @@ function mem(id: string, charId: string, t: number): Memory {
 }
 
 describe("memory store", () => {
-  beforeEach(() => { resetRepository(); indexedDB.deleteDatabase("the-reveries"); });
+  beforeEach(() => { resetRepository(); indexedDB.deleteDatabase("anywhere-door"); });
 
   it("appends and lists memories per character in createdAt order", async () => {
     const repo = getRepository();
