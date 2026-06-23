@@ -1,53 +1,225 @@
-# 任意门 / Anywhere Door — 对照第一性原则的差距分析与补齐路线
+# 任意门 / Anywhere Door — Product Roadmap
 
-- **日期**: 2026-06-23
-- **方法**: 基于本项目前期对竞品/开放世界的调研 + 领域知识综合;本文只描述当前差距和后续补齐方向。
-- **第一性原则**: 一扇通往任意世界、且认得你的门;沉浸第一;交互是文字,但**内核要像真实世界**(因果/持久/后果)。
+- **日期**: 2026-06-24
+- **状态**: aligned to `AGENTS.md` and
+  `docs/superpowers/specs/2026-06-24-overall-product-design.md`.
+- **职责**: 描述从当前实现走向最新产品设计的路径。本文不是承诺清单;
+  实现状态以代码与 `docs/DESIGN.md` 为准。
 
-## 指导洞察(来自本轮调研)
-- **感知到的模拟 > 真实模拟**(Tynan Sylvester《The Simulation Dream》):价值在玩家脑中的"世界模型"。Ultima Online 真生态被秒杀,因为玩家根本感知不到。结论:不必造重模拟,要造**高密度刺激**触发玩家的"脑补"(apophenia)+ 高 story-richness。**我们的 LLM 恰好极擅长这点**——方向是强化玩家能"感知到"的反应,而非隐藏的重型 sim。
-- **"世界认得你"最强信号 = 对你"具体/独创动作"的显式承认**(沉浸式模拟:通用系统响应物理/因果事件,而非预设玩法;对玩家自创解法给特殊回应)。→ 确保角色/God **明确呼应玩家这一回合具体做了什么**(我们的 Reactor + 角色已具备底子,值得在 prompt 里强化)。
-- **全局状态累积**(Dishonored 混沌系统):把玩家行为聚合成世界状态再分发后果 → 对应"世界级声誉"(下表#3)。
-- **世界独立性**:"世界不该感觉只为你存在" → NPC 自治/线下生活(#4)。
-- **校准记忆**:"有选择地记得你"(记太多反而是折磨)→ 我们的 recency×relevance×importance 检索已是这个思路 ✓。
-- **配音陷阱反证文字优势**(Cliffski/Skyrim 批评):全配音把对白深度锁死(2 条配音 vs 100 条文字);文字反而能做**深得多的反应性**。→ **这是我们"交互是文字"的有力背书,写进 README 定位。**
+## 1. Roadmap Principles
 
-## 各领域的关键优势(我们可借鉴)
-- **开放世界 / 沉浸式模拟**(GTA/RDR2、Deus Ex/Dishonored/Prey、Bethesda、Dwarf Fortress、The Sims):
-  - **系统化属性 + 涌现解法**:物体有统一属性(可燃/上锁/贵重/易碎/湿),任何系统都能据此交互 → "我用 X 对 Y"自然产生合理后果。
-  - **世界级反应/声誉**:GTA 通缉、RDR2 荣誉、NPC 记得你做过什么、消息会传开。
-  - **NPC 自治**:日程/需求/目标(Radiant AI、Sims),不在场时也在过自己的生活。
-  - **涌现历史**:Dwarf Fortress 把模拟沉淀成可追溯的传说史。
-- **AI 角色扮演产品**(SillyTavern、AI Dungeon、c.ai、Janitor/Chub、NovelAI、Friends&Fables):
-  - **Lorebook / World-Info**(社区最看重的功能):按关键词触发注入设定,世界保持**一致且有深度**,又不撑爆 prompt。
-  - **长程记忆/摘要**:把旧剧情滚动摘要成"故事梗概"喂回,长会话不失忆(RP 第一痛点)。
-  - **重生成/分支/存档点**:对同一回合换一个版本、回溯探索。
-  - **社区分享/发现**:卡片 + 标签生态。
-- **生成式智能体研究**(Stanford Generative Agents):记忆流 + 检索 + 反思(✓ 我们有)+ **规划(daily plan)**(我们缺,只有静态 goal)。
-- **Disco Elysium**(文字向独门):**技能即内心声音**、**世界/物体会对你说话**(Shivers=城市在低语)——纯文字独有的沉浸法。
+- **先让世界更真,再让功能更多。** 新功能必须增强存在、连续、因果、
+  记忆、信息差或回访价值。
+- **先私有实例,后公共分享。** 用户玩的世界是自己的 private branch;
+  可分享的是 seed / door definition,不是默认公开的游玩历史。
+- **先 Consequence Mode,后 live simulation。** 默认不做后台空转;用户回来时
+  懒补合理后果。
+- **先隐藏高级控制,后暴露 Studio。** 默认体验是沉浸 Player Mode;Director /
+  God 控制面向 power users、NSFW、高控制创作和调试。
+- **先行为序列,后标签生态。** 推荐与生成要看用户历史行为序列,并保持探索
+  / 利用平衡。
 
-## 差距排序(impact × 文字-LLM 可行性) + 补齐方案
-| # | 缺口 | 服务第一性原则 | 方案(贴合我们 WorldState + Reactor 架构) | 状态 |
-|---|---|---|---|---|
-| 1 | **Lorebook / World-Info** | 世界深度+一致(真实世界有沉淀的常识/设定) | 种子带 `lore` 条目(关键词→正文);提及即注入角色/反应器 prompt;生成器产出 lore;玩中可"结晶"新 canon | **已落地** |
-| 2 | **重生成上一条** | 沉浸探索(不满意可换一条) | play 加"重生成"——回滚最后一回合的消息/状态/记忆,重跑 | **已落地** |
-| 3 | **世界级声誉 / 消息传开** | 后果像真实世界(没见过你的人也听说过你) | 在 relationships 之上加 world flags 的 `reputation`;反应器可让"风声传到"未在场者 | 路线图(中) |
-| 4 | **NPC 自治议程 / 线下推进** | NPC 有自己的生活(不在场也在动) | 复用 offscreen seam:回到世界时按 msAway + 角色 goal 让 God 推进其议程(产出 deltas) | 路线图(中,seam 已留) |
-| 5 | **系统化物体属性 + 涌现解法** | 因果统一可推理(倒水灭火) | WorldObject 加轻量 `props`(可燃/上锁/贵重…),反应器/角色 prompt 据此推理后果 | 路线图(中) |
-| 6 | **长程"故事梗概"链** | 持久连续(长会话世界不失忆) | 现有:窗口化+记忆检索已扛住;增强:超阈值时把旧回合摘要成 world chronicle 摘要喂回 | 路线图(中) |
-| 7 | **涌现目标 / 轻量 stakes** | 不漫无目的(可选,勿伤自由) | God 浮现"线索/悬念"而非任务列表;保持自由叙事 | 路线图(轻) |
-| 8 | **内心声音 / 世界低语**(Disco) | 文字独有沉浸 | God 给玩家"直觉/第六感"旁白层(对物/人的察觉) | 路线图(实验) |
-| 9 | **多人 / 共享世界** | (社交) | 需后端;与上云一并 | 大注,延后 |
-| 10 | **自主生成新角色 / 新场景** | 世界像现实一样按需长出新人/新地(轴 2/4) | `establishCharacter` + 角色版 `stub→fleshed` + 活跃 agent 上限 + 环境群像叙述;详见 [`entity-genesis-design.md`](entity-genesis-design.md) | 路线图(大,设计中) |
+## 2. Current Foundation
 
-## 后续高价值方向(消费/后果系统,来自 DE / BG3 调研)
-"世界认得你"最强的不是即时反应,而是这几条——纳入 #3/#4/#6 的实现取向:
-- **延时回调**:早期的选择**隔很久、不经announce地**在后面重现(BG3 的 Arabella 三幕弧)。比即时承认强得多——靠记忆/lore/声誉把旧行为在后续场景里再唤起。
-- **身份级后果**,而非仅事件 flag:不是"你做了 X(真/假)",而是"你正在成为谁"(DE 的思想内阁/技能塑形)。我们的口味模型 + 关系已偏这个方向,继续强化。
-- **失败是分支不是死路**:每次尝试都"真的发生过",世界把你的踉跄纳入叙事(DE 红/白判定)。我们的自由叙事引擎天然支持,prompt 层可强化。
-- **道德多元**:不同角色用各自价值观评判你(BG3 同一行为不同人 +5/−10)——我们的 per-character disposition 已具备,值得在生成角色时拉开价值观差异。
+当前代码已经提供这些地基:
 
-## 当前状态
-- **已落地**: #1 Lorebook / World-Info,包括种子 `lore`、关键词注入、生成器产出 lore、玩中 `establishLore` 结晶 canon。
-- **已落地**: #2 重生成上一条,包括回合前快照、消息/记忆回滚、状态恢复和 play 页入口。
-- **后续路线**: #3–#9 按上线后反馈推进;#4 的 offscreen seam 已留,但当前仍是 no-op。
+- vertical door feed, cold-open cards, open-door transition, play route
+- BYO-key, local-first storage, IndexedDB repositories
+- `WorldRules + WorldState + Delta` structured world model
+- `reactor -> validateDelta -> applyDelta` gate
+- append-only `deltaLog`
+- location traversal, locked/gated/portable physical constraints
+- lore injection and `establishLore`
+- subjective memory, reflection, relationship ledger, hearsay
+- location `stub -> fleshed` on first visit
+- `establishCharacter` and instance-private world characters
+- lazy offscreen reconciliation through `evolveWhileAway`
+- regenerate-last-turn mechanics
+
+These are foundations, not the whole product. The next work should make them
+feel coherent to users.
+
+## 3. Phase 1 — Make The MVP Feel Like A Private Living-World Browser
+
+Goal: every first session proves "this is a real world", and every return makes
+the world feel personal.
+
+### 3.1 Doorway Library
+
+- Turn opened instances into a visible, first-class history/library.
+- Show last location, latest consequence, unresolved tension, and relationship
+  state.
+- Add pin/unpin or "my doorway" affordance.
+- Keep return hints light; no aggressive notification loop.
+
+### 3.2 Medium Seed Contract
+
+- Upgrade generated seeds from setting summaries into contracts:
+  hard rules, tonal gravity, opening locality, anchors, 2-3 pressure lines,
+  expansion grammar, canon ledger.
+- Ensure new details unfold as native world detail, not as outside imports.
+- Keep seed compact enough for cheap generation and fast judging.
+
+### 3.3 Pressure Lines
+
+- Add semi-hidden pressure lines to generation and runtime prompts.
+- Surface pressure diegetically: rumor, changed object, avoidance, message,
+  absence, altered location, or returning detail.
+- Avoid quest-log UI by default.
+- Fairness rule: hidden pressure can create signs; strong consequences require
+  perception, contact, or prior warning.
+
+### 3.4 Input Channels
+
+Expose user intent without forcing everything through one text box:
+
+- Say
+- Do
+- Observe / Inspect
+- Director Note
+
+The first three are in-world. Director Note is out-of-world steering and must
+stay channel-isolated.
+
+### 3.5 Taste Chronicle
+
+- Store local behavior sequences, not just tags.
+- Track dwell, quick swipe, returns, abandon, first action, world longevity,
+  relationship patterns, intensity preferences, branch/regenerate behavior.
+- Feed ranking should balance exploit / bridge / explore / diversity.
+- Generation should use taste history as a seed-generator input while protecting
+  world character knowledge from cross-world leakage.
+
+### 3.6 Character Reality
+
+- Represent private beliefs, wrong beliefs, secrets, goals, and witnessed facts
+  more explicitly.
+- Make characters respond to what they plausibly know, not what the engine knows.
+- Strengthen social causality: different characters should judge the same action
+  through different values.
+
+### 3.7 Entity Lifecycle For All Entity Types
+
+- Extend `stub -> fleshed` beyond locations into objects, characters, and lore.
+- Promote entities only when they earn persistence.
+- Summarize or offstage entities that no longer need active context.
+- Preserve identity and memory once an entity crystallizes.
+
+### 3.8 Consequence Mode Polish
+
+- Make return reconciliation user-visible through changed local details and
+  social echoes.
+- Use the delta log as evidence for delayed callbacks and offstage changes.
+- Keep major offscreen consequences bounded unless the user had signs.
+
+### 3.9 Timeline Hygiene
+
+- Keep regenerate/rewind/fork mechanics from leaking old branch state into new
+  branch memory, relationships, or object state.
+- Start with small visible controls before full branch comparison UI.
+
+## 4. Phase 2 — Depth And Power-User Surfaces
+
+Goal: support long-running RP, NSFW, creative steering, and world inspection
+without breaking immersion for default users.
+
+### 4.1 Director Notes And Scene Contract
+
+- Director Notes steer pacing, tone, boundaries, and desired direction without
+  becoming character speech.
+- Scene Contract sets local intensity, consent/boundary rules, relationship
+  direction, and NSFW constraints.
+- Keep contracts private to the control layer unless deliberately canonized.
+
+### 4.2 God Mode / Studio Mode
+
+- Allow direct private-world edits: canon repair, relationship adjustment,
+  object/location fixes, branch cleanup.
+- Edits affect the private instance, not the public seed.
+- Keep default Player Mode clean.
+
+### 4.3 Door Passport
+
+- Local cross-world profile for user preferences, boundaries, pronouns/identity
+  choices, favored dynamics, and control style.
+- It can influence recommendations and new seeds.
+- Characters do not automatically know passport facts unless canonized.
+
+### 4.4 World Atlas
+
+- Private record of a world: places, characters, relationships, objects, lore,
+  pressure lines, open mysteries, and timeline notes.
+- The Atlas should feel like the player's memory/notes, not a debug dump.
+- Advanced users can reveal more mechanical detail.
+
+### 4.5 Context Inspector
+
+- Studio/debug view for prompts, visible state, injected lore, active memories,
+  selected speakers, and proposed deltas.
+- Must be hidden from the default play surface.
+
+### 4.6 Director Profiles
+
+- Product-level presets: slow burn, high agency, romance focus, horror pressure,
+  sandbox exploration, strict canon, high-control RP.
+- Profiles tune pacing, pressure exposure, narration density, and agency without
+  exposing raw model knobs first.
+
+### 4.7 Home / Base / Anchor
+
+- Long-running worlds should develop a recurring anchor: place, role,
+  relationship, unfinished problem, or personal project.
+- Returning should feel like resuming a life, not reopening a chat.
+
+## 5. Phase 3 — Creation, Import, And Sharing
+
+Goal: let creators author doors while keeping each user's world private and
+alive.
+
+### 5.1 Seed Studio
+
+- Create and edit seed contracts.
+- Author pressure lines, expansion grammar, red lines, initial anchors, and
+  opening locality.
+- Preview a cold-open card and first scene.
+- Validate that seed edits do not violate the charter.
+
+### 5.2 Imports As Native World Entities
+
+- Character-card imports can seed native world entities.
+- Imported characters still enter through the world's own logic, never through
+  the player's door.
+- Imported data should map into private POV, goals, secrets, and memory seeds
+  rather than becoming omniscient prompt paste.
+
+### 5.3 Public Seeds, Private Branches
+
+- Users may share seeds / door definitions.
+- Private deltas, Taste Chronicle, Door Passport, NSFW settings, and play history
+  stay local by default.
+- Later sharing can export chronicles, branches, or curated snapshots with
+  explicit user action.
+
+## 6. Later, Not Now
+
+- true real-time multiplayer shared worlds
+- always-running server simulation
+- marketplace / creator monetization
+- voice-first or image-first interaction
+- deterministic large-map pre-generation
+- full physics sandbox across every object property
+- public social graph of user play history
+
+These may become valuable, but they are not required to prove the core thesis.
+
+## 7. Product Quality Signals
+
+The product is improving when:
+
+- users can judge a door in seconds
+- first actions produce visible, specific consequences
+- users return to the same world without being pushed
+- characters surprise users through limited POV, not random prose
+- the feed avoids both repetition and incoherent novelty
+- long-running worlds accumulate local history, not just chat length
+- power users can steer scenes without destroying the world illusion

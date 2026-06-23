@@ -9,10 +9,10 @@
 *Text is merely how you interact with it — not what it is.*
 
 像刷抖音一样竖滑发现世界,推门即入,用文字活在里面。
-An AI **living text-world** you swipe like TikTok — open a door, step inside, and live it in prose.
+一个私人 **living-world browser**: open a door, step inside, and live it in prose.
 
 ![license](https://img.shields.io/badge/license-MIT-111?style=flat-square)
-![tests](https://img.shields.io/badge/tests-419%20passing-2ea44f?style=flat-square)
+![tests](https://img.shields.io/badge/tests-run%20locally-2ea44f?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)
 ![React](https://img.shields.io/badge/React-19-149eca?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)
@@ -76,8 +76,10 @@ An AI **living text-world** you swipe like TikTok — open a door, step inside, 
 - 🚪 **抖音式「无数门」feed** —— 竖滑,每屏一个世界,刷不完(模型在后台不断按你口味生成新世界)。
 - 👁️ **一眼可判的冷开场卡** —— 类型/调性/烈度一目了然,加一句把你拽进去的开场。
 - ✨ **门会越来越懂你** —— 你停留、扎根、快划都被学习;feed 在「贴口味」与「给惊喜」之间平衡,不把你困进信息茧房。
+- 📚 **开过的门不是一次性聊天** —— 长玩的世界会进入你的 Doorway Library,带着上次的位置、关系、悬念和后果等你回来。
 - 🌧️ **世界真的记得你** —— 打翻的酒杯一直碎在地上;锁着的门真的挡路;你拿走谁的东西,他会记恨你;你带谁进里屋,场景和人就真的跟着移动。
 - 🎭 **角色是有秘密的人,不是答录机** —— 每个角色只知道自己见证的,会形成记忆、反思、立场,按自己的算计行动;信息差、秘密、戏剧反讽由此自然产生。
+- 🎛️ **高阶控制藏在幕后** —— 默认是沉浸 Player Mode;需要时可用 Director Notes / Scene Contract / God Mode 调节节奏、边界、私有 canon 和分支。
 - 🔑 **你的世界、你的 key、你的数据** —— 自带模型 key,数据全在你浏览器里,完全不设限。
 
 ### 快速开始
@@ -107,7 +109,7 @@ flowchart LR
   R0["离场演化<br/>(回来时按离开时长懒补)"] --> P["你的动作 / 对白"]
   P --> I["每个在场角色并行<br/>决定是否开口<br/>(好感越深越想说)"]
   I --> S["被选中的角色流式发言<br/>(只读自己主观可见的)"]
-  S --> D["God 导演<br/>张力 · 旁白 · 引入角色"]
+  S --> D["Director / God<br/>张力 · 旁白 · 引入角色"]
   D --> Rx["World Reactor<br/>提议结构化 delta"]
   Rx --> V{"按不可变规则校验"}
   V -->|合法| C["落库 + 写事件日志<br/>物态/移动/关系/新地点·物体·角色·正典"]
@@ -130,7 +132,7 @@ flowchart LR
 
 | 子系统 | 妙在哪 |
 |---|---|
-| **God 引擎** | 角色**自己决定**何时开口(并行意图 + 选发言者),而非掷骰或轮流;导演按张力控节奏、按需把幕后角色拉进场。 |
+| **Director / God 引擎** | 角色**自己决定**何时开口(并行意图 + 选发言者),而非掷骰或轮流;导演按张力控节奏、按需把幕后角色拉进场。 |
 | **World Reactor** | LLM 提议 `Delta`(14 种)→ `validateDelta`(规则不可变,含红线硬筛)→ `applyDelta`(不可变更新)→ 落库 + 写事件日志。世界因此能因果演化,且永不自相矛盾。 |
 | **主观记忆** | 每个角色只记**自己见证**的观察;检索按 `近期 × 相关 × 重要`(Generative Agents 思路)加权,周期性**反思**成更高层信念;同场角色把见闻**口耳相传**成二手 hearsay。 |
 | **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR 多样性 × 防腻:同 id 重惩 + 同题材软降权)→ LLM 世界生成器(贴合/故意发散)+ 后台预生成池。 |
@@ -145,7 +147,7 @@ flowchart TB
     Gen["LLM 世界生成器<br/>+ 后台预生成"] --> Feed
   end
   Feed -->|推门 + 开门转场| Play["沉浸文字世界"]
-  Play --> Engine["God 引擎 + World Reactor"]
+  Play --> Engine["Director / God + World Reactor"]
   Engine --> State[("结构化 WorldState 快照<br/>+ 追加式事件日志<br/>IndexedDB · 纯本地")]
   Play -->|BYO-key| Proxy["/api/llm/chat 薄代理"]
   Proxy --> LLM["OpenRouter / DeepSeek<br/>(OpenAI 兼容,SSE 流式)"]
@@ -156,13 +158,13 @@ flowchart TB
 ### 开发
 
 ```bash
-npm test        # 419 passing
+npm test
 npm run build
 npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 充实 · 离场 · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/`(观察 · 检索 · 反思 · 传话)· `src/lib/storage/`(IndexedDB · 事件日志)· `src/app/`(feed · play · settings)。
-设计与架构(单一事实来源):[`CLAUDE.md`](CLAUDE.md)(第一性宪章)· [`docs/DESIGN.md`](docs/DESIGN.md)(架构详解)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(前瞻)。
+设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
 
 ---
 
@@ -174,7 +176,7 @@ npm run typecheck
 
 ## ✦ 路线图(节选)
 
-世界级声誉/消息传开(基于已落地的事件日志深化)· NPC 自治议程与规划 · 延时回调(早期选择隔很久不经意地重现)· 导演戏剧手法库 · lorebook 递归激活 · SillyTavern 角色卡 V2/V3 导入导出与世界分享 · 多人共享世界。详见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
+Doorway Library · Input Channels / Director Notes · 行为序列驱动的 Taste Chronicle · Door Passport · World Atlas / Context Inspector · Timeline Forks · Seed Studio · Director Profiles · Home/Base/Anchor。详见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
 ## ✦ License
 

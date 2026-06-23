@@ -1,23 +1,29 @@
-# 任意门 / Anywhere Door — 设计与架构(当前权威版)
+# 任意门 / Anywhere Door — 当前技术架构
 
-> 这是产品形态与技术方案的**单一事实来源**,反映当前已实现的状态。演进过程中的旧设计稿/实现计划已归入 git 历史,不在工作树中保留。
-> 前瞻方向见 [`ROADMAP.md`](ROADMAP.md)。
+> 本文描述**当前已实现的技术架构**。产品原则与取舍权威见
+> [`../AGENTS.md`](../AGENTS.md);最新整体产品设计见
+> [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](superpowers/specs/2026-06-24-overall-product-design.md);
+> 从当前实现走向最新产品形态的路线见 [`ROADMAP.md`](ROADMAP.md)。
+>
+> 如果本文与 `AGENTS.md` 或最新产品 spec 冲突,以更高层产品文档为准;
+> 同时需要回头更新本文,让它继续准确反映代码现实。
 
 ## 1. 产品形态
 
-一个**移动优先、纯网页**的 AI **活体文字世界**:
+一个**移动优先、纯网页**的 AI **私人活体文字世界浏览器**:
 
 - 面前是**无数扇门**。像刷抖音一样**竖滑** feed,每屏一个世界。
 - 每张卡是一段**冷开场**(第二人称、悬在最勾人的一刻)——让你**一眼判断**想不想进。
-- **推门进入**(开门转场)→ 跨入一个**沉浸的文字世界**:你打字说话/行动,多个角色 + 一个 God 引擎以流式散文回应。
+- **推门进入**(开门转场)→ 跨入一个**沉浸的文字世界**:你打字说话/行动,多个角色 + 一个 Director/God 编排层以流式散文回应。
 - feed 由**口味引擎**驱动:刷到的门越来越懂你,世界由模型按你的口味**持续生成**,且刻意保持多样性。
+- 长玩的世界应进入个人 **Doorway Library**;当前代码已有持久 instance/history 地基,完整产品形态见 ROADMAP。
 
 ## 2. 第一性原则
 
-> **权威定义见 [`CLAUDE.md`](../CLAUDE.md)。** 任意门通往的是一个**真的世界**(因果·持久·后果);**沉浸第一**;**文字只是你与世界交互的形式,不是它的本质**。**门只属于玩家** —— 其余一切(角色/场景/可交互物)都是世界自身展开、细化出来的。个性化 /「认得你」是产品形态层的强力选择,不是第一性。
+> **权威定义见 [`AGENTS.md`](../AGENTS.md)。** 任意门通往的是一个**真的世界**(因果·持久·后果);**沉浸第一**;**文字只是你与世界交互的形式,不是它的本质**。**门只属于玩家** —— 其余一切(角色/场景/可交互物)都是世界自身展开、细化出来的。个性化 /「认得你」是产品形态层的强力选择,不是第一性。
 
 设计取舍由此推出:
-- **交互驱动演化**:世界只在你交互时推进(离开即冻结),零空转成本;线下演化留了接口未实现(见 ROADMAP)。
+- **交互驱动演化**:世界只在你交互时推进(离开即冻结),零空转成本;回来时通过 `evolveWhileAway` 懒补合理后果,对应产品默认的 **Consequence Mode**。
 - **规则不可变 · 状态可变**:世界有一层不可变 `WorldRules`(物理/设定/红线),其上是可变 `WorldState`;LLM 永不直接改状态,只**提议**变化、经校验后落库。
 - **自带 key · 本地优先**:平台零推理成本、零数据库;隐私归用户。
 - **不设限**:走向由你与模型共同决定。
@@ -29,7 +35,7 @@
 1. **离场演化**:玩家回来时,`evolveWhileAway` 按**离开时长**(`Date.now - lastSeenAt`,≥1h 才触发)让 LLM 提议这段时间里合理发生的平静变化(角色挪位/时间推移/物态/关系淡化),经同一 validate/apply/事件日志落库([`world/offscreen.ts`](../src/lib/world/offscreen.ts))。与"交互驱动:离开即冻结"一致——不实时空转,回来才懒补。
 2. **意图**:每个在场角色**并行**判断是否开口(speak/pass + 急切度),`selectSpeakers` 取 top-N + 破冰([`engine/intent.ts`](../src/lib/engine/intent.ts), [`select.ts`](../src/lib/engine/select.ts))。
 3. **发言**:被选中的角色**流式**说话,prompt 只含其**主观可见**的场景/记忆/关系/lore([`engine/prompt.ts`](../src/lib/engine/prompt.ts))。
-4. **导演**:God 更新张力、在**张力跃升(≥1.5)或已在高位(≥7)且仍上行**时插入**旁白**(高位但持平/衰减的回合不插,天然防刷屏)、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。
+4. **导演**:Director/God 更新张力、在**张力跃升(≥1.5)或已在高位(≥7)且仍上行**时插入**旁白**(高位但持平/衰减的回合不插,天然防刷屏)、张力高时**引入幕后角色**([`engine/director.ts`](../src/lib/engine/director.ts), [`introduce.ts`](../src/lib/engine/introduce.ts))。
 5. **World Reactor**:LLM 读本回合发生的事(prompt 携带世界**物理 + 红线**作软约束,且**证据优先**:只为近期发言里确已发生的事提议 delta,不为被提及/打算/假设的事写),**提议结构化 `Delta[]`**;每个 `validateDelta`(对照规则:结构/空间 + **红线关键词硬筛** + **空操作丢弃**:状态/体态/锁态没真变的 delta 不落库)→ 合法才 `applyDelta`(不可变更新)→ 落库([`engine/reactor.ts`](../src/lib/engine/reactor.ts), [`world/delta.ts`](../src/lib/world/delta.ts))。
 6. **记忆**:各角色把**自己见证**的写入观察,周期性**反思**([`memory/`](../src/lib/memory/))。
 
@@ -55,7 +61,7 @@
 
 | 子系统 | 当前实现 | 代码 |
 |---|---|---|
-| **God 引擎** | 角色自决发言(并行意图+选人)、主观记忆+反思、导演(张力/旁白/引入角色) | `src/lib/engine/` |
+| **Director/God 引擎** | 角色自决发言(并行意图+选人)、主观记忆+反思、导演(张力/旁白/引入角色) | `src/lib/engine/` |
 | **World Reactor** | LLM 提议 delta → 校验(结构/空间 + 红线关键词硬筛)→ 落库;prompt 携物理+红线作软约束;玩家身体、可游走空间、社会后果都由此驱动 | `engine/reactor.ts` · `world/delta.ts` |
 | **主观记忆** | witness 作用域观察;检索按 `近期×相关×重要`;周期反思成更高层信念 | `src/lib/memory/` |
 | **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻:同 id 重惩 + **同题材近期占比软降权**)| `src/lib/taste/` |
@@ -77,4 +83,4 @@
 
 ## 8. 技术栈
 
-Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · Dexie/IndexedDB · Vitest。`npm test`(326 passing) · `npm run build`。
+Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · Dexie/IndexedDB · Vitest。常用检查:`npm test` · `npm run build` · `npm run typecheck`。
