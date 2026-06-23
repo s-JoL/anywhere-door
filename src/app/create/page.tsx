@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { buildSeedFromDraft } from "@/lib/world/author";
 import type { CharDraft, WorldDraft } from "@/lib/world/author";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { getRepository } from "@/lib/storage";
+import { useDoorEnter } from "@/app/DoorTransition";
 
 interface CharCard {
   name: string;
@@ -22,7 +22,7 @@ function emptyChar(): CharCard {
 }
 
 export default function CreatePage() {
-  const router = useRouter();
+  const { enter, Overlay } = useDoorEnter();
   const [title, setTitle] = useState("");
   const [worldview, setWorldview] = useState("");
   const [physics, setPhysics] = useState("");
@@ -91,7 +91,7 @@ export default function CreatePage() {
     }
     try {
       await getRepository().upsertSeed(seed);
-      router.push("/play?world=" + seed.id);
+      enter("/play?world=" + seed.id);
     } catch {
       setError("保存失败，请重试");
       setSaving(false);
@@ -100,6 +100,7 @@ export default function CreatePage() {
 
   return (
     <main className="world-bg relative mx-auto flex min-h-[100dvh] max-w-md flex-col gap-8 px-6 py-10">
+      <Overlay />
       {/* Header */}
       <header className="relative z-10 mt-6">
         <div className="eyebrow">创作者 · 造世</div>

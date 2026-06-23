@@ -6,6 +6,7 @@ import { ensureBuiltinSeeds } from "@/lib/engine/bootstrap";
 import { parseCardFile, cardToSeed } from "@/lib/import/character-card";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { derivePresentation } from "@/lib/world/presentation";
+import { useDoorEnter } from "@/app/DoorTransition";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -92,10 +93,12 @@ function WorldPanel({
   seed,
   isFirst,
   isFocused,
+  onEnter,
 }: {
   seed: WorldSeed;
   isFirst: boolean;
   isFocused: boolean;
+  onEnter: (id: string) => void;
 }) {
   const pres = derivePresentation(seed);
   const accent = pres.accent ?? "var(--lamp)";
@@ -129,7 +132,7 @@ function WorldPanel({
 
       {/* ── Top eyebrow ── */}
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <div className="eyebrow">浮生 · THE REVERIES</div>
+        <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
         {/* Intensity indicator */}
         <div className="flex items-center gap-1.5">
           <span
@@ -201,9 +204,9 @@ function WorldPanel({
           </div>
         )}
 
-        {/* CTA */}
-        <Link
-          href={`/play?world=${seed.id}`}
+        {/* CTA — door transition */}
+        <button
+          onClick={() => onEnter(seed.id)}
           className="mt-8 inline-flex w-fit items-center gap-2 rounded-2xl border px-6 py-3 text-[15px] text-[var(--mist)] transition active:scale-[0.97]"
           style={{
             fontFamily: "var(--serif)",
@@ -214,7 +217,7 @@ function WorldPanel({
           }}
         >
           推门进入 <span className="text-[17px]">➤</span>
-        </Link>
+        </button>
       </div>
 
       {/* Bottom hint on first panel */}
@@ -266,7 +269,7 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
       />
 
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <div className="eyebrow">浮生 · THE REVERIES</div>
+        <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
       </div>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
@@ -303,6 +306,7 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
 
       <div className="relative z-10 pb-6 text-center">
         <div className="text-[11px] text-[var(--smoke)]">自带模型 key · 本地优先 · 不设限</div>
+        <div className="mt-1 text-[10px] text-[var(--smoke)] opacity-40">曾用名 · 浮生</div>
       </div>
     </section>
   );
@@ -315,6 +319,7 @@ export default function Home() {
   const [seeds, setSeeds] = useState<WorldSeed[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const containerRef = useRef<HTMLElement | null>(null);
+  const { enter, Overlay } = useDoorEnter();
 
   async function refreshSeeds() {
     setSeeds(await getRepository().listSeeds());
@@ -355,9 +360,15 @@ export default function Home() {
       ref={containerRef}
       className="h-[100dvh] w-full overflow-y-auto overscroll-none snap-y snap-mandatory"
     >
+      <Overlay />
       {seeds.map((seed, i) => (
         <div key={seed.id} ref={(el) => setRef(el, i)}>
-          <WorldPanel seed={seed} isFirst={i === 0} isFocused={focusedIndex === i} />
+          <WorldPanel
+            seed={seed}
+            isFirst={i === 0}
+            isFocused={focusedIndex === i}
+            onEnter={(id) => enter(`/play?world=${id}`)}
+          />
         </div>
       ))}
       {seeds.length === 0 && (
