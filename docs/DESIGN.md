@@ -1,7 +1,7 @@
 # 任意门 / Anywhere Door — 设计与架构(当前权威版)
 
 > 这是产品形态与技术方案的**单一事实来源**,反映当前已实现的状态。演进过程中的旧设计稿/实现计划已归入 git 历史,不在工作树中保留。
-> 前瞻方向见 [`ROADMAP.md`](ROADMAP.md)。曾用名 浮生 / The Reveries。
+> 前瞻方向见 [`ROADMAP.md`](ROADMAP.md)。
 
 ## 1. 产品形态
 
@@ -39,6 +39,8 @@
 
 **双向中介** —— 角色对世界既无直接读权、也无直接写权。读 = 上述投影;写 = 角色**只产散文**,散文 →(a)成为在场者的观察;(b)喂给 Reactor → 提议 delta → 校验 → 落库。**角色改变世界的唯一途径,是说/做一件能被 Reactor 翻译成合法 delta 的事。** 回合内发言读的是**回合初的冻结快照**,后果在回合末由 Reactor 一次性落库。这正是 §5 三极(角色片面只读+只写散文 / 导演·Reactor 全知操盘 / WorldState 惰性)的运行态。
 
+**重生成上一条**复用同一回合入口:每次 `runTurn` 会记录回合前的世界状态、消息高水位和记忆高水位;`regenerateLastTurn` 删除上一回合产生的消息/记忆、恢复状态,再用同一输入重跑。重生成因此不会把旧分支的记忆或物态残留进新分支。
+
 ## 4. 世界模型
 
 - **`WorldRules`**(不可变):physics / setting / redLines。
@@ -56,7 +58,7 @@
 | **口味引擎** | 行为信号(进入/扎根/创作/快划,衰减)→ 口味模型 → 排序(利用 × ε-探索 × MMR × 防腻)| `src/lib/taste/` |
 | **世界生成器** | 条件化(贴合/故意发散避免局部最优)产出完整可玩种子;冷启动跨题材铺开;后台预生成池 | `world/generate.ts` · `world/pregenerate.ts` |
 | **Lorebook** | 关键词触发正典注入;`establishLore` 让设定按需结晶 | `world/lore.ts` |
-| **展示层** | 冷开场世界卡(genre/mood/intensity/hook/cast/accent);逐字打入;开门转场 | `src/app/page.tsx` · `DoorTransition.tsx` · `world/presentation.ts` |
+| **展示层** | 冷开场世界卡(genre/mood/intensity/hook/cast/accent);逐字打入;开门转场;重生成上一条 | `src/app/page.tsx` · `src/app/play/page.tsx` · `DoorTransition.tsx` · `world/presentation.ts` |
 | **创作/导入** | 创作者世界表单;SillyTavern V2 角色卡(PNG tEXt)导入 | `src/app/create/` · `world/author.ts` · `import/` |
 
 ## 6. LLM / BYO-key
@@ -70,4 +72,4 @@
 
 ## 8. 技术栈
 
-Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · Dexie/IndexedDB · Vitest。`npm test`(322 passing)· `npm run build`。
+Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · Dexie/IndexedDB · Vitest。`npm test`(326 passing) · `npm run build`。

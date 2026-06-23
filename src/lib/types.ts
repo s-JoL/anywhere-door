@@ -95,6 +95,14 @@ export interface WorldSeed {
   presentation?: WorldPresentation;
 }
 
+export interface TurnSnapshot {
+  input: string;
+  state: WorldState;
+  messageIds: string[];
+  memoryIds: string[];
+  createdAt: number;
+}
+
 /** 玩家的私有分叉。 */
 export interface WorldInstance {
   id: string;
@@ -102,6 +110,7 @@ export interface WorldInstance {
   state: WorldState;
   createdAt: number;
   updatedAt: number;
+  lastTurnSnapshot?: TurnSnapshot;
 }
 
 export interface Message {

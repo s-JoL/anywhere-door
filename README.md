@@ -10,14 +10,12 @@
 An AI **living text-world** you swipe like TikTok — open a door, step inside, and play it out in prose.
 
 ![license](https://img.shields.io/badge/license-MIT-111?style=flat-square)
-![tests](https://img.shields.io/badge/tests-322%20passing-2ea44f?style=flat-square)
+![tests](https://img.shields.io/badge/tests-326%20passing-2ea44f?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square)
 ![React](https://img.shields.io/badge/React-19-149eca?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square)
 ![local-first](https://img.shields.io/badge/local--first-IndexedDB-f0c36b?style=flat-square)
 ![BYO-key](https://img.shields.io/badge/LLM-bring%20your%20own%20key-ff3d7f?style=flat-square)
-
-> *曾用名 · 浮生 / The Reveries · 命名灵感致敬哆啦A梦的任意门*
 
 </div>
 
@@ -62,6 +60,7 @@ An AI **living text-world** you swipe like TikTok — open a door, step inside, 
 - ✨ **门会越来越懂你** —— 你停留、扎根、快划,都会被学习;feed 在"贴合你口味"和"给你惊喜"之间平衡,不让你困在信息茧房。
 - 🌧️ **世界真的记得你** —— 打翻的酒杯会一直碎在地上;淋着雨进门,有人会递给你毛巾;你推开挡路的人,他会记恨你;你带谁走进里屋,场景和人就真的跟着移动。
 - 🎭 **角色是有秘密的人,不是答录机** —— 每个角色只知道自己看到的,会形成记忆、反思、立场,按自己的算计行动。
+- ↻ **不满意就重来这一拍** —— 重生成上一条会回滚消息、世界状态和本回合记忆,再用同一个动作展开另一版。
 - 🔑 **你的世界、你的 key、你的数据** —— 自带模型 key,数据全在你浏览器里,完全不设限。
 
 ## ✦ 快速开始
@@ -128,7 +127,7 @@ flowchart TB
 ### 开发
 
 ```bash
-npm test        # 322 passing
+npm test
 npm run build
 npm run typecheck
 ```
@@ -148,7 +147,6 @@ npm run typecheck
 
 线下世界演化(离开后世界懒推进,回来补演化 —— 接口已留)· 世界级声誉/消息传开 · NPC 自治议程 · 系统化物体属性(可燃/上锁…)· 延时回调(早期选择隔很久不经意地重现)· 多人共享世界。详见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
-## ✦ 致谢 & License
+## ✦ License
 
-前身实验 **Speakeasy** 奠定了自由发言与破限提示词的底子。
 [MIT](LICENSE) © 2026 Anywhere Door contributors · 欢迎 issue / PR。

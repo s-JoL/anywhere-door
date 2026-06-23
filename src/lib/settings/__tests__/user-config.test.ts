@@ -3,6 +3,8 @@ import { getUserConfig, setUserConfig, clearUserConfig, resolveModelConfig, type
 import type { WorldSeed } from "@/lib/types";
 
 const USER: UserConfig = { provider: "deepseek", apiKey: "user-key", model: "deepseek-v4-flash", reasoningEnabled: true };
+const KEY = "anywhere-door.userConfig";
+const LEGACY_KEY = "anymen.userConfig";
 
 function seedWith(source: WorldSeed["source"], apiKey: string): WorldSeed {
   return {
@@ -31,6 +33,8 @@ describe("user-config storage", () => {
     expect(getUserConfig()).toBeNull();
     setUserConfig(USER);
     expect(getUserConfig()).toEqual(USER);
+    expect(localStorage.getItem(KEY)).toBe(JSON.stringify(USER));
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
     clearUserConfig();
     expect(getUserConfig()).toBeNull();
   });
@@ -40,13 +44,28 @@ describe("user-config storage", () => {
   });
 
   it("getUserConfig returns null on garbage", () => {
-    localStorage.setItem("anymen.userConfig", "{not json");
+    localStorage.setItem(KEY, "{not json");
     expect(getUserConfig()).toBeNull();
   });
 
   it("getUserConfig returns null on structurally-invalid value", () => {
-    localStorage.setItem("anymen.userConfig", JSON.stringify({ provider: "openrouter" }));
+    localStorage.setItem(KEY, JSON.stringify({ provider: "openrouter" }));
     expect(getUserConfig()).toBeNull();
+  });
+
+  it("migrates a valid legacy key to the Anywhere Door key", () => {
+    localStorage.setItem(LEGACY_KEY, JSON.stringify(USER));
+    expect(getUserConfig()).toEqual(USER);
+    expect(localStorage.getItem(KEY)).toBe(JSON.stringify(USER));
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
+  });
+
+  it("clearUserConfig removes both current and legacy keys", () => {
+    localStorage.setItem(KEY, JSON.stringify(USER));
+    localStorage.setItem(LEGACY_KEY, JSON.stringify(USER));
+    clearUserConfig();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(LEGACY_KEY)).toBeNull();
   });
 });
 

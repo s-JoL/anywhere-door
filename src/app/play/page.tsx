@@ -3,7 +3,7 @@ import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { getRepository } from "@/lib/storage";
 import { ensureDemoSeed, ensureInstanceForSeed } from "@/lib/engine/bootstrap";
-import { runTurn, type TurnEvent } from "@/lib/engine/turn";
+import { regenerateLastTurn, runTurn, type TurnEvent } from "@/lib/engine/turn";
 import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { recordDwell } from "@/lib/taste/record";
@@ -146,6 +146,41 @@ function PlayInner() {
       } else {
         setErr(`这一刻没能继续：${msg}`);
       }
+      await reload(instanceId, nameOf);
+    } finally {
+      streamingId.current = null;
+      setBusy(false);
+    }
+  }
+
+  async function regenerate() {
+    if (busy || !instanceId || !seed) return;
+    const lastUserIndex = [...items].map((it) => it.kind).lastIndexOf("user");
+    if (lastUserIndex < 0) return;
+    const text = items[lastUserIndex].content;
+
+    setBusy(true);
+    setErr("");
+    setNeedsKey(false);
+    setItems((xs) => [...xs.slice(0, lastUserIndex), { id: `regen-u-${Date.now()}`, kind: "user", content: text }]);
+    try {
+      const cfg = resolveModelConfig(seed, getUserConfig());
+      await regenerateLastTurn({
+        seed,
+        repo: getRepository(),
+        instanceId,
+        llm: (msgs, onContent) => streamChat({ cfg, messages: msgs, onContent }),
+        onEvent,
+      });
+      await reload(instanceId, nameOf);
+    } catch (e) {
+      const msg = (e as Error).message ?? "";
+      if (/missing api key/i.test(msg) || /upstream 40[0-3]/i.test(msg)) {
+        setNeedsKey(true);
+      } else {
+        setErr(`这一刻没能重来：${msg}`);
+      }
+      await reload(instanceId, nameOf);
     } finally {
       streamingId.current = null;
       setBusy(false);
@@ -163,6 +198,7 @@ function PlayInner() {
   const loc = world ? world.locations[world.currentLocationId] : null;
   const present = loc ? loc.presentCharacterIds.map(nameOf) : [];
   const waitingForFirst = busy && streamingId.current === null;
+  const canRegenerate = items.some((it) => it.kind === "user");
 
   return (
     <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col door-arrive">
@@ -252,6 +288,15 @@ function PlayInner() {
         style={{ paddingBottom: "max(0.9rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-end gap-2.5">
+          <button
+            onClick={regenerate}
+            disabled={busy || !canRegenerate}
+            aria-label="重生成上一条"
+            title="重生成上一条"
+            className="field send-glow flex h-12 w-12 shrink-0 items-center justify-center text-[18px] text-[var(--lamp)] transition disabled:opacity-35 disabled:shadow-none"
+          >
+            {busy ? <span className="breathe">◍</span> : "↻"}
+          </button>
           <textarea
             className="field max-h-32 flex-1 resize-none px-4 py-3 text-[15px] leading-relaxed"
             rows={1}

@@ -5,8 +5,11 @@ export interface Repository {
   upsertInstance(i: WorldInstance): Promise<void>;
   listMessages(instanceId: string): Promise<Message[]>;
   appendMessage(m: Message): Promise<void>;
+  deleteMessages(ids: string[]): Promise<void>;
   appendMemory(m: Memory): Promise<void>;
   listMemories(charId: string): Promise<Memory[]>;
+  listAllMemories(): Promise<Memory[]>;
+  deleteMemories(ids: string[]): Promise<void>;
   getSeed(id: string): Promise<WorldSeed | undefined>;
   listSeeds(): Promise<WorldSeed[]>;
   upsertSeed(s: WorldSeed): Promise<void>;

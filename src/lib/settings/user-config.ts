@@ -4,7 +4,8 @@ import { isValidProvider } from "@/lib/llm/providers";
 /** 用户自带的全局模型配置（与单个世界 modelConfig 同形）。 */
 export type UserConfig = ModelConfig;
 
-const KEY = "anymen.userConfig";
+const KEY = "anywhere-door.userConfig";
+const LEGACY_KEY = "anymen.userConfig";
 
 function isUserConfig(v: unknown): v is UserConfig {
   if (typeof v !== "object" || v === null) return false;
@@ -21,9 +22,18 @@ function isUserConfig(v: unknown): v is UserConfig {
 export function getUserConfig(): UserConfig | null {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    return isUserConfig(parsed) ? parsed : null;
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      return isUserConfig(parsed) ? parsed : null;
+    }
+
+    const legacyRaw = localStorage.getItem(LEGACY_KEY);
+    if (!legacyRaw) return null;
+    const legacyParsed: unknown = JSON.parse(legacyRaw);
+    if (!isUserConfig(legacyParsed)) return null;
+    localStorage.setItem(KEY, JSON.stringify(legacyParsed));
+    localStorage.removeItem(LEGACY_KEY);
+    return legacyParsed;
   } catch {
     return null;
   }
@@ -32,11 +42,13 @@ export function getUserConfig(): UserConfig | null {
 /** 写入本地配置。仅触碰 localStorage。 */
 export function setUserConfig(c: UserConfig): void {
   localStorage.setItem(KEY, JSON.stringify(c));
+  localStorage.removeItem(LEGACY_KEY);
 }
 
 /** 清除本地配置。 */
 export function clearUserConfig(): void {
   localStorage.removeItem(KEY);
+  localStorage.removeItem(LEGACY_KEY);
 }
 
 /**

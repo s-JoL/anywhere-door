@@ -11,10 +11,22 @@ export class IndexedDbRepository implements Repository {
     return rows.sort((a, b) => a.createdAt - b.createdAt);
   }
   async appendMessage(m: Message) { await this.db.messages.put(m); }
+  async deleteMessages(ids: string[]) {
+    if (ids.length === 0) return;
+    await this.db.messages.bulkDelete(ids);
+  }
   async appendMemory(m: Memory) { await this.db.memories.put(m); }
   async listMemories(charId: string): Promise<Memory[]> {
     const rows = await this.db.memories.where("charId").equals(charId).toArray();
     return rows.sort((a, b) => a.createdAt - b.createdAt);
+  }
+  async listAllMemories(): Promise<Memory[]> {
+    const rows = await this.db.memories.toArray();
+    return rows.sort((a, b) => a.createdAt - b.createdAt);
+  }
+  async deleteMemories(ids: string[]) {
+    if (ids.length === 0) return;
+    await this.db.memories.bulkDelete(ids);
   }
   async getSeed(id: string) { return this.db.seeds.get(id); }
   async listSeeds(): Promise<WorldSeed[]> {
