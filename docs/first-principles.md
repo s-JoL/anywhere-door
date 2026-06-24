@@ -446,8 +446,10 @@ source of truth / turn-based no-idle / change gate / subjective POV / text mediu
 - **Covered via the agentic world (scope expands):** precise combat adjudication /
   scoring / exact puzzles / small economies — the Director-agent **actually
   computes** (1.4 inward), not improvised by the LLM; each world's rules can
-  become a reusable executable skill. **This is in scope and attempted, not
-  deferred.**
+  become a reusable executable skill. **The architecture supports this; the build
+  is deferred until the core drama / return loop is validated** — game-y is a
+  proven *appetite* but not yet a proven *retention* driver, so it is a target,
+  not an MVP line (it must still earn its funnel row, §2.2).
 - **Still out (excluded by design — do not chase):** ① twitch / real-time
   (platformers, shooters, rhythm) — the text medium can't; ② large-scale numeric
   simulation (4X, Factorio throughput, colony economies) — not the architecture

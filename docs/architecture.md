@@ -144,6 +144,19 @@ must finish before the user reads the first prose:
   memory/reflection frequency, flesh threshold, agentic-compute depth). Ship one
   tier first; tiers are the later cost valve.
 
+**Unretired bets — latency and the model floor (BYO-key).** The fast/slow shape is
+the right structure, but two claims are *bets to be measured, not facts*: (1) that
+the structural settle is "shorter than reading time" — this needs a real
+first-token and settle **latency budget** measured on a representative *consumer*
+key (often a cheaper/slower model), not asserted; (2) that an arbitrary BYO-key
+model is a competent proposer at all. The runtime therefore defines a **minimum
+model-capability floor** and a **graceful-degradation path**: below the floor, the
+slow path narrows (lower active-agent cap, less frequent memory/reflection, a
+stricter guard, fewer agentic steps) and the world degrades to a simpler-but-still-
+consistent experience rather than breaking. Consistency must survive a weak model
+that follows the propose schema poorly; the gate rejects what it cannot validate,
+so a weak model loses *richness*, never *coherence*.
+
 ### 4.2 Rollback and regenerate
 
 On a fatal error, restore the snapshot, drop messages/memories/changes created
@@ -352,6 +365,15 @@ policed afterward. But generating *from* the truth does not stop the model from
 Faithful is the default transduction; lawful distortion is a rules-level property
 of the world. The hub always holds the truth underneath, so a *caught* slip is
 recoverable, not corruption.
+
+**Craft: source material, not a fact list.** Transduction must not read as
+inventory recitation ("There is a key. There is a girl. The rain is heavy.") — the
+anti-pattern of dry, list-like prose the product explicitly rejects. The snapshot
+is the *source material plus the world's narration voice*: the model writes freely
+and vividly *against* the facts, foregrounding what the Director made salient,
+not enumerating state. Grounding constrains *what is true*, never *how alive the
+prose is*. Prose liveliness is a tracked quality signal, not an afterthought —
+grounding-from-truth must buy consequence without costing voice.
 
 **The consistency guard — conservative and best-effort.** It is deliberately *not*
 a semantic re-derivation of the world (the same restraint as the red-line and
