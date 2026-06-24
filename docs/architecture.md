@@ -69,14 +69,14 @@ Living World Mode can reuse these modules with a more proactive scheduler.
   helper.
 - **PerceptionResolver** — the **single perception boundary**. Builds each
   character's subjective projection from mechanical fact (present characters,
-  visible objects, own memory) plus directed salience (§8). Out-of-world channels
+  visible objects, own memory) plus directed salience (§6). Out-of-world channels
   never enter here (charter §9).
 - **Director** — the omniscient dramatic orchestrator; *not* a character. Chooses
   active pressure lines, casts active vs. ambient characters, decides whether to
   surface a latent entity and how, frames new detail as world-native, sets pacing
   and narration density, and honors Director Notes / Scene Contract without
   leaking them. It writes only through narration, proposed changes, and casting
-  decisions — never bypassing the gate. It **may be a computing agent** (§10).
+  decisions — never bypassing the gate. It **may be a computing agent** (§9).
 - **AgentRuntime** — runs the capped set of active character agents for the turn
   (`perceive → retrieve → decide intent → speak/act → record observation`). Not
   every present person is an agent every turn; the Director casts who matters.
@@ -89,7 +89,7 @@ Living World Mode can reuse these modules with a more proactive scheduler.
   each change rests on). Runs when the Director's structural-change signal fires;
   high-consequence changes get a second check.
 - **Materializer** — turns earned ambient detail into structured entities along
-  the lifecycle (§15). The world is the source; new entities are never framed as
+  the lifecycle (§13). The world is the source; new entities are never framed as
   entering through the player's door.
 - **MemoryBeliefSystem** — owns subjective records: observation, memory, hearsay,
   belief, hypothesis, secret, reflection, relationship evidence. Observations are
@@ -97,7 +97,7 @@ Living World Mode can reuse these modules with a more proactive scheduler.
   retrieval strength but keeps its evidence; belief may diverge from canon.
 - **OffstageReconciler** — Consequence Mode: on return, reconciles bounded
   plausible change from elapsed time, rules, active threads, and log evidence, at
-  three precision tiers (§7.5). Shares its repair machinery with God edits (§11).
+  three precision tiers (§7.5). Shares its repair machinery with God edits (§10).
 - **TasteSeedRuntime** — world generation, **outside** the world instance. Learns
   behavior sequences (not tags), generates with exploit/bridge/explore balance.
   Taste never leaks into character knowledge.
@@ -169,12 +169,12 @@ Subjective records (per-agent projections / memory)
 **WorldRules** carries, beyond physics / setting / red lines:
 
 - **narration rule** — the truth→prose transduction: faithful by default, with
-  optional lawful distortion for horror/dream/unreliable worlds (§9).
+  optional lawful distortion for horror/dream/unreliable worlds (§8).
 - **rule-skills (optional)** — executable deterministic rules the agentic Director
-  runs for precise adjudication (combat, scoring, puzzles, small economies; §10).
+  runs for precise adjudication (combat, scoring, puzzles, small economies; §9).
 
 **WorldState** carries the local scene pointer, time, locations, objects,
-**instance-private characters** (§15.3), roster, flags, a tension scalar,
+**instance-private characters** (§13.3), roster, flags, a tension scalar,
 relationships (a signed affinity ledger with decaying evidence), lore, and:
 
 - **pressure lines** — structured threads (§7.2);
@@ -183,6 +183,13 @@ relationships (a signed affinity ledger with decaying evidence), lore, and:
 - **beliefs** — a *read view* (fact × observer) derived from memory, not a second
   source of truth (§7.3);
 - **timeline / branch** metadata for forks.
+
+The player's in-world identity is an ordinary roster entity inside WorldState; the
+world knows only what that identity reveals in-world. **Cross-world Door Passport /
+persona data lives in the taste layer outside the instance, never in WorldState** —
+so, like the Taste Chronicle, it structurally cannot reach a character (it is never
+in anything the perception boundary reads). The instance only records which persona
+is bound to it, not the persona's cross-world history.
 
 ### 5.2 Changes (the typed mutation vocabulary)
 
@@ -254,7 +261,7 @@ core      — seed-level load-bearing canon, or an authored (God) fact
 **Validation rule (at the gate):** a change that contradicts a fact harder than
 its own authority is rejected. Reactor/character-sourced changes may not contradict
 an *anchored* fact; only an *authored* change may revise anchored/core, and it
-pays the witness-scoped reconcile (§11). Contradiction is detected conservatively
+pays the witness-scoped reconcile (§10). Contradiction is detected conservatively
 (same entity/field, opposing value), consistent with the conservative red-line
 screen — not a semantic model. Hardness never bypasses the gate; it is a new
 *reason a change can be rejected*, parallel to the locked-door causality check.
@@ -291,7 +298,7 @@ as a second truth.
 
 The fields of §5.4 made active: first-hand observations are stamped witnessed /
 full confidence; hearsay is stamped heard with degraded confidence; rule-warped
-distortion is the hook for lawful distortion (§9). Retrieval scoring folds
+distortion is the hook for lawful distortion (§8). Retrieval scoring folds
 confidence into recency × relevance × importance, so low-confidence hearsay
 surfaces less forcefully.
 
@@ -339,15 +346,25 @@ the browser, never server analytics, never reaching characters.
 ## 8. Narration as Transduction
 
 User-facing prose is **generated from the hub's fact snapshot**, so grounding is
-structural — not free prose policed afterward. Faithful is the default
-transduction; lawful distortion is a rules-level property of the world. The hub
-always holds truth underneath, so a render slip is recoverable, not corruption.
+**biased structural** — the snapshot is the source material, not free prose
+policed afterward. But generating *from* the truth does not stop the model from
+*adding* unsupported detail, which is exactly what the guard exists to catch.
+Faithful is the default transduction; lawful distortion is a rules-level property
+of the world. The hub always holds the truth underneath, so a *caught* slip is
+recoverable, not corruption.
 
-Because the prose is still model-generated, a **cheap consistency guard** remains:
-it catches prose that asserts a fact absent from the snapshot before that slip can
-mislead the player or seed a spurious change. It is a lightweight backstop, not the
-source of grounding. Character voices are orthogonal: a partial perceiver may lie
-or err; such claims route to belief or a recorded lie, never silently into state.
+**The consistency guard — conservative and best-effort.** It is deliberately *not*
+a semantic re-derivation of the world (the same restraint as the red-line and
+canon-contradiction screens, §7.1). It screens the cheap, high-value cases: prose
+that **names an entity absent from the snapshot**, asserts an **object / location /
+state the snapshot contradicts**, or attributes knowledge to a character outside
+its projection. On a hit it regenerates the beat or drops the offending clause.
+It is honestly **best-effort**: subtle slips — a plausible-but-unstated motive, an
+invented background detail that mints no entity — can pass. So the claim is
+*biased grounding + a backstop*, not a proof of non-divergence; grounding comes
+from generating-from-truth, never from the guard. Character voices are orthogonal:
+a partial perceiver may lie or err; such claims route to belief or a recorded lie,
+never silently into state.
 
 ## 9. The Agentic Director
 
@@ -361,6 +378,19 @@ The Director may be a tool-using agent that runs the world's rules over the trut
   carried in the seed contract.
 - **Gate invariant holds:** computed results are proposals committed by the
   WriteGate; the agent never bypasses validation.
+
+**Authoring, validation, and routing.** A rule-skill is part of the seed contract,
+authored at creation time (by the seed generator or a creator in Seed Studio), not
+improvised per turn. Two properties keep an unsound skill bounded: (1) its outputs
+are *proposals* — they commit only through the WriteGate, so a buggy skill can be
+rejected but can never corrupt state directly; (2) skills run sandboxed and
+deterministically, so the same inputs reproduce and are inspectable. Routing
+("does this turn need the combat skill?") reuses the Director's structural-change
+signal, biased toward running the skill when a rule-relevant action is detected; a
+misroute degrades to narration, never to silent miscomputation. Skill *soundness*
+itself (is the combat math fair?) is a creation-time concern surfaced in Seed
+Studio preview, not a runtime guarantee — the runtime only guarantees that whatever
+a skill proposes still passes the gate.
 
 This moves precise **game-y** worlds inside coverage (charter §16). Large-scale
 numeric simulation stays out on per-turn-budget grounds, not architecture.
@@ -385,11 +415,14 @@ offstage consequences are the same bounded reconcile.
 
 ## 11. Concurrency and Locks
 
-An instance operation lock disciplines writes: only one turn commits to an
-instance at a time; each long model operation has an id; stale results are
-ignored; a timeout releases the lock safely; regeneration/fork/god-edit invalidate
-in-flight operations. Without this, overlapping Director/Reactor/character results
-contaminate the same private branch.
+Even a single-player local app has real concurrency to discipline: **rapid
+re-submit** (the user fires the next turn before this turn's slow path commits),
+**the same instance open in multiple tabs**, and **regenerate / fork / god-edit
+issued mid-stream** while a turn is still settling. An instance operation lock
+handles all three: only one turn commits to an instance at a time; each long model
+operation has an id; stale results are ignored; a timeout releases the lock safely;
+regeneration/fork/god-edit invalidate in-flight operations. Without this,
+overlapping Director/Reactor/character results contaminate the same private branch.
 
 ## 12. Error Handling
 

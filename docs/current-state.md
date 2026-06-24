@@ -93,7 +93,8 @@ reruns the same input — so a regenerate does not leak old-branch state.
   Affinity feeds eagerness back into speaker selection. Gossip
   (`src/lib/memory/gossip.ts`) spreads one-hop, degraded, de-duplicated hearsay
   among co-present characters.
-- **`Delta` (14 kinds)**: `moveCharacter`, `setObjectState`, `setFlag`,
+- **`Delta` (14 kinds)** — `Delta` is the code name for what the design docs call
+  a "typed change" (`architecture.md` §5.2): `moveCharacter`, `setObjectState`, `setFlag`,
   `advanceTime`, `setCondition`, `establishObject`, `establishLocation`,
   `moveScene`, `setRelationship`, `establishLore`, `establishCharacter`,
   `moveObject`, `setObjectLocked`, `fleshLocation`. `establish*` grows the world
