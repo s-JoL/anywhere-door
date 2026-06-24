@@ -69,15 +69,16 @@ The runtime spine above keeps the world *consistent*; these decide whether the
 consistent world is *felt* and *affordable*. They are first-class work items, not
 polish. Decisions and rationale: `docs/first-principles-synthesis.md`.
 
-1. **Rendering consistency (A).** State is truth, but the user reads prose, and
-   prose can contradict state. Split voices — the narrator/Director voice stays
-   grounded to hard facts; character voices may make false claims, which the
-   Reactor routes to belief/lie, never silently into state. Enforcement is hybrid:
-   prompt-grounding every turn, plus a lightweight post-check only for hard-state
-   objects (doors, locks, key items, presence, location).
+1. **Rendering consistency (A).** State is truth, but the user reads prose. Resolution:
+   narration is the world **re-telling its truth through its rules** — generated from
+   the hub's fact snapshot (grounding is structural, no post-check). Faithful is the
+   default transduction; worlds may define lawful distortion (horror/dream/unreliable)
+   as a `WorldRules` property. The hub always holds truth, so a slip is cosmetic, not
+   corruption. Character voices are orthogonal: they may lie/err, routed to belief/lie
+   by the Reactor, never silently into state.
 2. **Latency (B).** Many serial LLM calls on the user's key fight immersion. Split
    fast path (casting + streaming, first token quickly) from slow path (Reactor,
-   memory, flesh, post-check), with the instance lock as commit barrier.
+   memory, flesh), with the instance lock as commit barrier.
 3. **Cost (C).** Depth tiers (fast / standard / deep) scale the slow path. MVP ships
    a single tier; tiers follow as the cost valve.
 4. **Reactor precision (D).** The call that makes the world change. Gate it by the
@@ -91,6 +92,20 @@ under BYO-key, browsing has a cost/key friction. Needs a static example-door poo
 (key-free first impression), a background pre-generation pool with diversity, and
 its own metrics (seconds-to-judge, open-door conversion, take-root rate). This
 deserves a named owner alongside the runtime.
+
+5. **Agentic Director (compute on demand).** Make the Director a tool-using agent that
+   runs the world's rules over the truth: deterministic computation (combat, scoring,
+   puzzle logic, small economies) proposed as deltas when a world needs it, pure
+   narration otherwise. This moves precise game-y worlds inside coverage; large-scale
+   numeric simulation, twitch, and real-human multiplayer stay out by design (medium /
+   per-turn budget / single-player private instance). Coverage taxonomy and rationale:
+   `docs/first-principles-synthesis.md` Part 5.
+
+Seed strategy (feeds Phase 3 / Seed Studio): ship platform-original and
+structurally-homaged seeds (world-rich, not plot-on-rails), and open user-local IP
+import (BYO-key — a private user action, not platform distribution). Seed contracts
+gain a narration rule and optional executable rule-skills. Candidate archetypes, each
+showcasing one engine strength: `docs/first-principles-synthesis.md` Part 6.
 
 ## 3. Phase 1 — Make The MVP Feel Like A Private Living-World Browser
 

@@ -117,6 +117,10 @@ Recommended medium seed contents:
 - 2-3 semi-hidden pressure lines
 - expansion grammar: how new locations, people, objects, lore, and social consequences should appear
 - canon ledger: already established truths that cannot be contradicted
+- narration rule: how the world transduces truth into prose (faithful by default;
+  optional lawful distortion for horror / dream / unreliable worlds)
+- executable rule-skills (optional): deterministic rules the agentic Director runs
+  for precise adjudication (combat, scoring, puzzle logic, small economies)
 
 The world should begin incomplete, but unfold as if it was always complete.
 

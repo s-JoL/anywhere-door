@@ -128,6 +128,10 @@ A seed is not a content list. It is a compact generative contract:
 - expansion grammar: how new places, people, objects, lore, and social
   consequences appear
 - canon ledger: established truths that cannot be contradicted
+- narration rule: how the world transduces its truth into prose — faithful by
+  default, with optional lawful distortion for horror/dream/unreliable worlds
+- executable rule-skills (optional): deterministic rules the agentic Director runs
+  for precise adjudication (combat, scoring, puzzle logic, small economies)
 
 The world begins incomplete, but unfolds as if it was always complete.
 
@@ -335,6 +339,15 @@ work should avoid blocking them:
   relationship evidence are *superseded* (never deleted — append-only), scoped to
   witnesses of the now-contradicted events. The authored world stays self-consistent,
   auditable, and forkable.
+- **Narration is transduction, not free prose.** User-facing text is the world
+  re-telling its committed truth through the world's narration rule (faithful by
+  default; lawful distortion is a `WorldRules` property). The hub always holds the
+  real truth; narration never mutates it, so a render slip is cosmetic, not corruption.
+- **The Director may be an agent.** It may compute deterministically (combat,
+  scoring, puzzle logic, small economies) and propose the result as deltas, or
+  degrade to pure narration. Computed results still commit through WorldKernel; the
+  agent never bypasses validation. Large-scale numeric simulation stays out on
+  per-turn-budget grounds, not architecture.
 - **Interaction-driven evolution.** The world advances through interaction and
   lazy return reconciliation, not server-side idle simulation.
 - **BYO-key and local-first.** Production is bring-your-own-key; data lives in

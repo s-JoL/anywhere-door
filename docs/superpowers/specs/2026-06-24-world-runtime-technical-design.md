@@ -240,12 +240,26 @@ The Director can see the whole world, but it should write only through:
 
 It should not bypass validation.
 
-**Narrator grounding (rendering consistency).** The Director / narrator voice is the
-omniscient world description and must stay grounded: it may not narrate a hard
-physical fact that contradicts committed state (a locked door is not described as
-open). Hard facts are fed to the narrator as constraints; a lightweight post-check
-guards hard-state objects (doors, locks, key items, presence, location). Character
-voices are not bound this way — their false claims are drama (see §4.7).
+**Narration as transduction.** The user-facing prose is not free text policed against
+state; it is the world **re-telling its own truth through its rules**. The hub's fact
+snapshot is the *source material* the narration is generated from, so grounding is
+structural — there is no separate post-check. Faithful narration is the default
+transduction; worlds may define *lawful distortion* (horror sanity effects, dream
+logic, a world that hides a death from the player) as a `WorldRules`-level property
+(§6.1). The hub always holds the real truth underneath, so distortion is recoverable
+and never a true divergence; an occasional LLM slip is a one-off cosmetic blemish, not
+state corruption. Character voices are an orthogonal layer: partial perceivers may lie
+or err, routed to belief/lie by the Reactor (§4.7), never silently into state.
+
+**Agentic Director (compute on demand).** The Director need not be a single prompt; it
+may be a tool-using agent that runs the world's rules over the truth. When a world
+needs precise adjudication (combat resolution, scoring, puzzle logic, a small economy)
+it computes deterministically (code/ledger) and proposes the result as deltas; when it
+does not, it degrades to pure narration at no extra cost. Per-world rules may be
+expressed as reusable executable skills (Voyager-style). The gate invariant holds:
+computed results are proposals committed by WorldKernel — the agent never bypasses
+validation. This is what moves precise game-y worlds inside coverage while large-scale
+numeric simulation stays out on per-turn-budget grounds, not architecture.
 
 **Reactor gating.** The Director also emits a per-turn signal of whether structural
 change likely occurred, gating whether the Reactor runs. It is already running and
@@ -495,14 +509,14 @@ acquire instance lock
 
 **Fast path vs slow path.** To protect immersion under multiple serial LLM calls on
 the user's own key, split the flow by what must complete before the user reads the
-first prose. The *fast path* (Director casting + selected characters streaming)
-reaches first token quickly so the user has something to read. The *slow path*
-(Reactor deltas, memory/hearsay writes, post-pass flesh, the hard-state consistency
-check) may settle during or after streaming, as long as it commits before the next
-turn builds context. The instance lock (§7) enforces one commit at a time: the user
-may read immediately but cannot commit the next turn until this turn's structural
-settle finishes. A depth tier (fast / standard / deep) scales the slow path
-(`maxActiveAgents`, memory/reflection frequency, flesh threshold, post-check scope).
+first prose. The *fast path* (Director casting + narration + selected characters
+streaming) reaches first token quickly so the user has something to read. The *slow
+path* (Reactor deltas, memory/hearsay writes, post-pass flesh) may settle during or
+after streaming, as long as it commits before the next turn builds context. The
+instance lock (§7) enforces one commit at a time: the user may read immediately but
+cannot commit the next turn until this turn's structural settle finishes. A depth
+tier (fast / standard / deep) scales the slow path (`maxActiveAgents`,
+memory/reflection frequency, flesh threshold, agentic-compute depth).
 
 Rollback:
 
@@ -550,6 +564,13 @@ Add over time:
 - `facts`
 - `beliefs`
 - `timeline`
+
+`WorldRules` (immutable) likewise gains, beyond physics/setting/redLines:
+
+- `narration` — the world's truth→prose transduction rule (faithful by default;
+  optional lawful distortion for horror/dream/unreliable worlds; see §4.6)
+- `ruleSkills` — optional executable rules the agentic Director runs for precise
+  adjudication (combat, scoring, puzzle logic, small economies; see §4.6)
 
 ### 6.2 Delta
 
