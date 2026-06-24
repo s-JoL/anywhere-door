@@ -32,7 +32,11 @@ before changing the implementation.**
 2. **ContextAssembler + PerceptionResolver.** Replace the prompt-helper sprawl
    with typed context packs and one perception boundary; add standing assertions
    that out-of-world channels never enter a character projection (`architecture.md`
-   §3, charter §9). (Unblocks channel-isolated control surfaces.)
+   §3, charter §9). **These isolation assertions are a hard prerequisite: no
+   power surface (Director Notes / Scene Contract / God / cross-world taste) ships
+   until they are in place** — channel isolation fails *silently*, so the guard
+   must exist before the thing it guards. (Unblocks channel-isolated control
+   surfaces.)
 3. **Director casting.** Director chooses the active-agent set (cap ≈ 4) and
    ambient cast; remove the hardcoded `tension ≥ 6` introduction in favor of
    Director surfacing decisions (`architecture.md` §13.1).
@@ -93,10 +97,12 @@ it feel personal (`product-design.md` §26 MVP).
     narration rule for lawful distortion (`architecture.md` §8).
 11. **Metrics funnel.** Instrument the return-rate funnel, local-first
     (`architecture.md` §7.7).
-12. **One game-y template.** A cold-start dungeon proving the agentic Director +
-    rule-skill path end to end (`product-design.md` §22).
-13. **Timeline hygiene.** Keep regenerate/rewind/fork from leaking old-branch
+12. **Timeline hygiene.** Keep regenerate/rewind/fork from leaking old-branch
     state.
+
+(The game-y / agentic-Director rule-skill path is **not** in Phase 1 — it moves to
+Phase 2, after the drama/return loop is shown to retain. The architecture supports
+it; the build waits.)
 
 ## Phase 2 — Depth and power-user surfaces
 
@@ -116,6 +122,9 @@ default immersion.
 - **Home / Base / Anchor** — recurring world-native anchors for return value.
 - **Depth tiers** — fast / standard / deep as the cost valve on the slow path
   (`architecture.md` §4.1).
+- **Agentic Director + game-y rule-skills** — deterministic combat/scoring/puzzle/
+  economy adjudication and a proving game-y template (`architecture.md` §9,
+  `product-design.md` §22). Gated on the Phase 1 drama/return loop retaining first.
 
 ## Phase 3 — Creation, import, and sharing
 

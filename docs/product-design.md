@@ -109,6 +109,16 @@ On return, the world consumes one candidate plus elapsed time to produce a
 **return-open beat**. Returning **advances** the world; it is not the
 continuation of the last chat line.
 
+> **Open risk: discovery novelty vs. return depth.** The feed optimizes for
+> *disposable novelty* (swipe many doors); the Library optimizes for *return to
+> one* — two different engagement loops that can cannibalize each other (endless
+> new doors competing with the world you should be coming back to). The handoff is
+> a deliberate design surface, not an accident of having both: the feed's promise
+> must be "a world *worth returning to*," and the Library must resurface a pinned
+> world with enough pull (its echo) to win against the next new door. Return-rate
+> (the north star) is exactly the metric that catches it if the feed is winning at
+> the Library's expense.
+
 ### 3.4 The Atomic Experience (worked example)
 
 The smallest complete proof that this is a world and not a chat is one thread of
@@ -201,6 +211,15 @@ break: a platform-funded reactive trial would break *platform-burns-nothing*, an
 a canned reactive transcript would break the *reactive moat*. The pre-baked taste
 does neither — it is static (no platform inference) and openly non-reactive (the
 real loop is what the key unlocks).
+
+> **Open risk (primary, not solved): the keyless→reactive conversion cliff.** The
+> entire moat is *reactivity*, yet the keyless first impression is deliberately
+> non-reactive — so the gap between the canned taste and the real loop, gated
+> behind pasting an API key, may be the single largest drop in the funnel.
+> Competitors that won acquisition (e.g. Character.AI) did so with *immediately
+> reactive* free play. We accept this as the price of strict BYO-key, and treat
+> it as a first-class funnel risk with its own metric (taste→key-add→first-action
+> conversion) and an explicit experiment plan — not as a solved problem.
 
 Feed-generation quality is a first-class subsystem co-equal with the runtime,
 with its own signals (seconds-to-judge, open-door conversion, take-root rate).
@@ -468,22 +487,43 @@ social intrigue, high-agency sandbox, tragic epic, absurd comedy. Profiles tune
 pacing, pressure frequency, narration style, character initiative, risk level, and
 default suggested actions.
 
-## 21. Home / Base / Anchor
+## 21. Relationship Anchor / Home / Base
 
-Long-term retention benefits from a place or relationship that belongs to the
-user: a room, base, shop, ship, recurring table, relationship nest, faction role.
-These are structured world entities that gather memory, objects, relationships, and
-pressure — not decorative UI. Returning should feel like resuming a life.
+A **bonded relationship is a first-class retention mechanic**, not a side effect.
+The strongest evidence in the category is that people return for *a specific
+character who remembers and reacts to them* (companion apps retain on attachment);
+our differentiator is that the bond lives inside a *world with consequence*, not a
+context-free chat. So attachment is promoted to a named loop, not left implicit in
+the relationship ledger:
+
+- **First-ten-minutes proof includes a bond beat.** Alongside "something changed /
+  someone (mis)remembers me / a consequence / canon earned" (§3.2), at least one
+  character should give the player a reason to be *wanted back* — a thread only
+  they share, a confidence, an unfinished ask.
+- **A return is partly a relationship event.** The echo (§3.3) surfaces not only
+  world changes but *someone's* changed stance toward the player ("she left you a
+  note").
+- It rides the **existing** perception boundary and relationship ledger — **no
+  kernel change**, no omniscient character, no cross-world leakage (charter §9).
+
+Long-term retention also benefits from a place or role that belongs to the user: a
+room, base, shop, ship, recurring table, relationship nest, faction role — structured
+world entities that gather memory, objects, relationships, and pressure, not
+decorative UI. Returning should feel like resuming a life — *with someone in it*.
 
 ## 22. Game-y Worlds
 
-Game-y worlds (precise combat, scoring, puzzles, small economies) are **in scope
-and attempted**, not deferred. They are delivered by the **agentic Director**
-(charter §14): when a world needs precise adjudication it computes
-deterministically (a ledger / executable rule-skill) and proposes the result as a
-validated change; when it does not, it degrades to pure narration at no cost.
+Game-y worlds (precise combat, scoring, puzzles, small economies) are **in scope;
+the architecture supports them, but the build is deferred until the core drama /
+return loop is validated.** Game-y is a proven *appetite* but not a proven
+*retention* driver, so per the discipline "every feature must name the funnel row
+it discharges," rule-skills are not an MVP line — they follow once the drama loop
+retains. When built, they are delivered by the **agentic Director** (charter §14):
+when a world needs precise adjudication it computes deterministically (a ledger /
+executable rule-skill) and proposes the result as a validated change; when it does
+not, it degrades to pure narration at no cost.
 
-Product rules for game-y worlds:
+Product rules for game-y worlds (when built):
 
 - **Mechanics stay diegetic by default.** A fight is felt as a fight; raw numbers
   surface only in an advanced/Studio view, like the Context Inspector.
@@ -492,8 +532,8 @@ Product rules for game-y worlds:
   narration.
 - **Rule-skills are seed assets.** A world's combat or puzzle logic is part of its
   contract and is reusable across instances of that seed.
-- **A cold-start game-y template ships in the pool** (§4.3) so the capability is
-  provable from first use.
+- **A cold-start game-y template proves the capability** (§4.3) — shipped once the
+  core loop is validated, not in the first MVP.
 
 Large-scale numeric simulation (4X throughput, colony economies) stays **out** —
 a per-turn-budget limit, not an architectural one (charter §16).
@@ -523,6 +563,8 @@ the user owns.
 | pin rate | did the user treat a door as a private collection |
 | world-object interaction rate | did the user treat it as a world, not a chat |
 | POV-asymmetry trigger rate | was limited POV actually felt |
+| bond-beat / relationship-return rate | did a *character* give the user a reason to come back (§21) |
+| taste→key-add→first-action conversion | how steep is the keyless→reactive cliff (§4.3) |
 
 The funnel — `card-dwell → open-door → first-action → ten-minute-retain →
 first-consequence → return → pin` — is **local-first instrumentation**; it never
@@ -560,11 +602,15 @@ Each is a way the core promise collapses:
 8. Doorway Library with pinned worlds and echoes.
 9. Taste Chronicle using behavior sequences, not tags.
 10. Basic Director Notes and regenerate / rewind.
-11. One game-y cold-start template proving the agentic Director path.
+
+(The agentic Director's game-y rule-skills are **not** in the MVP — see §22 and
+§27; they follow once this core loop is validated.)
 
 ## 27. Later, Not Now
 
-Avoid until the core loop works: full shared multiplayer; always-live background
+Avoid until the core loop works: the agentic Director's deterministic rule-skills
+and any game-y template (§22 — architecture supports it, build deferred until the
+drama/return loop retains); full shared multiplayer; always-live background
 simulation; full map UI; every NPC as an agent; complex economy / creator
 marketplace; voice-first or image-first product; deterministic big-map
 pre-generation.

@@ -317,11 +317,12 @@ runs the world's rules over the truth.** When a world needs precise adjudication
 changes; when it does not, it degrades to pure narration at no extra cost.
 Per-world rules may be expressed as reusable executable rule-skills.
 
-This moves precise **game-y** worlds inside the product's scope — they are part
-of the target, attempted, not deferred indefinitely. The gate invariant holds:
-computed results are proposals committed through the write gate; the agent never
-bypasses validation. Large-scale numeric simulation stays out on per-turn-budget
-grounds (§16), not architecture.
+This keeps precise **game-y** worlds inside the product's scope — the architecture
+supports them and the gate invariant holds: computed results are proposals
+committed through the write gate; the agent never bypasses validation. Their
+*build* is deferred until the core drama / return loop is validated (§16), so this
+capability is a target, not an MVP line. Large-scale numeric simulation stays out
+on per-turn-budget grounds (§16), not architecture.
 
 ## 15. Non-Negotiable Technical Invariants
 
@@ -361,11 +362,14 @@ grounds (§16), not architecture.
 **Sweet spot (built for this):** character-driven drama, RP, mystery, social
 intrigue, romance, survival, horror, detective, dungeon exploration.
 
-**In scope, attempted:** **game-y** worlds with precise adjudication (combat,
-scoring, puzzles, small economies), via the agentic Director (§14). "Weird" is
-cheap — strange cognition, Rashomon, non-Euclidean space, time loops,
-unreliable reality are all just lore + perception filters + rules expressed as
-changes.
+**In scope, build deferred:** **game-y** worlds with precise adjudication (combat,
+scoring, puzzles, small economies), via the agentic Director (§14). The
+architecture supports them and they are not excluded — but their *build* is
+deferred until the core drama / return loop is validated, so scarce build budget
+goes to the proven retention loop first (not to an unproven-retention appetite).
+"Weird," by contrast, is cheap and needs no special build — strange cognition,
+Rashomon, non-Euclidean space, time loops, unreliable reality are all just lore +
+perception filters + rules expressed as changes.
 
 **Out by design (do not chase):** twitch/real-time input (the text medium
 cannot), large-scale numeric simulation (per-turn budget, not architecture), and
