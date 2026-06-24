@@ -250,13 +250,25 @@ is a standing tax — see Part 4.5).
 
 The per-turn-cost constraint (1.6) forces BYO-key, which creates a top-of-funnel
 problem: if browsing itself requires a key and spends money, acquisition dies at
-the door. The resolution is asymmetric:
+the door. But the obvious fix — "let keyless visitors just play the built-in
+worlds" — collides with two of our own invariants: *reactive* play needs live
+inference, which either the platform pays (breaks "platform burns nothing", 1.6)
+or is faked with a canned script (breaks the reactive moat, "it changed because of
+*my* action"). The resolution threads exactly between them:
 
-> **A key is required to *play* and to *generate*. But the product ships with a
-> first-class pool of built-in cold-start worlds** — including worlds with
-> different rule configurations — **that a keyless visitor can browse and
-> experience immediately.** Generating a *new* world always costs a key. The
-> cold-start pool is the keyless on-ramp; live creation is the BYO-key engine.
+> **A key is required for *reactive play* and for *generation*. The product ships
+> with a first-class pool of built-in cold-start worlds** — including different
+> rule configurations — **that a keyless visitor can browse and play as a
+> *pre-baked taste*:** a baked cold-open plus a short scripted sample beat,
+> conveying the experience with **zero live inference**. It is non-reactive by
+> construction — the reactive loop begins the instant the user adds a key.
+> Generating a *new* world always costs a key.
+
+This keeps both invariants intact: the platform burns nothing (the taste is
+static), and the reactive moat is never faked (the canned beat is plainly a
+sample, and the *real* "changes because of me" loop is exactly what the key
+unlocks). The cold-start pool is the keyless on-ramp; live creation and reactive
+play are the BYO-key engine.
 
 ## Part 3 — The architecture, as a corollary of the product
 

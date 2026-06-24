@@ -66,8 +66,9 @@ The feed avoids: full setting summaries, quest-log framing, backend concepts, an
 **raw tags as the primary recommendation surface**. Tags may exist internally;
 the experience is doors, hooks, and living possibilities.
 
-A keyless visitor browses and plays the **built-in cold-start pool** (§4.3); the
-feed mixes that pool with live-generated doors once a key is present.
+A keyless visitor browses the feed and plays the **pre-baked taste** of the
+**built-in cold-start pool** (§4.3); reactive play and live-generated doors begin
+once a key is present.
 
 ### 3.2 Play (first ten minutes + deepen)
 
@@ -182,13 +183,24 @@ causal pressure. The desired feeling:
 
 ### 4.3 Access model and the cold-start pool
 
-- **A key is required to play and to generate** (local-first, BYO-key).
+- **A key is required for reactive play and for generation** (local-first,
+  BYO-key); the platform burns no inference of its own.
 - **The product ships with a first-class pool of built-in cold-start worlds** —
-  including worlds with different rule configurations (a faithful drama, a
-  distorted horror, a game-y dungeon) — that a keyless visitor can browse and
-  fully experience. This is the keyless on-ramp and the first impression; it is a
+  including different rule configurations (a faithful drama, a distorted horror, a
+  game-y dungeon). A keyless visitor can **browse the feed and play a pre-baked
+  taste** of these: a baked cold-open plus a short scripted sample beat that
+  conveys the experience with **zero live inference**. It is non-reactive by
+  construction — the reactive moat ("the world changes because of *my* specific
+  action") begins the moment a key is added, and the sample is plainly a sample,
+  never a faked reactive loop. This is the keyless on-ramp and first impression; a
   curated, quality-gated asset, not filler.
-- **Generating a new world always costs a key.** Live play also runs on the key.
+- **Reactive play and generating a new world both require a key.**
+
+This threads between two invariants that "let keyless users just play" would
+break: a platform-funded reactive trial would break *platform-burns-nothing*, and
+a canned reactive transcript would break the *reactive moat*. The pre-baked taste
+does neither — it is static (no platform inference) and openly non-reactive (the
+real loop is what the key unlocks).
 
 Feed-generation quality is a first-class subsystem co-equal with the runtime,
 with its own signals (seconds-to-judge, open-door conversion, take-root rate).
