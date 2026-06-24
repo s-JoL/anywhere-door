@@ -3,99 +3,102 @@
 This file is for Claude/Codex-style agents working in this repo. It does not
 replace the charter.
 
-## Read Order
+## Read Order (authority)
 
-1. `AGENTS.md` — highest authority: essence, product form, invariants.
-2. `docs/superpowers/specs/2026-06-24-overall-product-design.md` — latest full
-   product design.
-3. `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
-   target world-runtime / agent architecture.
-4. `docs/DESIGN.md` — current implementation architecture.
-5. `docs/ROADMAP.md` — staged implementation direction.
-6. `docs/entity-genesis-design.md` — entity genesis and surfacing details.
+Docs 1–4 are the **design** — implementation-agnostic, no code symbols. They
+describe the best product; the code is obligated to them, not the reverse.
+Docs 5–6 are where the current codebase and the migration path live.
 
-Older `.superpowers/sdd/*` reports and implementation plans are historical
-evidence. Do not treat them as product authority when they conflict with the
-files above.
+1. `AGENTS.md` — charter: essence, the single axiom, non-negotiable invariants.
+2. `docs/first-principles.md` — the derivation: why the product and architecture
+   are forced, not chosen.
+3. `docs/product-design.md` — the product: experience, surfaces, funnel, control,
+   taste, metrics.
+4. `docs/architecture.md` — the ideal world-runtime: topology, modules, turn
+   flow, data-model direction, the living-world mechanics, entity genesis.
+5. `docs/current-state.md` — **non-authoritative** snapshot of what the code does
+   today. The only doc that names code symbols/paths.
+6. `docs/roadmap.md` — the migration path from (5) to (3)/(4).
+
+Older `.superpowers/` reports are historical evidence, never authority.
 
 ## What Must Not Drift
 
-- **Real world, not prose.** Text is the interface. `WorldRules + WorldState +
-  validated Delta` is the world.
-- **LLM proposes, engine validates.** No model output should directly mutate
-  durable world state without `validateDelta` / `applyDelta` or an equivalent
-  typed gate.
-- **The player's door is unique.** Only the player enters from outside the world.
-  Other entities unfold from the world itself.
-- **Ambient by default.** Locations, objects, lore, and characters crystallize
-  only when they earn persistence.
+- **Single source of truth (the axiom).** One omniscient hub holds the world and
+  distributes partial projections; no parallel authority. Everything else is a
+  theorem of this (charter §3).
+- **Real world, not prose.** Text is the interface. Immutable rules + a validated
+  mutable state + an append-only log of validated changes is the world.
+- **Model proposes, engine validates.** No model output mutates durable state
+  except through the typed write gate; the gate is never bypassed at any control
+  level.
+- **The player's door is unique.** Only the player enters from outside; every
+  other entity unfolds from the world.
+- **Ambient by default; hardness/persistence is earned.** Entities crystallize,
+  and facts harden (ambient → anchored → core), only when earned.
 - **Agency requires private POV.** A separate agent exists only when private
-  memory, beliefs, secrets, goals, or limited knowledge drive the fiction.
-- **Characters are not omniscient.** Character prompts must preserve subjective
-  projection, witness scope, and information asymmetry.
-- **Director/Reactor are not characters.** They can be omniscient because they
-  orchestrate and validate; characters stay partial.
-- **Taste is behavioral, not tag-only.** New-world generation should use raw
-  behavior sequences and balance exploit / bridge / explore / diversity.
-- **Consequence Mode is default.** No idle server simulation; reconcile plausible
-  offstage consequences when the user returns.
-- **Turn-scoped layered runtime.** Do not add an always-running simulation loop
-  as the default. Split runtime work into Director, capped active character
-  agents, Reactor, Materializer, Memory/Belief, Offstage Reconciler, and a
-  WorldKernel write gate.
-- **WorldKernel owns durable state.** Any persistent world change should be a
-  typed delta or equivalent validated operation with log evidence.
-- **Power controls are channel-isolated.** Player Mode, Director Notes, Scene
-  Contract, and God/Studio Mode must not blur into each other.
-- **Local-first / BYO-key.** Production uses user-provided model keys and browser
-  storage; no server database.
+  memory/beliefs/secrets/goals drive the fiction.
+- **One perception boundary.** Characters never read raw state; all character
+  context passes one boundary, and out-of-world channels (Director Notes, Scene
+  Contract, cross-world taste, un-canonized God edits) never cross it. Failures
+  here are silent — guard with standing assertions (charter §9).
+- **Director/Reactor are omniscient orchestration, not characters.**
+- **Narration is transduction with a cheap guard.** Prose is generated from the
+  truth snapshot, not free-written then policed; a lightweight consistency guard
+  remains because the prose is still model-generated.
+- **The Director may compute** (combat/scoring/puzzle/economy) but never bypasses
+  validation.
+- **Authored edits reconcile, not overwrite.** God edits supersede (never delete),
+  scoped to witnesses.
+- **Taste is behavioral, not tag-only**, and never leaks into character knowledge.
+- **Consequence Mode is default.** No idle server simulation; reconcile on return,
+  budgeted by relevance tiers.
+- **Turn-scoped layered runtime.** No always-running default simulation loop.
+- **Local-first / BYO-key.** Playing requires a key; a built-in cold-start pool is
+  the keyless on-ramp; no server database.
 
 ## Product Defaults
 
-- Default surface: immersive Player Mode.
-- Advanced surfaces: Director Notes, Scene Contract, God Mode / Studio Mode.
-- Discovery: vertical door feed with cold-open cards.
-- Persistence: opened worlds belong in a Doorway Library.
-- Identity/preferences: Door Passport is future-facing and local/private by
-  default.
-- World records: World Atlas and Context Inspector are advanced surfaces, not
-  default play clutter.
-- Creation: Seed Studio should edit seed contracts and private branches without
-  breaking the rule that entities are native to their world.
-- NSFW/adult fiction: supported within platform baseline and explicit user /
-  creator / scene constraints.
+- Default surface: immersive Player Mode; one product across the control axis.
+- Advanced (hidden, discoverable): Director Notes, Scene Contract, God/Studio Mode,
+  World Atlas, Context Inspector, Seed Studio.
+- Discovery: vertical door feed with cold-open cards; behavior-sequence taste.
+- Persistence: opened worlds enter a Doorway Library; exit settlement + echoes.
+- Scope: character-driven drama is the sweet spot; **game-y worlds are in scope**
+  via the agentic Director. Twitch input, large-scale numeric sim, and human
+  multiplayer are out by design.
+- NSFW/adult fiction: supported within platform baseline + user/creator/scene
+  constraints; not a separate ontology.
 
 ## Implementation Guidance
 
-- Prefer existing engine paths: `runTurn`, Director/Reactor prompts,
-  `Delta` types, `validateDelta`, `applyDelta`, storage repositories, and
-  memory helpers.
-- When changing the turn loop, follow the runtime spec. Extract boundaries from
-  the current `runTurn`; do not create a second competing runtime.
-- Add new world changes as typed deltas unless there is a strong reason not to.
-- Keep generated content and durable state separate. Prose can suggest; deltas
-  commit.
-- Preserve the delta log whenever a durable change happens. Delayed callbacks,
-  offstage reconciliation, reputation, and timeline tools depend on it.
-- Keep current implementation docs factual. If a feature is roadmap-only, say
-  so instead of implying it already exists.
-- When UI exposes control, separate player-facing immersion from Studio/debug
+- Build toward `architecture.md`; do not create a second competing runtime. When
+  the turn loop needs work, extract behavior around the single write gate and the
+  single perception boundary (see `roadmap.md` Phase 0).
+- Add durable world changes as typed, validated, logged changes — not because
+  prose wants color, but because the detail must persist, be validated, or affect
+  future behavior.
+- Keep generated content and durable state separate: prose suggests; validated
+  changes commit.
+- Preserve the change log on every durable change (delayed callbacks, reputation,
+  offstage reconciliation, timeline tools depend on it).
+- Keep `current-state.md` factual; if a feature is roadmap-only, say so there
+  rather than implying it exists. Never let implementation detail leak up into
+  docs 1–4.
+- When UI exposes control, keep player-facing immersion separate from Studio/debug
   surfaces.
-- For recommendation/generation features, avoid shallow tag filters as the sole
-  mechanism; use behavior history and novelty controls.
+- For recommendation/generation, use behavior history and novelty controls, not
+  shallow tag filters alone.
 
 ## Documentation Rules
 
-- `AGENTS.md` is the charter. Update it only when the principle itself changes.
-- The latest product spec is the complete product-design reference.
-- The world-runtime technical spec is the complete agent/runtime architecture
-  reference.
-- `docs/DESIGN.md` describes current architecture and may lag vision by design.
-- `docs/ROADMAP.md` explains the gap between current code and latest product
-  direction.
-- `docs/entity-genesis-design.md` owns detailed entity lifecycle mechanics.
-- README should present the product clearly to users/developers without becoming
-  the deepest spec.
+- `AGENTS.md` is the charter; change it only when a principle itself changes.
+- `product-design.md` and `architecture.md` are the complete product and runtime
+  references; they carry no code symbols.
+- `current-state.md` describes current code and may lag the design by design.
+- `roadmap.md` explains the gap between current code and the design.
+- README presents the product to users/developers without becoming the deepest
+  spec.
 
 ## Verification
 
