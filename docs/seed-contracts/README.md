@@ -54,10 +54,26 @@
 
 | 样板 | IP 路线 | 炫的引擎强项 | 状态 |
 |---|---|---|---|
-| [`closed-manor-murder`](./closed-manor-murder.md) | 结构化致敬:Agatha Christie | 见证作用域 + 秘密 + 信息差 | ✅ 完整样板 |
-| `isolated-station` | 结构化致敬:Alien / Firefly | 离场演化 + anchor + 生存压力 | ⬜ 待写 |
-| `rotten-precinct-night` | 结构化致敬:Disco Elysium / 真探 | 压力线 + 道德分歧 + 角色POV | ⬜ 待写 |
-| `hidden-society` | 结构化致敬:VtM / Dresden | 派系权谋 + lore 按需展开 | ⬜ 待写 |
-| `border-zone-drift` | 结构化致敬:STALKER / 魂系 | 按注意力材化 + ambient lore | ⬜ 待写 |
-| `slow-town` | 结构化致敬:Twin Peaks | 关系深度 + 回访价值 | ⬜ 待写 |
-| `one-night-dungeon` | 平台原创 | **agent 化世界**:战斗/检定确定性计算 | ⬜ 待写(炫 `ruleSkills`) |
+| [`closed-manor-murder`](./closed-manor-murder.md) | 结构化致敬:Agatha Christie | 见证作用域 + 秘密 + 信息差 | ✅ |
+| [`isolated-station`](./isolated-station.md) | 结构化致敬:Alien / Firefly | 离场演化 + anchor + 生存压力 | ✅ |
+| [`rotten-precinct-night`](./rotten-precinct-night.md) | 结构化致敬:Disco Elysium / 真探 | 压力线 + 道德分歧 + 角色POV | ✅ |
+| [`hidden-society`](./hidden-society.md) | 结构化致敬:VtM / Dresden | 派系权谋 + lore 按需展开 | ✅ |
+| [`border-zone-drift`](./border-zone-drift.md) | 结构化致敬:STALKER / 魂系 | 按注意力材化 + ambient lore | ✅ |
+| [`slow-town`](./slow-town.md) | 结构化致敬:Twin Peaks | 关系深度 + 回访价值 | ✅ |
+| [`one-night-dungeon`](./one-night-dungeon.md) | 平台原创 | **agent 化世界**:战斗/检定确定性计算 | ✅ |
+
+## 覆盖矩阵:七个样板各炫一处,合起来覆盖全漏斗 + 全引擎强项
+
+| 样板 | 漏斗段 | narration | ruleSkills |
+|---|---|---|---|
+| closed-manor-murder | 头十分钟(误记) | 忠实(钉死,公平推理) | 空 |
+| isolated-station | 回访(离场演化) | 忠实·AI 中介可失真 | 中(生命维持账本) |
+| rotten-precinct-night | 头十分钟(本地后果) | 忠实·语气调制 | 近空(走社会账本) |
+| hidden-society | 加深(lore 结晶) | 忠实·帷幕失真 | 轻(恩义/契约账) |
+| border-zone-drift | 跨阈(氛围) | 忠实·惜字不解释 | 轻(异常逻辑) |
+| slow-town | 留存(像续一段生活) | 忠实·分级(边缘微失真) | 空 |
+| one-night-dungeon | 证明 game-y 成立 | 忠实·结算散文化 | **核心(TRPG)** |
+
+> 读法:`narration` 七种形态(钉死忠实 / 系统中介 / 语气调制 / 帷幕 / 惜字 / 分级 /
+> 结算散文化)证明它是 per-world 设定的连续谱;`ruleSkills` 从**空**(社会世界)到
+> **核心**(地牢)证明 agent 化世界把 game-y 拉进覆盖,而纯叙事世界零负担。
