@@ -11,10 +11,14 @@
 >    full product design.
 > 3. `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
 >    target world-runtime / agent architecture.
-> 4. `docs/DESIGN.md` — current implementation architecture.
-> 5. `docs/ROADMAP.md` — staged path from current implementation to the latest
+> 4. `docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md`
+>    — detailing of the net-new living-world mechanics (canon hardness, thread
+>    state, belief graph, offstage tiers, doorway echoes, metrics) under the
+>    runtime spine.
+> 5. `docs/DESIGN.md` — current implementation architecture.
+> 6. `docs/ROADMAP.md` — staged path from current implementation to the latest
 >    product design.
-> 6. `docs/entity-genesis-design.md` — detailed entity genesis and surfacing
+> 7. `docs/entity-genesis-design.md` — detailed entity genesis and surfacing
 >    design.
 >
 > Historical plans and `.superpowers/sdd/*` reports are useful evidence, but
@@ -70,6 +74,12 @@ The hardest promise:
 
 > Every door feels instantly inviting; every world the user stays in feels like
 > it keeps becoming more real.
+
+The behavioral signal that this promise landed is **return-rate**: whether the
+user comes *back* to the same door. A world the user reopens is no longer a chat
+log — it is a private world they own. Return-rate is the product north-star
+metric; the funnel toward it (card dwell → open door → first action → ten-minute
+retain → first consequence → return → pin) is detailed in the product spec.
 
 ## 4. Product Form
 
@@ -165,8 +175,24 @@ rules before committing. The model never writes the world directly.
 | Spatial persistence | Places are traversable and become richer on visit. | Core; location `stub -> fleshed` is wired, object/character depth continues. |
 | Physical causality | A few drama-driving properties are mechanical. | Selective core; locked/gated/portable are enforced, flammable/broken can come later. |
 | Social causality | Relationships shift from events, evidence, secrets, and memory. | Core; relationship ledger + subjective memory + hearsay. |
-| Canon consistency | The world must not contradict established truth. | Core; lore injection + `establishLore` + validation. |
+| Canon consistency | The world must not contradict established truth. | Core; lore injection + `establishLore` + validation, with a **canon hardness scale** below. |
 | Offstage evolution | The world feels alive while respecting local-first cost. | Core as **Consequence Mode**: no idle simulation, lazy reconciliation on return. |
+
+**Canon hardens as it is earned.** Not all truth is equally fixed. A fact climbs
+a five-level hardness scale as the fiction commits to it — the same "earn your
+persistence" gradient that governs entities (§7), applied to facts:
+
+```text
+L1 transient (atmosphere)      -> L2 player witnessed
+-> L3 player acted on           -> L4 a character witnessed
+-> L5 core canon (seed-level, load-bearing)
+```
+
+The rule that follows: a proposal may not silently contradict a fact harder than
+its own authority. Reactor and character proposals cannot overturn what the
+player saw or did (L2–L3); only a `god-edited` delta may, and it pays the bounded
+reconcile of §13. This is what makes "I hid the key, so it stays hidden" hold.
+The mechanic is detailed in the living-world mechanics spec.
 
 ## 7. Entity Lifecycle And Agency
 

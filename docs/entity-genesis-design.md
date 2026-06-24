@@ -96,6 +96,27 @@ Both replace blunt mechanisms; **tension is an *input*, never an on/off gate.**
 | **A new character's initial memory** | Minimal: a few high-importance identity/backstory memories + a goal. **No** shared history with the player (asymmetry from birth). The rest accretes through play. |
 | **Despawn / archival** | `present:false`; record + memory persisted, not loaded; reload on reappearance (see instance-private characters above). |
 
+## DECIDED — canon hardness tracks materialization
+
+Crystallization (`stub → fleshed` + `establish*`) and **canon hardness** (L1–L5,
+see `AGENTS.md` §6 and the living-world mechanics spec) are the same "earn your
+persistence" gradient applied to *entities* and to *facts* respectively, and they
+move together:
+
+- An ambient detail the player merely glimpses produces L1 facts (revisable) and
+  no structured entity.
+- The moment the player **engages** an entity (the trigger that flesh-on-engage
+  uses) the facts they establish about it become L2 (witnessed) / L3 (acted-on),
+  and the entity earns a `fleshed` structured record.
+- A fact a **character** witnesses about an entity is L4 and enters that
+  character's memory (witness scope) — the same write that feeds the belief graph.
+- Seed-level load-bearing entities and their core truths are L5 from birth.
+
+Consequence for this design: once an entity is fleshed because the player acted
+on it, the facts that justified its crystallization are L3+ and cannot be quietly
+contradicted by later Reactor prose — only a God edit may revise them. Archival
+(`present:false`) never lowers hardness; the records persist.
+
 ## DECIDED — deferred (explicitly out of scope for this change)
 
 - **Intra-turn Reactor pass.** Keep the single end-of-turn Reactor. Within a turn,
@@ -139,6 +160,9 @@ flesh-on-visit is unwired for every type.
 - `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md` —
   Materializer, Director casting, AgentRuntime, and PerceptionResolver
   boundaries.
+- `docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md`
+  — canon hardness, thread state, belief graph, and the observation fields that
+  this lifecycle feeds.
 - `docs/DESIGN.md` — turn flow, perception projection, bidirectional mediation.
 - `docs/ROADMAP.md` — roadmap phases for entity lifecycle, character reality,
   offstage life, and power-user surfaces.

@@ -67,6 +67,19 @@
 
 **这就是区别:不是「一个角色记得你说过什么」,而是「整个世界因你而改变,并把改变记住」。**
 
+而最小的「像世界」证据,是一条贯穿离开与回来的因果。换一扇门——雨夜旅馆:
+
+> 老板递来一把湿钥匙:「这是你昨晚交给我的。」可你昨晚根本没来过。
+> **你:** 我把钥匙塞进口袋。
+
+这一下被引擎落成后果(钥匙进了你口袋),而**只有当时在场的小女孩看见了**——低头看登记簿的老板没有这条记忆,日后问不出口。你离开,世界冻结;几小时后回来,它**不是接着上一句聊天,而是变了样**:
+
+> 你再次推开旅馆的门。雨停了。
+> 大厅里所有椅子都倒扣在桌上。老板不在。
+> 柜台上一张小纸条:「我没告诉他钥匙在你那里。」
+
+*我来过,所以这里变了。* 一个世界是否值得你**回门**——回到同一扇门——是这款产品的北极星信号:愿意回去的那一刻,它就不再是 AI 聊天,而是你私人的世界收藏。
+
 ---
 
 ## ✦ 给玩家:玩起来什么感觉
@@ -164,7 +177,7 @@ npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 充实 · 离场 · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/`(观察 · 检索 · 反思 · 传话)· `src/lib/storage/`(IndexedDB · 事件日志)· `src/app/`(feed · play · settings)。
-设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`](docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md)(世界 runtime / agent 架构)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
+设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`](docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md)(世界 runtime / agent 架构)· [`docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md`](docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md)(活世界机制技术方案:硬度/暗线/信念图/离场分级/回声/指标)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
 
 ---
 

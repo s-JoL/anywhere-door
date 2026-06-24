@@ -4,6 +4,10 @@
 - **状态**: aligned to `AGENTS.md` and
   `docs/superpowers/specs/2026-06-24-overall-product-design.md` plus
   `docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`.
+  Concrete data models and landing order for the net-new mechanics below
+  (canon hardness, thread state, belief graph, offstage tiers, doorway echoes,
+  metrics) live in
+  `docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md`.
 - **职责**: 描述从当前实现走向最新产品设计的路径。本文不是承诺清单;
   实现状态以代码与 `docs/DESIGN.md` 为准。
 
@@ -114,11 +118,18 @@ the world feel personal.
 
 ### 3.1 Doorway Library
 
-- Turn opened instances into a visible, first-class history/library.
+- Turn opened instances into a visible, first-class history/library (`app/library/`).
 - Show last location, latest consequence, unresolved tension, and relationship
   state.
 - Add pin/unpin or "my doorway" affordance.
 - Keep return hints light; no aggressive notification loop.
+- **Exit settlement + echoes**: on leaving, a bounded pass builds a `DoorwayEcho`
+  (trace from the player's hardest-caused facts, unresolved threads, return-open
+  candidates) from the delta log — consumed by the reconciler on return so a
+  re-entry advances the world rather than continuing the last chat line.
+- **Metrics funnel**: instrument the return-rate funnel (card-dwell → open-door →
+  first-action → ten-minute-retain → first-consequence → return → pin),
+  local-first. Return rate is the north-star signal that a door became a world.
 
 ### 3.2 Medium Seed Contract
 
@@ -127,17 +138,23 @@ the world feel personal.
   expansion grammar, canon ledger.
 - Ensure new details unfold as native world detail, not as outside imports.
 - Keep seed compact enough for cheap generation and fast judging.
+- **Canon hardness (L1–L5)**: give facts a hardness level (`canonLevel`) so the
+  canon ledger is enforceable by degree — Reactor/character proposals cannot
+  overturn what the player witnessed (L2) or acted on (L3); only God edits revise
+  L3+ canon, paying a bounded reconcile. This is what keeps earned facts stable.
 
 ### 3.3 Pressure Lines
 
 - Add semi-hidden pressure lines to generation and runtime prompts.
-- Represent pressure lines in structured state before making them a visible UI
-  feature.
+- Represent pressure lines in structured state (`WorldState.pressureLines`, a
+  `PressureLine` with status/tension/knownByUser/nextReveal/linkedEntities)
+  before making them a visible UI feature; the Director advances them only via a
+  `setPressureLine` delta.
 - Surface pressure diegetically: rumor, changed object, avoidance, message,
   absence, altered location, or returning detail.
 - Avoid quest-log UI by default.
-- Fairness rule: hidden pressure can create signs; strong consequences require
-  perception, contact, or prior warning.
+- Fairness rule (as validation): hidden pressure can raise `knownByUser` to
+  "signs" freely; a strong consequence is rejected while `knownByUser` is "none".
 
 ### 3.4 Input Channels
 
@@ -159,11 +176,21 @@ stay channel-isolated.
 - Feed ranking should balance exploit / bridge / explore / diversity.
 - Generation should use taste history as a seed-generator input while protecting
   world character knowledge from cross-world leakage.
+- **Door DNA**: give doors an internal multi-dimension representation (skin,
+  opening tension, player role, power relation, emotional texture, core desire,
+  cast structure, object hooks, world rule, pace) richer than tags, so bridge can
+  hold deep dimensions and swap the surface. Internal only; never shown as raw tags.
 
 ### 3.6 Character Reality
 
 - Represent private beliefs, wrong beliefs, secrets, goals, and witnessed facts
   more explicitly.
+- Add `provenance` / `confidence` / `interpretation` / `distortion` to observation
+  records so first-hand, hearsay, misremembered, and rule-warped knowledge carry
+  different epistemic weight (and feed retrieval scoring).
+- Provide a **Belief Graph** read model (fact × observer) derived from
+  witness-scoped memory — answering "who knows what, how sure" for the Director,
+  Context Inspector, and World Atlas without giving any character omniscience.
 - Route character context through `PerceptionResolver` so limited POV is tested,
   not only prompted.
 - Make characters respond to what they plausibly know, not what the engine knows.
@@ -183,6 +210,9 @@ stay channel-isolated.
   social echoes.
 - Use the delta log as evidence for delayed callbacks and offstage changes.
 - Keep major offscreen consequences bounded unless the user had signs.
+- **Three-tier precision**: reconcile offstage agents by relevance —
+  `near` (adjacent / active-thread-linked) high precision, `related` medium,
+  `far` frozen — so return changes stay bounded and cheap on the user's key.
 
 ### 3.9 Timeline Hygiene
 

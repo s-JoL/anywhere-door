@@ -422,6 +422,21 @@ Constraints:
 - do not punish the user for hidden information
 - prefer signs, changed objects, absences, rumors, and shifted stances
 
+**Precision tiers.** Reconciliation is not uniform — it is budgeted by relevance.
+Each offstage agent is classified before any deltas are proposed:
+
+- `near` (high precision): adjacent to the current scene (`Location.connections`)
+  or linked to an active pressure line — may produce a few concrete,
+  sign-bearing deltas.
+- `related` (medium precision): tied to a cooling/latent thread — at most one
+  low-impact stance or position delta.
+- `far` (frozen): unrelated to the current scene or active threads — no deltas;
+  reconciled lazily only when next touched.
+
+This operationalizes the constraints above as a cost ceiling and keeps offstage
+work bounded on the user's own key. The tier derivation is detailed in the
+living-world mechanics spec (§5).
+
 Pause Mode disables most reconciliation. Living World Mode may later make it
 more proactive.
 
@@ -555,14 +570,17 @@ Keep:
 - `relationships`
 - `lore`
 
-Add over time:
+Add over time (concrete field shapes for the starred items are specified in
+`docs/superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md`):
 
-- `pressureLines`
+- `pressureLines`* — structured threads:
+  `{ id, kind: "world"|"character"|"mystery", status: "latent"|"active"|"cooling"|"resolved", tension, knownByUser: "none"|"signs"|"partial"|"revealed", nextReveal?, linkedEntities[] }`.
+  Director reads and advances them via a `setPressureLine` delta; never mutated directly.
 - `sceneContracts`
-- `offstage`
+- `offstage` — per offstage agent, plus a derived precision tier (`near`/`related`/`far`, §4.11).
 - `entityLifecycle`
-- `facts`
-- `beliefs`
+- `facts`* — canonical facts carrying `canonLevel?: 1|2|3|4|5` (canon hardness; absent = L1/transient). Validation forbids a proposal from contradicting a fact harder than its own authority.
+- `beliefs`* — a *read model* (fact × observer) derived from witness-scoped memory, not a parallel source of truth: `{ factKey, observerId, stance: "knows"|"believes"|"suspects"|"unaware"|"wrong", provenance, confidence, evidenceLogIds[] }`.
 - `timeline`
 
 `WorldRules` (immutable) likewise gains, beyond physics/setting/redLines:
@@ -621,6 +639,9 @@ Target fields:
 - `source`
 - `provenance`
 - `confidence`
+- `interpretation` — the observer's reading of the event, which may differ from what objectively happened
+- `perceptionQuality` — how well it was perceived (full / partial / glimpsed)
+- `distortion` — `none | misheard | misremembered | rule-warped`; `rule-warped` is the hook for lawful distortion (§4.6)
 - `importance`
 - `createdAt`
 - `gameTime`
@@ -628,6 +649,11 @@ Target fields:
 - `branchId`
 
 This enables wrong beliefs, one-hop gossip, Context Inspector, and World Atlas.
+The four cases the product requires — a character sees only part, misunderstands,
+misremembers, or perceives a rule-warped version — are all expressed through
+`provenance` + `confidence` + `interpretation` + `distortion`, not through a
+separate unreliable-narrator code path. Concrete field shapes are in the
+living-world mechanics spec (§4).
 
 ## 7. Concurrency And Locks
 

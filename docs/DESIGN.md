@@ -75,6 +75,8 @@ world/delta 和 memory helpers 中。
 
 **重生成上一条**复用同一回合入口:每次 `runTurn` 会记录回合前的世界状态、消息高水位和记忆高水位;`regenerateLastTurn` 删除上一回合产生的消息/记忆、恢复状态,再用同一输入重跑。重生成因此不会把旧分支的记忆或物态残留进新分支。
 
+**原子体验印证(已实现部分)** —— 产品 spec §3.4 的「雨夜旅馆」范例里,真正落地的环节正是上面这套:玩家「把钥匙塞进口袋」→ Reactor 提议 `setObjectState`/`moveObject` delta → 校验落库(witness 作用域只把这条观察写给在场的小女孩,不写给低头看登记簿的老板)→ 老板日后**没有**这条记忆、问不出口;玩家离开后世界冻结,回来时 `evolveWhileAway` 懒补后果。范例中**尚未**落地的是「关门结算/回声候选」「显式暗线推进」「事实硬度」——见下方 §9。
+
 ## 4. 世界模型
 
 - **`WorldRules`**(不可变):physics / setting / redLines。**红线双层强制**:① 软约束——`physics+redLines` 注入 World Reactor 的 system prompt,提议阶段就规避违规;② 硬兜底——`validateDelta` 对 delta 的自由文本字段(condition/state/lore content/disposition…)做**保守的红线关键词子串筛查**,字面命中即丢弃(散文式整句红线不会误伤合法 delta,语义约束交给软约束层)。
@@ -113,3 +115,23 @@ world/delta 和 memory helpers 中。
 ## 8. 技术栈
 
 Next.js 15 (App Router) · React 19 · TypeScript strict · Tailwind CSS 4 · Dexie/IndexedDB · Vitest。常用检查:`npm test` · `npm run build` · `npm run typecheck`。
+
+## 9. 设计已定、尚未实现
+
+以下机制产品/runtime 文档已定稿,但**当前代码尚未实现**(部分以隐式形式存在)。
+完整数据模型与落地次序见
+[`2026-06-24-living-world-mechanics-technical-design.md`](superpowers/specs/2026-06-24-living-world-mechanics-technical-design.md);
+此处只如实标注现状,避免夸大。
+
+| 机制 | 现状 | 目标 |
+|---|---|---|
+| **事实硬度 L1–L5** | 无;`validateDelta` 仅做结构/空间/红线校验 | `LoreEntry`/facts 加 `canonLevel`;低权威提议不得矛盾更硬的事实 |
+| **显式暗线 Thread State** | 仅隐式(`tension` 标量 + Director 启发式) | `WorldState.pressureLines` 结构化 + `setPressureLine` delta |
+| **Belief Graph(事实×观察者)** | 信息已在 witness-scoped `Memory` 里,但无可查询读模型 | 由现有记忆派生的 `buildBeliefView` 读模型,供 Director/Context Inspector/Atlas |
+| **Observation provenance/confidence/distortion** | `Memory` 有 `kind`/`importance`,无来源权重与失真字段 | 增量可选字段;一手 vs 二手 vs 规则扭曲分级 |
+| **三级离场精度** | `evolveWhileAway` 统一处理所有离场角色 | near 高精 / related 中精 / far 冻结,按场景邻接 + 暗线关联派生 |
+| **门廊馆 UI + 关门结算 + 回声** | 存储就绪(`WorldInstance`/`deltaLog`),无 library 页、无结构化回声 | `app/library/` + `world/echo.ts` 生成 `DoorwayEcho`(trace/unresolved/candidates) |
+| **产品漏斗指标(回门率)** | `TasteEvent` 仅 enter/dwell/author/skip,供排序 | 扩成漏斗(含 first-consequence/return/pin),本地优先 |
+
+每一项都仍走 `propose→validate→apply` 闸门,且不引入第二套运行时——它们是当前
+`runTurn` 边界上的增量,不是重写。

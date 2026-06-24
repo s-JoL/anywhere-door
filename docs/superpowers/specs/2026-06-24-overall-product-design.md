@@ -102,6 +102,71 @@ Recommended behavior:
 - no aggressive notifications in MVP
 - each saved world shows its title, last location, unresolved tension, and latest consequence
 
+#### Exit Settlement And Echoes
+
+Leaving a world is not just pausing a chat. On exit, a bounded **settlement**
+pass turns the session into a returnable hook, derived from the delta log and
+active pressure lines (not a background simulation):
+
+- **trace**: what the player left behind, drawn from the hardest facts they
+  caused — e.g. "You hid the key in your pocket; only the girl saw."
+- **unresolved**: active pressure lines, projected into player-safe language —
+  "Room 201 is still shut. The owner is starting to suspect you."
+- **echo candidates**: plausible return openings the world might surface next
+  time — the girl leaves a note; the owner notices the key is gone; 201's door
+  opens a crack. These are *candidates*, never committed facts.
+
+On return, the Offstage Reconciler consumes one echo candidate plus elapsed time
+to produce a bounded return-open beat. Returning advances the world's state; it
+is not the continuation of the last chat line. The data shapes are in the
+living-world mechanics spec (`DoorwayEcho`).
+
+### 3.4 Atomic Experience (Worked Example)
+
+The smallest complete proof that this is a world and not a chat is a single
+thread of cause and consequence. Use the rainy-inn example as the canonical
+walkthrough; every step maps to an existing engine mechanic.
+
+1. **The door crack (Feed).** A card shows only the hooking moment:
+
+   > **Don't go upstairs until the rain stops**
+   > The innkeeper hands you a damp key. "You gave it to me last night."
+   > But you were never here last night.
+   > *Open the door: take the key.*
+
+   No genre label, no setting dump — just a reason to push the door.
+
+2. **In the scene (Play).** The player enters a concrete local scene: an
+   innkeeper behind the counter, a girl by the stairs, a key, a register that
+   reads wrong. One tension is live; the input invites speech *or* action.
+
+3. **The act.** The player types: *"I slip the key into my pocket."* This is a
+   player action, not a line of chat.
+
+4. **Witness asymmetry.** The Reactor commits the move as a delta
+   (`object.key.location = pocket`, an L3 player-acted fact). The observation is
+   written only to witnesses present: the girl saw it; the innkeeper, looking
+   down at the register, did not. The innkeeper therefore *cannot* later ask why
+   you hid the key — he has no memory of it. The girl can choose to tell, or just
+   glance at your pocket and say nothing. This is witness scope, already wired.
+
+5. **Exit settlement.** The player leaves. The world freezes (Consequence Mode),
+   and the settlement records the trace ("you hid the key, only the girl saw"),
+   the unresolved threads (201 is still shut; the owner suspects you), and echo
+   candidates.
+
+6. **The return (echo).** Next entry, the world has *moved*, not resumed:
+
+   > You push the inn door open again. The rain has stopped.
+   > Every chair is stacked upside-down on the tables. The owner is gone.
+   > On the counter, a small note: "I didn't tell him you have the key."
+
+This loop — *I was here, so it changed* — is the core moat. It demonstrates, in
+one minute, every charter axis at once: a fact changed in `WorldState`, two
+characters hold different versions of it, the change persisted offstage, and the
+return is a consequence rather than a continuation. The first ten minutes of any
+world should aim to deliver one such loop.
+
 ## 4. World Generation Model
 
 ### 4.1 Seed As Generative Contract
@@ -181,6 +246,25 @@ An entity becomes an agent iff it has a private POV that drives the fiction.
 - A person who only decorates a crowd can remain ambient.
 - A person whose private knowledge or goal changes the scene becomes an agent.
 
+### 5.3 Canon Hardness
+
+Facts earn fixity the same way entities earn persistence. A fact climbs a
+five-level hardness scale as the fiction commits to it:
+
+```text
+L1 transient (atmosphere, e.g. "the rain is heavy")
+L2 player witnessed (e.g. "the key reads 201")
+L3 player acted on (e.g. "the key is in your pocket")
+L4 a character witnessed it (enters that character's memory)
+L5 core canon (seed-level, load-bearing — e.g. "201 is the mystery's core")
+```
+
+A proposal may not silently contradict a fact harder than its own authority:
+Reactor and character prose cannot overturn what the player saw or did. Only a
+God edit can revise L3+ canon, and it pays a bounded reconcile. Hardness is what
+keeps the rainy-inn key hidden once the player pockets it. The validation rule
+and data model live in the living-world mechanics spec.
+
 ## 6. Pressure Lines
 
 Pressure lines are not quests. They are unfinished causality.
@@ -221,6 +305,24 @@ Default presentation should be diegetic:
 - an old detail returning with new meaning
 
 Do not show raw clock meters in the default play experience.
+
+### 6.3 Thread State
+
+A pressure line is not a prose hint; it is structured world state the Director
+reads and advances. Each carries:
+
+- **kind**: world / character / mystery
+- **status**: latent / active / cooling / resolved
+- **tension**: how close it is to a visible change
+- **knownByUser**: none / signs / partial / revealed
+- **nextReveal**: a plausible diegetic sign for the next beat (not a script)
+- **linkedEntities**: the characters, objects, and locations it binds
+
+The Director advances threads only through validated deltas, and surfaces them
+only diegetically (§6.2). The fairness principle (§6.1) becomes a validation
+rule: a thread may raise `knownByUser` to "signs" freely, but a strong
+consequence is rejected while `knownByUser` is "none". The field shapes
+(`PressureLine`, `setPressureLine`) are in the living-world mechanics spec.
 
 ## 7. Character Reality
 
@@ -263,6 +365,24 @@ The user should feel:
 
 > Not everyone knows what happened. Not everyone agrees what it means.
 
+### 7.3 Belief Graph
+
+The same information, held differently by different characters, forms a belief
+graph — a fact × observer view:
+
+| fact | truth | innkeeper | girl |
+|---|---|---|---|
+| the key reads 201 | yes | knows | maybe |
+| the key is in your pocket | yes | unaware | knows |
+| the register lists tomorrow's guest | yes | knows | unaware |
+
+This is not a new source of truth. It is a *read model* derived from the
+witness-scoped memories characters already keep — it answers "who knows X, and
+how sure are they?" for the Director, the Context Inspector, and the player-facing
+World Atlas. A character still never reads raw `WorldState`; the graph only
+inspects what each one has legitimately witnessed, heard, or inferred. The cell
+shape (`BeliefCell`) is in the living-world mechanics spec.
+
 ## 8. Offstage Life
 
 Important characters can leave the current scene without being deleted or continuously simulated.
@@ -286,6 +406,22 @@ On return, the world lazily reconciles what plausibly happened based on:
 - existing canon
 
 This gives the feeling of faraway activity without full background simulation.
+
+### 8.1 Simulation Precision Tiers
+
+Reconciliation is not uniform across all offstage characters — that would be both
+expensive and unfair. On return, agents are reconciled at three precisions:
+
+- **near (high precision)**: adjacent to the current scene, or linked to an
+  active pressure line — may produce a few concrete, sign-bearing changes.
+- **related (medium precision)**: tied to a cooling or latent thread — at most
+  one low-impact shift in stance or position.
+- **far (frozen)**: unrelated to the current scene or any active thread — no
+  changes; reconciled lazily only when the player next touches them.
+
+"High-density local simulation, sparse narrative in-fill at the edges." Tiers are
+derived from scene proximity and pressure-line links; the mechanism is in the
+living-world mechanics spec.
 
 ## 9. Time Modes
 
@@ -416,6 +552,29 @@ Default ratio:
 ```
 
 Bridge is the signature feature. It should preserve deep attraction structures, not just swap tags.
+
+### 13.1 Door DNA
+
+What the user is drawn to is rarely a genre tag ("horror", "campus"); it is a
+*situation structure*. Each door should carry an internal **Door DNA** — a set of
+dimensions richer than tags that bridge can recombine:
+
+- **skin**: surface setting (inn, spaceship, court, clinic, shrine office)
+- **opening tension**: mistaken identity, amnesia, countdown, secret hand-off, pursuit
+- **player role**: outsider, old acquaintance, suspect, heir, god, double
+- **power relation**: weaker than the world, needed by it, judged by it, secretly powerful
+- **emotional texture**: cold, tender-but-dangerous, absurd, oppressive, lonely, charged
+- **core desire**: find the truth, be believed, save someone, hide a secret, escape
+- **cast structure**: protector, concealer, lure, victim, bystander
+- **object hooks**: a key, a letter, a phone, a recording, a photo
+- **world rule**: memory mismatch, names have power, the rain won't stop, time loops
+- **pace**: slow burn, fast conflict, mystery, emotional company
+
+Bridge works by holding the deep dimensions (tension, role, power relation,
+desire) while swapping the skin — turning a rainy-inn mystery into a cryo-bay
+mystery for the same player. Door DNA is an internal representation only; it is
+never shown as raw tags in the feed (§3.1), and like the rest of the Taste
+Chronicle it never leaks into character knowledge.
 
 ## 14. Door Passport
 
@@ -641,7 +800,20 @@ Avoid these until the core private living-world loop works:
 - AI RP tools: persona switching, character cards, response regeneration, group chat, world info, lorebooks.
 - AI Dungeon: input modes, plot components, story cards, memory bank, scripting, context viewer, undo / editing.
 - Interactive fiction tools: Twine's accessible nonlinear authoring, ink's writer-friendly branching scripts, ChoiceScript's choices and stats, Inform's object/world model.
-- Open-world and simulation games: Minecraft-style local materialization, No Man's Sky-style exploration and discovery, Dwarf Fortress-style legends/history, RimWorld-style AI storyteller profiles.
+- Open-world and simulation games (the non-text reference class the product must learn from as much as it learns from AI RP tools):
+  - Minecraft: local materialization, manipulable objects, persistent traces, player-as-builder.
+  - GTA / Red Dead: a daily-life system and social reactions, consequences after chaos.
+  - Zelda BOTW/TOTK: give a goal, not a single solution — systemic, multi-path problem solving.
+  - Animal Crossing: return visits, daily change, low-pressure life.
+  - The Sims: character desires, relationships, schedules, autonomous behavior.
+  - RimWorld / Dwarf Fortress: emergent stories from systems colliding; legends/history; AI storyteller profiles.
+  - Roblox / Fortnite Creative: user creation, distribution, remix.
+  - No Man's Sky: the pull of endless generation — and its emptiness risk if openings, consequences, and echoes are weak.
+
+  Core lesson: an open world is not a big map; it is a high-density, highly
+  reactive *space*. A single door can be one inn lobby, one train car, one
+  convenience store — as long as it has characters, objects, rules, threads, and
+  consequences.
 - AI writing tools: story bible, beat-level control, prose/style separation, exportable chronicle.
 - AI character engines: realtime voice and multimodal rendering are valuable render layers, but not the core ontology.
 
@@ -677,3 +849,50 @@ The design locks these defaults for v1 development:
 Changing any of these defaults later should update `AGENTS.md`, this product
 spec, the world-runtime technical spec when relevant, and `docs/ROADMAP.md` in
 the same change.
+
+## 28. Key Metrics
+
+The product is not measured by chat turns. It is measured by whether a door
+becomes a world the user owns.
+
+| Metric | What it tells us |
+|---|---|
+| card dwell rate | did the door crack hook the user |
+| open-door rate | did the user push the door |
+| first-action rate | did the user understand how to play |
+| ten-minute retention | did the world catch the user |
+| first-consequence rate | did the user feel they changed something (first player-caused L2+ fact) |
+| return rate | did the user come back to the same world |
+| same-world second-session time | were the echoes effective |
+| pin rate | did the user treat a door as a private collection |
+| world-object interaction rate | did the user treat it as a world, not a chat |
+| character-knowledge-asymmetry trigger rate | was limited POV actually felt |
+
+The **north-star metric is return rate**. If the user returns to a door, this is
+not AI chat — it is a private collection of worlds. The funnel toward it
+(`card-dwell -> open-door -> first-action -> ten-minute-retain ->
+first-consequence -> return -> pin`) is local-first instrumentation; the event
+model is in the living-world mechanics spec. Metrics never leave the browser and
+never reach characters.
+
+## 29. Anti-Patterns
+
+Failure modes to design against, each a way the core promise collapses:
+
+- **Too much like a chat app.** If entering a door is just dialogue bubbles, the
+  product degrades into character chat. The user must feel they are *acting in a
+  scene*, with object interaction and visible consequence — not talking to an AI.
+- **Too much like a quest game.** Quests, levels, and progress bars break
+  suspense and immersion. Let the user slowly discover something is wrong; do not
+  tell them where to go next.
+- **Over-reliant on long prose.** Text-first does not mean walls of novel prose.
+  Use short lines, pauses, sounds, objects, expressions, scene state, and
+  return-visit change to build presence.
+- **Endless but empty.** Infinite generation is not an advantage. Without a strong
+  opening, a strong consequence, and a strong echo, every door fatigues the user.
+- **Omniscient NPCs.** A character that knows everything kills the world. Every
+  character must have information boundaries, misunderstandings, secrets, and
+  goals.
+- **Director retconning at will.** The Director holds the truth but may not casually
+  overturn what the player has already seen, acted on, or witnessed. Hardened
+  canon (§5.3) must be respected; revision is a God edit that pays a reconcile.
