@@ -45,7 +45,10 @@ isolation**: the default surface is always immersive; advanced surfaces are
 hidden but findable; advanced channels never leak into character knowledge
 (charter §9). This is the top product risk, so it is stated as a falsifiable bet:
 *if power-user surfaces routinely break immersion for entry users, the
-one-product thesis is wrong.* Design against that, measure for it.
+one-product thesis is wrong.* The measurable form: among the entry cohort (users
+who have never opened an advanced surface), a sustained drop in ten-minute
+retention or POV-asymmetry-trigger rate (§24) after advanced surfaces ship is the
+falsification signal. Design against that, measure for it.
 
 ## 3. Product Shape
 
@@ -298,13 +301,15 @@ Reconciliation is **budgeted by relevance**, not uniform:
 
 ## 8. Time Modes
 
-- **Pause Mode** — advances only on user input; maximum control.
-- **Consequence Mode (default)** — no idle simulation; triggered causality is
-  reconciled on return.
-- **Living World Mode** — important agents and pressure lines advance more
+- **Consequence Mode (default, the baseline)** — no idle simulation; triggered
+  causality is reconciled on return.
+- **Pause Mode (later)** — advances only on user input; maximum control.
+- **Living World Mode (later)** — important agents and pressure lines advance more
   proactively.
 
-Scope: global default + per-world override. Default is **Consequence Mode**.
+Consequence Mode is the only baseline; Pause and Living World are explicitly later
+modes (charter §10, architecture §15.1), not co-present in the MVP. Scope: global
+default + per-world override.
 
 ## 9. Canon Hardness (three tiers)
 
@@ -323,8 +328,10 @@ is what keeps the rainy-inn key hidden once pocketed.
 
 ## 10. Control Layers (one axis)
 
-Strong control without weakening the default real-world fantasy. The four layers
-below are **one continuous authority axis** (charter §11), from *discovering* a
+Strong control without weakening the default real-world fantasy. The four surfaces
+below sit on **one continuous authority axis** (charter §11) with three positions —
+*discover* (Player), *steer* (Director Notes + Scene Contract share this band), and
+*author* (God) — running from *discovering* a
 world to *authoring* it.
 
 ### 10.1 Player Mode (default)
