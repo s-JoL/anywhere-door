@@ -154,12 +154,17 @@ just came close enough to perceive them.
 
 ### Access model (locked)
 
-- **A model key is required to play.** Live world generation and live play both
-  run on the user's key (local-first, BYO-key; see §15).
-- **The product ships with enough built-in cold-start worlds** — including
-  worlds with differing rule configurations — that a keyless user can browse and
-  experience the product immediately. **Generating a new world always requires a
-  key.** The cold-start pool is a first-class asset, not a placeholder.
+- **A model key is required for reactive play and for generation.** Both live
+  world generation and the live turn loop run on the user's key (local-first,
+  BYO-key; see §15). The platform burns no inference of its own.
+- **The product ships with enough built-in cold-start worlds** — including worlds
+  with differing rule configurations — that a keyless visitor can **browse the
+  feed and play a pre-baked taste**: each cold-start world carries a baked
+  cold-open and a short scripted sample beat that conveys the experience *without*
+  live inference. This is non-reactive by nature — the reactive moat ("the world
+  changes because of *my* specific action") begins the moment the user adds a key.
+  **Generating a new world always requires a key.** The cold-start pool is a
+  first-class, quality-gated asset, not a placeholder.
 
 ## 7. Entity Lifecycle and Agency
 

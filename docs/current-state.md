@@ -167,7 +167,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
 | Doorway Library UI + exit settlement + echoes | storage is ready; no library page, no settlement/echo |
 | Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
-| Built-in keyless cold-start pool | none; play requires a key |
+| Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
 | Object/character on-demand fleshing | only location fleshing is wired |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
 

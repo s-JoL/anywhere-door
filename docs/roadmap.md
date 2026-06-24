@@ -60,8 +60,10 @@ it feel personal (`product-design.md` §26 MVP).
 
 1. **Cold-start pool (keyless on-ramp).** Ship a curated set of built-in worlds —
    including different rule configs (faithful drama, distorted horror, a game-y
-   dungeon) — playable without a key; live generation/play stay BYO-key
-   (`product-design.md` §4.3). This unblocks the top of the funnel.
+   dungeon) — each with a baked cold-open + a short scripted **pre-baked taste**
+   that a keyless visitor can browse and sample with zero live inference; reactive
+   play and generation stay BYO-key (`product-design.md` §4.3). This unblocks the
+   top of the funnel without platform inference or a faked reactive loop.
 2. **Medium seed contract + canon hardness.** Upgrade generated seeds into
    contracts (rules, tonal gravity, opening locality, anchors, 2–3 pressure lines,
    expansion grammar, canon ledger, narration rule). Give facts a 3-tier hardness
