@@ -19,6 +19,7 @@ import { react } from "./reactor";
 import { evolveWhileAway } from "../world/offscreen";
 import { fleshStubLocation } from "../world/flesh";
 import { deriveSettlement, composeReturnEcho } from "../world/settlement";
+import { recordFunnel } from "../taste/funnel";
 
 /** 触发回归 echo 的最短离场时长(§5.6):与离场演化同档,1 小时。 */
 const RETURN_ECHO_MS = 3_600_000;
@@ -246,6 +247,14 @@ async function runTurnBody(
       if (d.kind === "setRelationship" && d.reason?.trim()) {
         await repo.appendMemory(buildSelfMemory(d.fromId, `（我记下）${d.reason.trim()}`, 6));
       }
+    }
+
+    // §5.9 漏斗:玩家造成的**第一条 anchored 事实** = first-consequence。每实例只触发一次。
+    const anchoredNow = reactorRes.committed.some((d) => d.kind === "setFact" && (d.hardness ?? "ambient") !== "ambient");
+    if (anchoredNow) {
+      const log = await repo.listDeltaLog(instanceId);
+      const priorAnchored = log.some((e) => e.turn < turn && e.delta.kind === "setFact" && ((e.delta as { hardness?: string }).hardness ?? "ambient") !== "ambient");
+      if (!priorAnchored) recordFunnel(repo, "first-consequence", seed);
     }
 
     // stub→fleshed:玩家踏入的当前地点若仍是 stub,世界当场把它充实为 fleshed
