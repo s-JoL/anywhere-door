@@ -4,6 +4,7 @@ import type { Delta } from "../world/delta";
 import { commit, type GateCtx, type ProposalSource } from "./write-gate";
 import { instanceLock, type LockToken } from "./lock";
 import { TraceCollector, emitTrace } from "./trace";
+import { consistencyGuard, guardSnapshot } from "./guard";
 import { presentCharacters } from "./prompt";
 import { runActiveAgents } from "./agent-runtime";
 import { DEFAULT_ENGINE_CONFIG } from "./config";
@@ -191,8 +192,14 @@ async function runTurnBody(
     state = { ...state, tension: tensionAfter };
     const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
     if (beat) {
-      await repo.appendMessage(beat);
-      onEvent?.({ type: "narration", id: beat.id, content: beat.content });
+      // §5.8 cheap consistency guard:环境旁白若点了一个并不在场的角色名,判定为漏陷并丢弃该旁白。
+      const guard = consistencyGuard(beat.content, guardSnapshot(state));
+      if (guard.ok) {
+        await repo.appendMessage(beat);
+        onEvent?.({ type: "narration", id: beat.id, content: beat.content });
+      } else {
+        trace.note(`旁白漏陷,已丢弃:点到不在场的 ${guard.slips.join("、")}`);
+      }
     }
 
     // 导演决定是否让幕后角色登场制造转折(§4.3:whether/whom/how,世界一致,绝不经玩家之门)
