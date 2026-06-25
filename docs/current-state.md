@@ -110,9 +110,10 @@ reruns the same input — so a regenerate does not leak old-branch state.
   There is **no** `narration` rule and **no** `ruleSkills` field.
 - **`WorldState`** (mutable): `currentLocationId`, `time`, `locations`, `objects`,
   `roster` (incl. the player `you`'s `condition`), `flags`, `tension`,
-  `relationships` (a signed affinity ledger with decaying evidence), `lore`. There
-  is **no** `pressureLines`, `facts`, `beliefs`, `offstage`, or `timeline`
-  structure, and **no** instance-private `characters` map.
+  `relationships` (a signed affinity ledger with decaying evidence), `lore`, and
+  `pressureLines` (§4.6 — structured threads: id/summary/status/intensity, advanced
+  only via thread deltas through the gate). There is **no** `facts`, `beliefs`, or
+  `timeline` structure yet; the three-tier offstage precision is still Phase 1.
 - **Relationships** (`src/lib/world/relationship.ts`):
   `{ affinity, disposition?, evidence[], sinceDay }` — affinity is a signed number
   clamped to [-100, 100], decaying linearly toward 0 over game-days while keeping
@@ -187,7 +188,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Single perception boundary as a module | **done** (§4.2) — `perception.ts` `resolvePerception` is the sole producer; out-of-world standing assertion in place. Power surfaces (Director Notes / Scene Contract / God / cross-world taste) still unbuilt |
 | Director casting (active-agent cap, ambient cast) | **done** (§4.3/§4.4) — `castTurn` caps active agents + splits ambient; `runActiveAgents` runs only the active cast; `decideSurfacing` replaces the heuristic. Salience-driven active selection is Phase 1 |
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
-| Thread state (structured pressure lines) | only an implicit `tension` scalar + Director heuristics |
+| Thread state (structured pressure lines) | **scaffolded** (§4.6) — `pressureLines` on `WorldState` + open/advance/resolve thread deltas (gate-only); `evolveWhileAway` reads active threads. Three-tier precision still Phase 1 |
 | Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
 | Observation provenance / confidence / distortion | **done** (§4.5) — `Memory` has provenance/confidence/interpretation/perceptionQuality/distortion/evidenceLinks/branchId (additive); stamped by observe/gossip/reflect; confidence folded into retrieval. Belief graph (§5) reads this substrate |
 | Three-tier offstage precision | `evolveWhileAway` treats all offstage agents uniformly |
