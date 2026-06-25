@@ -6,6 +6,10 @@ import type { DeltaLogEntry } from "../world/delta";
 export class IndexedDbRepository implements Repository {
   private db = new AnywhereDoorDB();
   async getInstance(id: string) { return this.db.instances.get(id); }
+  async listInstances(): Promise<WorldInstance[]> {
+    const rows = await this.db.instances.toArray();
+    return rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+  }
   async upsertInstance(i: WorldInstance) { await this.db.instances.put(i); }
   async listMessages(instanceId: string): Promise<Message[]> {
     const rows = await this.db.messages.where("instanceId").equals(instanceId).toArray();

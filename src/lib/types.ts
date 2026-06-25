@@ -125,6 +125,7 @@ export interface WorldInstance {
   lastTurnSnapshot?: TurnSnapshot;
   turn?: number; // 已进行的回合数(事件日志归因)
   lastSeenAt?: number; // 玩家上次交互的真实时间戳(Date.now),供离场演化算"离开多久"
+  pinned?: boolean; // 玩家把这扇门收进"我的门廊"(Doorway Library)
 }
 
 export interface Message {
