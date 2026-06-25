@@ -1,7 +1,8 @@
 import type { TasteEvent, TasteEventKind, WorldSeed } from "@/lib/types";
 import { tagsOfSeed } from "./tags";
 
-export const EVENT_WEIGHT: Record<TasteEventKind, number> = {
+// 仅前四类是排序信号;漏斗事件(§5.9)是 out-of-world 指标,对口味画像权重为 0。
+export const EVENT_WEIGHT: Partial<Record<TasteEventKind, number>> = {
   enter: 1,
   dwell: 3,
   author: 4,
@@ -16,7 +17,7 @@ export function computeTasteProfile(
   const profile: Record<string, number> = {};
   for (const { kind, tags, at } of events) {
     const ageDays = Math.max(0, (now - at)) / 86_400_000;
-    const w = EVENT_WEIGHT[kind] * Math.pow(0.5, ageDays / halfLifeDays);
+    const w = (EVENT_WEIGHT[kind] ?? 0) * Math.pow(0.5, ageDays / halfLifeDays);
     for (const tag of tags) {
       profile[tag] = (profile[tag] ?? 0) + w;
     }

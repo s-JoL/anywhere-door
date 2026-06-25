@@ -199,7 +199,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | God-edit witness-scoped reconcile | no God/Studio edit path |
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
 | Doorway Library UI + exit settlement + echoes | **engine done** (§5.6) — `settlement.ts` `deriveSettlement` (trace from anchored+ facts, unresolved threads, candidate hooks, bond beat) stored on the instance each turn; `composeReturnEcho` emits a return-open beat on re-entry after time away. Library page exists (`listInstances` + pin); surfacing the settlement in the Library card UI is the remaining piece |
-| Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
+| Funnel metrics (return-rate) | **engine done** (§5.9) — `TasteEventKind` extended with the 7 funnel stages (card-dwell→…→pin); `funnel.ts` `recordFunnel` + pure `computeFunnel` (counts + step conversion), local-first, out-of-world. Firing each stage from UI/turn (incl. first-consequence on first anchored fact) is the remaining wiring |
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
 | Object/character on-demand fleshing | **done** (§5.7) — `fleshObject`/`fleshCharacter` deltas promote a stub to fleshed; `retireEntity` archives (presence flag, never deletes). Reactor parser wired; LLM flesh-producers for objects/characters still to author |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
