@@ -1,4 +1,4 @@
-import type { WorldState, WorldRules, Character } from "../types";
+import type { WorldState, WorldRules, Character, Hardness } from "../types";
 import { applyRelationshipUpdate } from "./relationship";
 
 export type Delta =
@@ -19,7 +19,9 @@ export type Delta =
   // ——— §4.6 压力线 / 悬念线(只经写入口推进) ———
   | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[] }
   | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved" }
-  | { kind: "resolveThread"; id: string };
+  | { kind: "resolveThread"; id: string }
+  // ——— §5.1 分级事实(canon 硬度;只经写入口) ———
+  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -64,6 +66,7 @@ function freeTextFields(d: Delta): string[] {
     case "setFlag": return typeof d.value === "string" ? [d.value] : [];
     case "openThread": return [d.summary];
     case "advanceThread": return [d.summary ?? ""];
+    case "setFact": return [d.value];
     default: return [];
   }
 }
@@ -97,8 +100,26 @@ function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][str
   return null;
 }
 
-/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。 */
-export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): Validation {
+/** 硬度档次序(用于比较)。 */
+const HARDNESS_RANK: Record<Hardness, number> = { ambient: 0, anchored: 1, core: 2 };
+
+/**
+ * 来源可写入的最高硬度(§5.1 权威分级):只有 god 编辑能写/改 core;
+ * 其余来源(reactor/角色/离场/充实/物化/导演/用户)至多写到 anchored。
+ * "提升权威绝不绕过写入口"——这条由 gate 传入 source 后在此强制。
+ */
+const SOURCE_MAX_HARDNESS: Record<DeltaSource, Hardness> = {
+  user: "anchored",
+  reactor: "anchored",
+  director: "anchored",
+  offscreen: "anchored",
+  flesh: "anchored",
+  materializer: "anchored",
+  god: "core",
+};
+
+/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。source 提供时附加权威校验。 */
+export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, source?: DeltaSource): Validation {
   const screened = screenRedLines(rules.redLines, d);
   if (!screened.ok) return screened;
   switch (d.kind) {
@@ -219,6 +240,22 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       const p = (state.pressureLines ?? []).find((x) => x.id === d.id);
       if (!p) return { ok: false, reason: `压力线 ${d.id} 不存在` };
       if (p.status === "resolved") return { ok: false, reason: `压力线 ${d.id} 已了结(空操作)` };
+      return { ok: true };
+    }
+    case "setFact": {
+      if (!d.id?.trim()) return { ok: false, reason: "事实 id 不能为空" };
+      if (!d.field?.trim()) return { ok: false, reason: "事实 field 不能为空" };
+      if (!d.value?.trim()) return { ok: false, reason: "事实 value 不能为空" };
+      const proposed: Hardness = d.hardness ?? "ambient";
+      // 权威分级:来源不能写入超过其权限的硬度(只有 god 能立/改 core)。
+      if (source && HARDNESS_RANK[proposed] > HARDNESS_RANK[SOURCE_MAX_HARDNESS[source]]) {
+        return { ok: false, reason: `来源 ${source} 无权写入 ${proposed} 级事实` };
+      }
+      // canon 硬度:同 (entityId, field) 已有更硬且不同值的事实 → 不可被推翻。
+      const existing = (state.facts ?? []).find((f) => f.entityId === d.entityId && f.field === d.field);
+      if (existing && existing.value !== d.value && HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
+        return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
+      }
       return { ok: true };
     }
   }
@@ -412,6 +449,13 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         p.id === d.id ? { ...p, status: "resolved" as const, updatedDay: state.time.day } : p,
       );
       return { ...state, pressureLines: lines };
+    }
+    case "setFact": {
+      const hardness: Hardness = d.hardness ?? "ambient";
+      const fact = { id: d.id, field: d.field, value: d.value, hardness, sinceDay: state.time.day, ...(d.entityId ? { entityId: d.entityId } : {}) };
+      // 按 (entityId, field) upsert:该维度的"此刻真相"是单值的。
+      const rest = (state.facts ?? []).filter((f) => !(f.entityId === d.entityId && f.field === d.field));
+      return { ...state, facts: [...rest, fact] };
     }
   }
 }
