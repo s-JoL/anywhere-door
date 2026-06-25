@@ -190,7 +190,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Studio instrumentation / Context Inspector | **scaffolded** (§4.7) — `trace.ts` per-turn `TraceCollector` (commits/rejections/casting/threads) + in-memory inspector channel, threaded through the gate; out-of-world, never persisted, never in a projection. No UI yet |
 | Canon hardness (3 tiers) | **done** (§5.1) — `facts` on `WorldState` with `ambient/anchored/core`; `setFact` delta with gate rules: a harder fact can't be overturned by a softer source, and only `god` may write/revise `core`. Reactor parser wired; reactor prompt to mint facts lands with §5.4/§5.8 |
 | Thread state (structured pressure lines) | **scaffolded** (§4.6) — `pressureLines` on `WorldState` + open/advance/resolve thread deltas (gate-only); `evolveWhileAway` reads active threads. Three-tier precision still Phase 1 |
-| Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
+| Belief graph (fact × observer read view) | **done** (§5.3) — `belief.ts` `beliefOf`/`assembleBeliefGraph`: pure read view over witness-scoped memory yielding knows/believes/suspects/unaware/wrong + evidence links; zero writes. Not yet wired into Director/Inspector/Atlas UI |
 | Observation provenance / confidence / distortion | **done** (§4.5) — `Memory` has provenance/confidence/interpretation/perceptionQuality/distortion/evidenceLinks/branchId (additive); stamped by observe/gossip/reflect; confidence folded into retrieval. Belief graph (§5) reads this substrate |
 | Three-tier offstage precision | `evolveWhileAway` treats all offstage agents uniformly |
 | Narration as transduction + cheap guard | narration is free prose; no transduction-from-snapshot, no consistency guard |
