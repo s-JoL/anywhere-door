@@ -32,9 +32,10 @@ A mobile-first, pure-web app:
   fixes `<html lang="zh">`; every UI string is a Chinese literal inline in JSX
   (e.g. `推门进入`, `张力`, `上滑，换一个世界`, `世界正在苏醒`); `globals.css` bakes
   one dark "rainy-inn" theme with CJK serif fonts (`Songti SC`). There is **no**
-  i18n layer, no locale state, no story-locale field on the seed, and no English
-  surface. The bilingual-first locale model (design docs §17 / §2.5 / §5.5) is
-  entirely unbuilt.
+  string/prompt extraction, no build-time locale constant, no English deployment,
+  and no per-language content pool. The target two-deployment bilingual model
+  (design docs §17 / §2.5 / §5.5) is entirely unbuilt — only the hardcoded-zh build
+  exists.
 
 ## 3. The turn loop (`src/lib/engine/turn.ts`)
 
@@ -177,7 +178,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
 | Object/character on-demand fleshing | only location fleshing is wired |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
-| Bilingual (zh/en), story locale ⟂ interface locale | none; `lang="zh"` hardcoded, all UI strings inline Chinese literals, no i18n layer, no seed story-locale field |
+| Bilingual (zh/en) as two single-language deployments | none; only a hardcoded-zh build exists — `lang="zh"` fixed, UI strings inline Chinese literals, no string/prompt extraction, no build-time locale constant, no en deployment or en content pool |
 
 Every implemented durable change already rides `propose → validate → apply → log`,
 and no second runtime exists — so the gaps above are additive work on the existing
