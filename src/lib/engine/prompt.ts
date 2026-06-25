@@ -1,7 +1,10 @@
 import type { WorldSeed, WorldState, Character, ChatMessage, Memory } from "../types";
 import { fillPlaceholders, applyOriginal, RP_PRESET, POST_HISTORY_REINFORCEMENT } from "./preset";
-import { retrieveLore, formatLore } from "../world/lore";
-import { effectiveAffinity, affinityBand } from "../world/relationship";
+import { formatLore } from "../world/lore";
+import { resolvePerception, type CharacterProjection } from "./perception";
+
+// visibleScene lives on the perception boundary now; re-exported for back-compat.
+export { visibleScene } from "./perception";
 
 /** 去掉角色误加在开头的「自己名字：」前缀。 */
 export function stripSpeakerPrefix(name: string, text: string): string {
@@ -17,69 +20,33 @@ export function presentCharacters(seed: WorldSeed, state: WorldState): Character
     .filter((c): c is Character => !!c);
 }
 
-/** 该角色**主观可见**的当前场景描述（不含他人内心/秘密）。`charById` 提供在场他人的硬事实(性别)以正确指代。 */
-export function visibleScene(state: WorldState, self: Character, charById?: Map<string, Character>): string {
-  const loc = state.locations[state.currentLocationId];
-  const others = loc.presentCharacterIds
-    .filter((id) => id !== self.id)
-    .map((id) => {
-      const name = state.roster[id]?.name ?? id;
-      const gender = charById?.get(id)?.identity?.gender; // 让发言者知道别人的性别,避免代词漂移
-      const cond = state.roster[id]?.condition;
-      const tags = [gender, cond].filter(Boolean).join("，");
-      return tags ? `${name}（${tags}）` : name;
-    })
-    .join("、");
-  const objs = loc.objectIds
-    .map((id) => {
-      const o = state.objects[id];
-      if (!o) return null;
-      return o.state ? `${o.name}（${o.state}）` : o.name;
-    })
-    .filter(Boolean)
-    .join("、");
-  const playerCondition = state.roster["you"]?.condition;
-  return [
-    `地点：${loc.name}——${loc.description ?? loc.gist}`,
-    `时间：第${state.time.day}天 ${state.time.clock}，${state.time.lighting}`,
-    others ? `在场：${others}` : "",
-    objs ? `可见物：${objs}` : "",
-    playerCondition ? `你此刻：${playerCondition}` : "",
-  ].filter(Boolean).join("\n");
-}
-
-export function buildCharacterPrompt(
-  seed: WorldSeed,
-  state: WorldState,
-  character: Character,
-  ctx: { memories?: Memory[]; recent?: Memory[] } = {},
-): ChatMessage[] {
+/**
+ * Renderer: a CharacterProjection → ChatMessage[]. This is the prose/wording layer —
+ * the only place story-locale prompt phrasing lives (§15.14), kept out of the
+ * projection structure. It reads ONLY the projection (+ world constants from seed);
+ * it never re-reads raw state, so it cannot widen what the character perceives.
+ */
+export function renderProjection(seed: WorldSeed, p: CharacterProjection): ChatMessage[] {
+  const character = p.self;
   const vars = { char: character.name, user: "你" };
 
-  const identity = character.identity
-    ? `【硬事实(绝不矛盾)】${[character.identity.gender, character.identity.age, character.identity.body, character.identity.hardFacts].filter(Boolean).join("；")}`
+  const identity = p.identity
+    ? `【硬事实(绝不矛盾)】${[p.identity.gender, p.identity.age, p.identity.body, p.identity.hardFacts].filter(Boolean).join("；")}`
     : "";
 
-  const memoryBlock = ctx.memories && ctx.memories.length
-    ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${ctx.memories.map((m) => `· ${m.text}`).join("\n")}`
+  // §5.4 把主观记录字段渲进叙述:低置信加"不确定"对冲,主观解读随行——角色据其**所信**行动。
+  const memLine = (m: CharacterProjection["memories"][number]): string => {
+    const hedge = (m.confidence ?? 1) < 0.5 ? "（不确定）" : "";
+    const interp = m.interpretation?.trim() ? `（我的理解：${m.interpretation.trim()}）` : "";
+    return `· ${hedge}${m.text}${interp}`;
+  };
+  const memoryBlock = p.memories.length
+    ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${p.memories.map(memLine).join("\n")}`
     : "";
 
-  const dispositionBlock = (() => {
-    const myRelations = state.relationships?.[character.id];
-    if (!myRelations) return "";
-    const loc = state.locations[state.currentLocationId];
-    const presentIds = new Set([...(loc?.presentCharacterIds ?? []), "you"]);
-    const lines: string[] = [];
-    for (const [toId, rel] of Object.entries(myRelations)) {
-      if (!presentIds.has(toId)) continue;
-      const name = toId === "you" ? "你（玩家）" : (state.roster[toId]?.name ?? toId);
-      // 角色体会到的是态度（短语或档位），不是裸数字。
-      const phrase = rel.disposition ?? affinityBand(effectiveAffinity(rel, state.time.day));
-      lines.push(`对${name}：${phrase}`);
-    }
-    if (!lines.length) return "";
-    return `【你此刻的心态】${lines.join("；")}。让这些态度自然影响你的言行。`;
-  })();
+  const dispositionBlock = p.stance.length
+    ? `【你此刻的心态】${p.stance.map((s) => `对${s.name}：${s.phrase}`).join("；")}。让这些态度自然影响你的言行。`
+    : "";
 
   // Build SYSTEM message — layered prefix
   const systemParts: string[] = [
@@ -87,11 +54,11 @@ export function buildCharacterPrompt(
     fillPlaceholders(RP_PRESET, vars),
     `【世界规则·不可变】${seed.rules.physics}（设定：${seed.rules.setting}）`,
     identity,
-    `【你的设定】${character.description}`,
-    character.systemPrompt?.trim()
-      ? fillPlaceholders(applyOriginal(character.systemPrompt, RP_PRESET), vars)
+    `【你的设定】${p.description}`,
+    p.systemPrompt?.trim()
+      ? fillPlaceholders(applyOriginal(p.systemPrompt, RP_PRESET), vars)
       : "",
-    character.goal ? `【你此刻的目标】${character.goal}` : "",
+    p.goal ? `【你此刻的目标】${p.goal}` : "",
     memoryBlock,
     dispositionBlock,
   ].filter(Boolean);
@@ -100,31 +67,19 @@ export function buildCharacterPrompt(
   const msgs: ChatMessage[] = [{ role: "system", content: system }];
 
   // Recent observations as user-turn context
-  for (const m of ctx.recent ?? []) {
+  for (const m of p.recent) {
     msgs.push({ role: "user", content: m.text });
   }
 
   // POST-HISTORY tail: scene + break-limits reinforcement (LAST message, recency-anchored)
-  const reinforcement = character.postHistoryInstructions?.trim()
-    ? fillPlaceholders(applyOriginal(character.postHistoryInstructions, POST_HISTORY_REINFORCEMENT), vars)
+  const reinforcement = p.postHistoryInstructions?.trim()
+    ? fillPlaceholders(applyOriginal(p.postHistoryInstructions, POST_HISTORY_REINFORCEMENT), vars)
     : fillPlaceholders(POST_HISTORY_REINFORCEMENT, vars);
 
-  // Lorebook: surface canon whose keys are on-stage (scene + recent/observed memory)
-  // so the world stays consistent. In-character world context — NOT the uncensoring layer.
-  // 在场他人的硬事实(供正确指代:他/她)——seed 角色 ∪ 实例新建角色
-  const charById = new Map<string, Character>();
-  for (const c of seed.characters) charById.set(c.id, c);
-  for (const [id, c] of Object.entries(state.characters ?? {})) charById.set(id, c);
-  const scene = visibleScene(state, character, charById);
-  const loreHaystack = [
-    scene,
-    ...(ctx.recent ?? []).map((m) => m.text),
-    ...(ctx.memories ?? []).map((m) => m.text),
-  ].join("\n");
-  const loreBlock = formatLore(retrieveLore(loreHaystack, state.lore));
+  const loreBlock = formatLore(p.triggeredLore);
 
   const tail = [
-    `【此刻所见】\n${scene}`,
+    `【此刻所见】\n${p.visibleScene}`,
     loreBlock,
     reinforcement,
   ].filter(Boolean).join("\n\n");
@@ -132,4 +87,19 @@ export function buildCharacterPrompt(
   msgs.push({ role: "user", content: tail });
 
   return msgs;
+}
+
+/**
+ * Thin compatibility entry: resolve a projection from already-scored memories/recent
+ * (the caller-supplied path), then render. Runtime turns call `resolvePerception` +
+ * `renderProjection` directly so memory retrieval lives on the boundary.
+ */
+export function buildCharacterPrompt(
+  seed: WorldSeed,
+  state: WorldState,
+  character: Character,
+  ctx: { memories?: Memory[]; recent?: Memory[] } = {},
+): ChatMessage[] {
+  const projection = resolvePerception({ seed, state, memories: ctx.memories, recent: ctx.recent }, character);
+  return renderProjection(seed, projection);
 }

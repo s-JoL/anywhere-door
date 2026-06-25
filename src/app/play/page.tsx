@@ -6,8 +6,11 @@ import { ensureDemoSeed, ensureInstanceForSeed } from "@/lib/engine/bootstrap";
 import { regenerateLastTurn, runTurn, type TurnEvent } from "@/lib/engine/turn";
 import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
+import { derivePresentation } from "@/lib/world/presentation";
 import { recordDwell } from "@/lib/taste/record";
+import { recordFunnel } from "@/lib/taste/funnel";
 import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
+import { t } from "@/lib/i18n";
 import Link from "next/link";
 import type { Message, WorldSeed, WorldState } from "@/lib/types";
 
@@ -54,10 +57,12 @@ function PlayInner() {
   const streamingId = useRef<string | null>(null);
   const turnCountRef = useRef(0);
   const dwellFiredRef = useRef(false);
+  const openDoorFiredRef = useRef(false);
+  const firstActionFiredRef = useRef(false);
 
   const nameOf = useCallback(
     (id: string | null | undefined) =>
-      (seed ?? DEMO_SEED).characters.find((c) => c.id === id)?.name ?? "某人",
+      (seed ?? DEMO_SEED).characters.find((c) => c.id === id)?.name ?? t("play.someone"),
     [seed],
   );
 
@@ -83,13 +88,21 @@ function PlayInner() {
       const repo = getRepository();
       const loaded = (await repo.getSeed(worldId)) ?? DEMO_SEED;
       setSeed(loaded);
+      if (!openDoorFiredRef.current) { openDoorFiredRef.current = true; recordFunnel(repo, "open-door", loaded); } // §5.9 funnel
       const resolve = (id: string | null | undefined) =>
-        loaded.characters.find((c) => c.id === id)?.name ?? "某人";
+        loaded.characters.find((c) => c.id === id)?.name ?? t("play.someone");
       const iid = await ensureInstanceForSeed(worldId);
       setInstanceId(iid);
       await reload(iid, resolve);
     })();
   }, [worldId, reload]);
+
+  // §5.9 funnel: still here after ten minutes → a retention signal.
+  useEffect(() => {
+    if (!seed) return;
+    const id = setTimeout(() => recordFunnel(getRepository(), "ten-minute-retain", seed), 10 * 60 * 1000);
+    return () => clearTimeout(id);
+  }, [seed]);
 
   // 贴近底部时才自动吸底，避免打断上翻；流式逐字用 auto 防抖
   useEffect(() => {
@@ -120,6 +133,7 @@ function PlayInner() {
     setBusy(true);
     setErr("");
     setNeedsKey(false);
+    if (!firstActionFiredRef.current) { firstActionFiredRef.current = true; recordFunnel(getRepository(), "first-action", seed); } // §5.9 funnel
     setItems((xs) => [...xs, { id: `u-${Date.now()}`, kind: "user", content: text }]);
     try {
       const cfg = resolveModelConfig(seed, getUserConfig());
@@ -144,7 +158,7 @@ function PlayInner() {
       if (/missing api key/i.test(msg) || /upstream 40[0-3]/i.test(msg)) {
         setNeedsKey(true);
       } else {
-        setErr(`这一刻没能继续：${msg}`);
+        setErr(t("play.error", { msg }));
       }
       await reload(instanceId, nameOf);
     } finally {
@@ -178,7 +192,7 @@ function PlayInner() {
       if (/missing api key/i.test(msg) || /upstream 40[0-3]/i.test(msg)) {
         setNeedsKey(true);
       } else {
-        setErr(`这一刻没能重来：${msg}`);
+        setErr(t("play.regenError", { msg }));
       }
       await reload(instanceId, nameOf);
     } finally {
@@ -190,30 +204,36 @@ function PlayInner() {
   if (!seed) {
     return (
       <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col items-center justify-center">
-        <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">世界正在苏醒 · · ·</div>
+        <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">{t("play.waking")}</div>
       </main>
     );
   }
 
+  const accent = derivePresentation(seed).accent ?? "var(--lamp)";
   const loc = world ? world.locations[world.currentLocationId] : null;
   const present = loc ? loc.presentCharacterIds.map(nameOf) : [];
   const waitingForFirst = busy && streamingId.current === null;
   const canRegenerate = items.some((it) => it.kind === "user");
 
   return (
-    <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col door-arrive">
+    <main
+      className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col door-arrive"
+      style={{ ["--accent" as string]: accent }}
+    >
       {/* 世界状态条 */}
       <header
         className="glass-bar relative z-10 shrink-0 border-b border-[var(--line)] px-4 pb-2.5"
         style={{ paddingTop: "max(0.7rem, env(safe-area-inset-top))" }}
       >
         <div className="flex items-center justify-between">
-          <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
+          <div className="eyebrow">{t("brand.eyebrow")}</div>
+          {/* Ambient mood cue — color carries pressure; no raw meter (design §5.2). */}
           {world && (
-            <div className="flex items-center gap-1.5 text-[10.5px] text-[var(--smoke)]">
-              <span className="presence-dot pulse" style={{ background: tensionColor(world.tension ?? 0), boxShadow: `0 0 9px ${tensionColor(world.tension ?? 0)}` }} />
-              张力 {Math.round(world.tension ?? 0)}
-            </div>
+            <span
+              className="presence-dot pulse"
+              aria-hidden="true"
+              style={{ background: tensionColor(world.tension ?? 0), boxShadow: `0 0 9px ${tensionColor(world.tension ?? 0)}` }}
+            />
           )}
         </div>
         <div className="mt-1 flex items-center gap-2 text-[12.5px]">
@@ -265,19 +285,19 @@ function PlayInner() {
         })}
 
         {waitingForFirst && (
-          <div className="breathe self-center text-[12px] tracking-[0.3em] text-[var(--smoke)]">世界在低语 · · ·</div>
+          <div className="breathe self-center text-[12px] tracking-[0.3em] text-[var(--smoke)]">{t("play.whisper")}</div>
         )}
         {err && <div className="self-center text-center text-[13px] text-[var(--rose)]">{err}</div>}
         {needsKey && (
           <div className="self-center text-center text-[13px] text-[var(--smoke)]">
-            还没配置模型 key ——{" "}
-            <Link href="/settings" className="text-[var(--lamp)] underline underline-offset-4">
-              去设置
+            {t("play.needKey")}
+            <Link href="/settings" className="text-[var(--accent)] underline underline-offset-4">
+              {t("play.needKeyLink")}
             </Link>
           </div>
         )}
         {items.length === 0 && !busy && (
-          <div className="breathe mt-10 self-center text-center text-[13px] text-[var(--smoke)]">推门进入這個世界…</div>
+          <div className="breathe mt-10 self-center text-center text-[13px] text-[var(--smoke)]">{t("play.empty")}</div>
         )}
         <div ref={bottomRef} />
       </div>
@@ -291,8 +311,8 @@ function PlayInner() {
           <button
             onClick={regenerate}
             disabled={busy || !canRegenerate}
-            aria-label="重生成上一条"
-            title="重生成上一条"
+            aria-label={t("play.regenerate")}
+            title={t("play.regenerate")}
             className="field send-glow flex h-12 w-12 shrink-0 items-center justify-center text-[18px] text-[var(--lamp)] transition disabled:opacity-35 disabled:shadow-none"
           >
             {busy ? <span className="breathe">◍</span> : "↻"}
@@ -302,14 +322,14 @@ function PlayInner() {
             rows={1}
             value={input}
             disabled={busy}
-            placeholder="对这个世界说点什么，或做点什么…"
+            placeholder={t("play.inputPlaceholder")}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
           />
           <button
             onClick={send}
             disabled={busy || !input.trim()}
-            aria-label="说出去"
+            aria-label={t("play.send")}
             className={`field send-glow flex h-12 w-12 shrink-0 items-center justify-center text-[18px] text-[var(--lamp)] transition disabled:opacity-35 disabled:shadow-none`}
           >
             {busy ? <span className="breathe">◍</span> : "➤"}
@@ -325,7 +345,7 @@ export default function Play() {
     <Suspense
       fallback={
         <main className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col items-center justify-center">
-          <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">世界正在苏醒 · · ·</div>
+          <div className="breathe text-[13px] tracking-[0.3em] text-[var(--smoke)]">{t("play.waking")}</div>
         </main>
       }
     >

@@ -1,4 +1,4 @@
-import type { WorldState, WorldRules, Character } from "../types";
+import type { WorldState, WorldRules, Character, Hardness } from "../types";
 import { applyRelationshipUpdate } from "./relationship";
 
 export type Delta =
@@ -15,12 +15,32 @@ export type Delta =
   | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
   | { kind: "moveObject"; objectId: string; toLocationId: string }
   | { kind: "setObjectLocked"; objectId: string; locked: boolean }
-  | { kind: "fleshLocation"; locationId: string; description: string; gist?: string };
+  | { kind: "fleshLocation"; locationId: string; description: string; gist?: string }
+  // ——— §4.6/§5.2 压力线 / 悬念线(只经写入口推进) ———
+  | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[]; threadKind?: string; playerKnown?: boolean; nextSign?: string }
+  | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved"; playerKnown?: boolean; nextSign?: string }
+  | { kind: "resolveThread"; id: string }
+  // ——— §5.1 分级事实(canon 硬度;只经写入口) ———
+  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness }
+  // ——— §5.7 实体生命周期(stub→fleshed 全类型;归档不删除) ———
+  | { kind: "fleshObject"; objectId: string; state?: string; name?: string }
+  | { kind: "fleshCharacter"; characterId: string; description: string; goal?: string }
+  | { kind: "retireEntity"; entityId: string; entityType: "character" | "object" };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
-/** delta 的来源类别(用于事件日志归因)。 */
-export type DeltaSource = "user" | "reactor" | "flesh" | "offscreen";
+/**
+ * delta 的来源类别(用于事件日志归因)。与 WriteGate 的 ProposalSource 同义:
+ * 每条提议都带来源,落库日志原样记录,供 Context Inspector / 离场对账归因。
+ */
+export type DeltaSource =
+  | "user"
+  | "reactor"
+  | "director"
+  | "offscreen"
+  | "flesh"
+  | "materializer"
+  | "god";
 
 /**
  * 事件日志一条:每个**经校验落库的 delta** 追加一条,记录 turn / 世界时间 / 逻辑时戳 /
@@ -48,6 +68,11 @@ function freeTextFields(d: Delta): string[] {
     case "setRelationship": return [d.disposition ?? "", d.reason ?? ""];
     case "establishLore": return [d.content, ...d.keys];
     case "setFlag": return typeof d.value === "string" ? [d.value] : [];
+    case "openThread": return [d.summary];
+    case "advanceThread": return [d.summary ?? ""];
+    case "setFact": return [d.value];
+    case "fleshObject": return [d.state ?? "", d.name ?? ""];
+    case "fleshCharacter": return [d.description, d.goal ?? ""];
     default: return [];
   }
 }
@@ -81,8 +106,29 @@ function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][str
   return null;
 }
 
-/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。 */
-export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): Validation {
+/** 硬度档次序(用于比较)。 */
+const HARDNESS_RANK: Record<Hardness, number> = { ambient: 0, anchored: 1, core: 2 };
+
+/** 压力线"强后果"强度阈值(§5.2 公平规则)。 */
+const STRONG_THREAD_INTENSITY = 8;
+
+/**
+ * 来源可写入的最高硬度(§5.1 权威分级):只有 god 编辑能写/改 core;
+ * 其余来源(reactor/角色/离场/充实/物化/导演/用户)至多写到 anchored。
+ * "提升权威绝不绕过写入口"——这条由 gate 传入 source 后在此强制。
+ */
+const SOURCE_MAX_HARDNESS: Record<DeltaSource, Hardness> = {
+  user: "anchored",
+  reactor: "anchored",
+  director: "anchored",
+  offscreen: "anchored",
+  flesh: "anchored",
+  materializer: "anchored",
+  god: "core",
+};
+
+/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。source 提供时附加权威校验。 */
+export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, source?: DeltaSource): Validation {
   const screened = screenRedLines(rules.redLines, d);
   if (!screened.ok) return screened;
   switch (d.kind) {
@@ -189,6 +235,71 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       if (!state.locations[d.locationId]) return { ok: false, reason: `地点 ${d.locationId} 不存在` };
       if (!d.description?.trim()) return { ok: false, reason: "充实描述不能为空" };
       return { ok: true };
+    case "openThread": {
+      if (!d.id?.trim()) return { ok: false, reason: "压力线 id 不能为空" };
+      if ((state.pressureLines ?? []).some((p) => p.id === d.id)) return { ok: false, reason: `压力线 ${d.id} 已存在` };
+      if (!d.summary?.trim()) return { ok: false, reason: "压力线摘要不能为空" };
+      return { ok: true };
+    }
+    case "advanceThread": {
+      const line = (state.pressureLines ?? []).find((p) => p.id === d.id);
+      if (!line) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      // 公平规则(§5.2):玩家尚不知情的线,不得被推进到"强后果"强度。
+      const resultIntensity = Math.max(0, Math.min(10, line.intensity + (d.intensityDelta ?? 0)));
+      const resultKnown = d.playerKnown ?? line.playerKnown ?? false;
+      if (resultIntensity >= STRONG_THREAD_INTENSITY && !resultKnown) {
+        return { ok: false, reason: "公平:玩家尚不知情,压力线不能升到强后果(需先给出征兆)" };
+      }
+      return { ok: true };
+    }
+    case "resolveThread": {
+      const p = (state.pressureLines ?? []).find((x) => x.id === d.id);
+      if (!p) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      if (p.status === "resolved") return { ok: false, reason: `压力线 ${d.id} 已了结(空操作)` };
+      return { ok: true };
+    }
+    case "setFact": {
+      if (!d.id?.trim()) return { ok: false, reason: "事实 id 不能为空" };
+      if (!d.field?.trim()) return { ok: false, reason: "事实 field 不能为空" };
+      if (!d.value?.trim()) return { ok: false, reason: "事实 value 不能为空" };
+      const proposed: Hardness = d.hardness ?? "ambient";
+      // 权威分级:来源不能写入超过其权限的硬度(只有 god 能立/改 core)。
+      if (source && HARDNESS_RANK[proposed] > HARDNESS_RANK[SOURCE_MAX_HARDNESS[source]]) {
+        return { ok: false, reason: `来源 ${source} 无权写入 ${proposed} 级事实` };
+      }
+      // canon 硬度:同 (entityId, field) 已有更硬且不同值的事实 → 不可被推翻。
+      const existing = (state.facts ?? []).find((f) => f.entityId === d.entityId && f.field === d.field);
+      if (existing && existing.value !== d.value && HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
+        return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
+      }
+      return { ok: true };
+    }
+    case "fleshObject": {
+      const o = state.objects[d.objectId];
+      if (!o) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if (o.detail !== "stub") return { ok: false, reason: `对象 ${d.objectId} 已是 fleshed(无需充实)` };
+      return { ok: true };
+    }
+    case "fleshCharacter": {
+      const c = state.characters?.[d.characterId];
+      if (!c) return { ok: false, reason: `实例角色 ${d.characterId} 不存在` };
+      if (c.detail !== "stub") return { ok: false, reason: `角色 ${d.characterId} 已是 fleshed(无需充实)` };
+      if (!d.description?.trim()) return { ok: false, reason: "角色充实描述不能为空" };
+      return { ok: true };
+    }
+    case "retireEntity": {
+      if (d.entityType === "character") {
+        const c = state.characters?.[d.entityId];
+        const inRoster = !!state.roster[d.entityId];
+        if (!c && !inRoster) return { ok: false, reason: `角色 ${d.entityId} 不存在` };
+        if (c?.archived) return { ok: false, reason: `角色 ${d.entityId} 已归档(空操作)` };
+        return { ok: true };
+      }
+      const o = state.objects[d.entityId];
+      if (!o) return { ok: false, reason: `对象 ${d.entityId} 不存在` };
+      if (o.archived) return { ok: false, reason: `对象 ${d.entityId} 已归档(空操作)` };
+      return { ok: true };
+    }
   }
 }
 
@@ -348,6 +459,88 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
           ...state.locations,
           [d.locationId]: { ...loc, description: d.description, gist: d.gist ?? loc.gist, detail: "fleshed" },
         },
+      };
+    }
+    case "openThread": {
+      const line = {
+        id: d.id,
+        summary: d.summary,
+        status: "active" as const,
+        intensity: Math.max(0, Math.min(10, d.intensity ?? 3)),
+        ...(d.relatedCharacterIds ? { relatedCharacterIds: d.relatedCharacterIds } : {}),
+        ...(d.relatedLocationIds ? { relatedLocationIds: d.relatedLocationIds } : {}),
+        ...(d.threadKind ? { kind: d.threadKind } : {}),
+        ...(d.playerKnown !== undefined ? { playerKnown: d.playerKnown } : {}),
+        ...(d.nextSign ? { nextSign: d.nextSign } : {}),
+        updatedDay: state.time.day,
+      };
+      return { ...state, pressureLines: [...(state.pressureLines ?? []), line] };
+    }
+    case "advanceThread": {
+      const lines = (state.pressureLines ?? []).map((p) => {
+        if (p.id !== d.id) return p;
+        return {
+          ...p,
+          intensity: Math.max(0, Math.min(10, p.intensity + (d.intensityDelta ?? 0))),
+          summary: d.summary ?? p.summary,
+          status: d.status ?? p.status,
+          ...(d.playerKnown !== undefined ? { playerKnown: d.playerKnown } : {}),
+          ...(d.nextSign ? { nextSign: d.nextSign } : {}),
+          updatedDay: state.time.day,
+        };
+      });
+      return { ...state, pressureLines: lines };
+    }
+    case "resolveThread": {
+      const lines = (state.pressureLines ?? []).map((p) =>
+        p.id === d.id ? { ...p, status: "resolved" as const, updatedDay: state.time.day } : p,
+      );
+      return { ...state, pressureLines: lines };
+    }
+    case "setFact": {
+      const hardness: Hardness = d.hardness ?? "ambient";
+      const fact = { id: d.id, field: d.field, value: d.value, hardness, sinceDay: state.time.day, ...(d.entityId ? { entityId: d.entityId } : {}) };
+      // 按 (entityId, field) upsert:该维度的"此刻真相"是单值的。
+      const rest = (state.facts ?? []).filter((f) => !(f.entityId === d.entityId && f.field === d.field));
+      return { ...state, facts: [...rest, fact] };
+    }
+    case "fleshObject": {
+      const o = state.objects[d.objectId];
+      return {
+        ...state,
+        objects: { ...state.objects, [d.objectId]: { ...o, detail: "fleshed", ...(d.name ? { name: d.name } : {}), ...(d.state !== undefined ? { state: d.state } : {}) } },
+      };
+    }
+    case "fleshCharacter": {
+      const c = state.characters![d.characterId];
+      return {
+        ...state,
+        characters: { ...state.characters, [d.characterId]: { ...c, detail: "fleshed", description: d.description, ...(d.goal ? { goal: d.goal } : {}) } },
+      };
+    }
+    case "retireEntity": {
+      if (d.entityType === "character") {
+        const c = state.characters?.[d.entityId];
+        // 从所有场景在场名单移除,但保留角色记录(archived 置真),绝不删除。
+        const locations: WorldState["locations"] = {};
+        for (const [id, loc] of Object.entries(state.locations)) {
+          locations[id] = { ...loc, presentCharacterIds: loc.presentCharacterIds.filter((x) => x !== d.entityId) };
+        }
+        return {
+          ...state,
+          locations,
+          ...(c ? { characters: { ...state.characters, [d.entityId]: { ...c, archived: true } } } : {}),
+        };
+      }
+      const o = state.objects[d.entityId];
+      const locations: WorldState["locations"] = {};
+      for (const [id, loc] of Object.entries(state.locations)) {
+        locations[id] = { ...loc, objectIds: loc.objectIds.filter((x) => x !== d.entityId) };
+      }
+      return {
+        ...state,
+        locations,
+        objects: { ...state.objects, [d.entityId]: { ...o, archived: true } },
       };
     }
   }

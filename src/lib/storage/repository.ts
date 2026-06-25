@@ -3,6 +3,7 @@ import type { DeltaLogEntry } from "../world/delta";
 
 export interface Repository {
   getInstance(id: string): Promise<WorldInstance | undefined>;
+  listInstances(): Promise<WorldInstance[]>; // all opened worlds, for the Doorway Library
   upsertInstance(i: WorldInstance): Promise<void>;
   listMessages(instanceId: string): Promise<Message[]>;
   appendMessage(m: Message): Promise<void>;

@@ -21,6 +21,8 @@ export interface Character {
   goal?: string;         // 当前目标（被 God 注入主观 prompt）
   systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
   postHistoryInstructions?: string;  // 角色覆盖末尾后置强化（支持 {{original}}）
+  /** 退场归档(§5.7):置真则从在场名单移除,但记录绝不删除。 */
+  archived?: boolean;
 }
 
 /** 不可变：世界的"物理法则"，创建后只读。 */
@@ -48,6 +50,8 @@ export interface WorldObject {
   props: { portable?: boolean; locked?: boolean; owner?: string; gates?: string; [k: string]: unknown };
   locationId: string;
   state?: string;
+  /** 退场归档(§5.7):置真则从在场/可见中移除,但记录绝不删除。 */
+  archived?: boolean;
 }
 
 /** 角色的客观事实投影（秘密/内心不在此）。 */
@@ -82,6 +86,55 @@ export interface WorldState {
   relationships?: Record<string, Record<string, Relationship>>;
   /** 世界书 / canon：关键词触发的永久世界设定，可经 establishLore 按需生长。 */
   lore?: LoreEntry[];
+  /** 结构化压力线 / 悬念线(§4.6)。导演读取;只经 thread delta(过写入口)推进。 */
+  pressureLines?: PressureLine[];
+  /** 硬度分级的事实(§5.1 canon 硬度)。只经 setFact(过写入口)写入。 */
+  facts?: Fact[];
+}
+
+/**
+ * Canon 硬度三档(§5.1):
+ * ambient 氛围(可被任何更可信来源改写) · anchored 锚定(reactor/角色不能推翻,
+ * 唯 god 编辑可改) · core 内核(世界基石,唯 god 编辑可改)。
+ * 事实只在**需要持久、需要校验、或影响未来行为**时才升格,默认保持 ambient。
+ */
+export type Hardness = "ambient" | "anchored" | "core";
+
+/**
+ * 一条分级事实(§5.1)。按 (entityId, field) 唯一:它是该维度"此刻的真相"。
+ * 矛盾 = 同 (entityId, field) 不同 value;更硬的事实不可被更软的来源推翻。
+ */
+export interface Fact {
+  id: string;
+  entityId?: string;   // 事实关于谁/什么(省略表示世界级事实)
+  field: string;       // 维度,如 "location" / "hidden" / "alive"
+  value: string;       // 断言的值
+  hardness: Hardness;
+  sinceDay?: number;   // 该事实确立/最近改写的世界日
+}
+
+/** 压力线状态:潜伏 / 活跃 / 已了结。 */
+export type ThreadStatus = "latent" | "active" | "resolved";
+
+/**
+ * 一条结构化压力线(§4.6 / 架构 §5 压力线)。把"张力"从单一标量升级为可命名、可推进、
+ * 可了结的悬念线。`summary` 为玩家可见的安全措辞;强度供导演排序。Phase 0 仅脚手架:
+ * 字段与 thread delta 就位,三档精度的离场推进在 Phase 1。
+ */
+export interface PressureLine {
+  id: string;
+  summary: string;
+  status: ThreadStatus;
+  intensity: number;             // 0–10
+  relatedCharacterIds?: string[];
+  relatedLocationIds?: string[];
+  updatedDay?: number;           // 最近一次推进的世界日
+  /** 线索类别(如 debt / secret / threat),供导演分类与排序。 */
+  kind?: string;
+  /** 玩家是否已知情(§5.2 公平:不知情的线不得升到强后果)。 */
+  playerKnown?: boolean;
+  /** 下一个该让玩家看到的"征兆"(diegetic 提示,非裸数值)。 */
+  nextSign?: string;
 }
 
 export interface WorldPresentation {
@@ -125,6 +178,24 @@ export interface WorldInstance {
   lastTurnSnapshot?: TurnSnapshot;
   turn?: number; // 已进行的回合数(事件日志归因)
   lastSeenAt?: number; // 玩家上次交互的真实时间戳(Date.now),供离场演化算"离开多久"
+  pinned?: boolean; // 玩家把这扇门收进"我的门廊"(Doorway Library)
+  /** 离场结算记录(§5.6):退场时派生,供门廊展示与回归 echo。 */
+  settlement?: SettlementRecord;
+}
+
+/**
+ * 离场结算(§5.6):玩家离开时对世界状态的一次有界提炼。
+ * - `trace`:已发生且站得住的事(anchored+ 事实 / 玩家造成的改变),玩家安全措辞。
+ * - `unresolved`:仍悬而未决的(活跃压力线摘要)。
+ * - `candidates`:**可能**的开场(回归时的钩子)——注意是候选,**不是**已落库的事实。
+ * - `bond`:某人对玩家态度的变化(回归 echo 不只讲世界,也讲关系)。
+ */
+export interface SettlementRecord {
+  trace: string[];
+  unresolved: string[];
+  candidates: string[];
+  bond?: { who: string; stance: string };
+  atDay: number;
 }
 
 export interface Message {
@@ -138,6 +209,23 @@ export interface Message {
 }
 
 /** 每角色主观记忆（借 Generative Agents 的 ConceptNode）。 */
+/**
+ * 记忆的来源类别(§4.5 / 架构 §5.4 主观记录)。决定可信度与传播规则:
+ * witnessed 一手所见 · heard 转述 · inferred 推断/反思 · remembered 回忆 ·
+ * revealed 被揭示 · canonized 已固化为正典 · authored 作者注入。
+ */
+export type Provenance =
+  | "witnessed"
+  | "heard"
+  | "inferred"
+  | "remembered"
+  | "revealed"
+  | "canonized"
+  | "authored";
+
+/** 感知质量:完整 / 只见局部 / 失真模糊(§5.4 的"只看到一部分""记错了")。 */
+export type PerceptionQuality = "full" | "partial" | "garbled";
+
 export interface Memory {
   id: string;
   charId: string;
@@ -149,7 +237,31 @@ export interface Memory {
   lastAccessed: number;
   /** 反思记忆的来源记忆 id 列表（仅 kind:"reflection" 有值）。 */
   evidence?: string[];
+  // ——— §4.5 主观记录字段(均可选;缺省语义 = witnessed / 满置信 / full) ———
+  /** 来源类别;缺省视为 "witnessed"。 */
+  provenance?: Provenance;
+  /** 主观置信度 0–1;缺省视为 1。低置信在检索中更弱地浮现。 */
+  confidence?: number;
+  /** 叠加在原始事实之上的主观解读(§5.4「误解」)。 */
+  interpretation?: string;
+  /** 感知质量;缺省视为 "full"。 */
+  perceptionQuality?: PerceptionQuality;
+  /** 记录与真相的偏离方式(规则扭曲 / 记错)。 */
+  distortion?: string;
+  /** 该记忆所依据的变更日志条目 id(→ deltaLog),供信念图回溯证据。 */
+  evidenceLinks?: string[];
+  /** 产生该记忆的世界分支 id(供分支/重生成隔离)。 */
+  branchId?: string;
 }
 
-export type TasteEventKind = "enter" | "dwell" | "author" | "skip";
+/**
+ * 本地口味/漏斗事件类别。前四个用于推荐排序;后续 7 个是获取漏斗的各级(§5.9):
+ * card-dwell → open-door → first-action → ten-minute-retain → first-consequence
+ * → return → pin。first-consequence 在玩家造成第一条 anchored 事实时触发。
+ * 全程本地优先,绝不上服务器,绝不抵达角色。
+ */
+export type TasteEventKind =
+  | "enter" | "dwell" | "author" | "skip"
+  | "card-dwell" | "open-door" | "first-action" | "ten-minute-retain"
+  | "first-consequence" | "return" | "pin";
 export interface TasteEvent { id: string; kind: TasteEventKind; seedId: string; tags: string[]; at: number; }

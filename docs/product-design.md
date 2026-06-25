@@ -50,6 +50,34 @@ who have never opened an advanced surface), a sustained drop in ten-minute
 retention or POV-asymmetry-trigger rate (§24) after advanced surfaces ship is the
 falsification signal. Design against that, measure for it.
 
+## 2.5 Two Single-Language Deployments, One Engine
+
+The product is **bilingual-first — Chinese and English are both primary
+audiences** (charter §17), not a base language plus translation. Because different
+communities are drawn to different stories, each language is its **own product
+surface**, shipped as a **separate single-language deployment** — chosen at
+build/deploy time, **not a runtime language toggle.** A user is simply on the
+deployment for their language; there is no in-app locale switch to configure.
+
+**What each deployment owns (diverges per language):**
+
+- **UI** — designed natively per language (typography — CJK serif vs. Latin —
+  line-height, density, copy voice, control affordances), not one layout with
+  swapped strings. The bar is *"feels native,"* judged independently per language.
+- **Story / seed content** — authored natively for that community, never
+  machine-translated. Different communities like different worlds, so the
+  cold-start pool, generated worlds, and door cards differ by deployment.
+- **Language-facing prompt wording** — the prompt text that makes the model read
+  and produce that language. The prompt *structure and logic* are shared; only the
+  wording differs.
+
+**What both deployments share (one kernel):**
+
+The world-running engine — state, the write gate, the perception boundary, the
+turn flow, validation, storage — is one codebase, language-agnostic (charter
+§15.14). The two deployments are the *same engine* speaking different languages to
+different communities, never a forked runtime and never a second source of truth.
+
 ## 3. Product Shape
 
 ### 3.1 Feed (discover)
@@ -565,6 +593,7 @@ the user owns.
 | POV-asymmetry trigger rate | was limited POV actually felt |
 | bond-beat / relationship-return rate | did a *character* give the user a reason to come back (§21) |
 | taste→key-add→first-action conversion | how steep is the keyless→reactive cliff (§4.3) |
+| per-locale ten-minute retention | does each language land natively, judged independently (§2.5) |
 
 The funnel — `card-dwell → open-door → first-action → ten-minute-retain →
 first-consequence → return → pin` — is **local-first instrumentation**; it never
@@ -628,3 +657,7 @@ pre-generation.
 8. God Mode edits the private branch, not the public seed.
 9. Recommendation learns from behavior sequences, not labels.
 10. Default experience is immersion; advanced control is available when desired.
+11. Bilingual-first (zh/en): each language ships as a separate single-language
+    deployment (UI + story content + prompt wording designed natively per
+    language); the world engine is one shared, language-agnostic kernel, never a
+    forked runtime (§2.5, charter §17).

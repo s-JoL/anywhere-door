@@ -46,6 +46,8 @@ export function propagateGossip(
       const known = recentByChar[listener.id] ?? [];
       if (known.some((m) => m.text === text)) continue; // 已经听过,不重复
       const t = nextTime();
+      // 二手转述:provenance=heard,置信度从转述者自己的置信再打折(<一手),感知质量 partial
+      const tellerConfidence = top.confidence ?? 1;
       out.push({
         id: newId("mem"),
         charId: listener.id,
@@ -55,6 +57,9 @@ export function propagateGossip(
         importance: Math.max(1, Math.round(top.importance * 0.6)),
         createdAt: t,
         lastAccessed: t,
+        provenance: "heard",
+        confidence: Math.round(tellerConfidence * 0.6 * 100) / 100,
+        perceptionQuality: "partial",
       });
     }
   }

@@ -24,8 +24,8 @@ describe("computeTasteProfile", () => {
     // old enter weight = 1 * 0.5^(28/14) = 1 * 0.25 = 0.25
     // recent dwell weight = 3 * 0.5^0 = 3
     // dwell alone (3) > enter alone (0.25)
-    const enterWeight = EVENT_WEIGHT.enter * Math.pow(0.5, 28 / HALF_LIFE);
-    const dwellWeight = EVENT_WEIGHT.dwell * Math.pow(0.5, 0 / HALF_LIFE);
+    const enterWeight = (EVENT_WEIGHT.enter ?? 0) * Math.pow(0.5, 28 / HALF_LIFE);
+    const dwellWeight = (EVENT_WEIGHT.dwell ?? 0) * Math.pow(0.5, 0 / HALF_LIFE);
     expect(profile["genre:悬疑"]).toBeCloseTo(enterWeight + dwellWeight);
     expect(dwellWeight).toBeGreaterThan(enterWeight);
   });

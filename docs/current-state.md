@@ -28,32 +28,62 @@ A mobile-first, pure-web app:
   diversity.
 - Persistent instances/history exist in storage; there is **no** Doorway Library
   UI yet.
+- **Bilingual foundation built; zh is the live deployment.** A build-time locale
+  constant (`NEXT_PUBLIC_LOCALE`, `src/lib/i18n/locale.ts`) selects the deployment
+  language; `src/app/layout.tsx` sets `<html lang>` from it. UI strings are
+  extracted into a typed catalog (`src/lib/i18n/messages/{zh,en}.ts` + `t()`), zh
+  as source of truth and en authored natively. `globals.css` now carries a token
+  layer (type scale, spacing, `--accent`) and splits a world-agnostic chrome
+  background (`.app-bg`) from the per-world accent-tinted Play background
+  (`.world-bg`); fonts switch CJK→Latin under `:lang(en)`. Both `zh` and
+  `NEXT_PUBLIC_LOCALE=en` builds pass. **Not yet done:** the en **world/seed
+  content pool** (zh first) and the **language-facing prompt** wording (engine
+  prompts in `src/lib/engine/prompt.ts`, `world/generate.ts` are still Chinese) —
+  both deferred per the "zh first" decision.
 
 ## 3. The turn loop (`src/lib/engine/turn.ts`)
 
-`runTurn` is a single, fairly monolithic orchestrator. One turn:
+`runTurn` is the orchestrator. It runs under a per-instance operation lock
+(`src/lib/engine/lock.ts`, §4.0) so one turn commits at a time; regenerate
+supersedes any in-flight turn (its writes are dropped as stale). All durable world
+mutation routes through the single **WriteGate** (`src/lib/engine/write-gate.ts`,
+§4.1) — the sole caller of `applyDelta` + `appendDeltaLog` — which validates,
+applies in order, logs with attribution, and records rejections. One turn:
 
 1. **Offstage evolution.** On return, `evolveWhileAway`
    (`src/lib/world/offscreen.ts`) triggers only after an absence (`Date.now() -
    lastSeenAt`, ≥ 1h). The LLM proposes calm plausible changes (characters move,
    time passes, object states, relationships fade), committed through the same
-   validate/apply/log path. Reconciliation is **uniform** — no precision tiers.
-2. **Intent.** Each present character decides in parallel whether to speak
-   (speak/pass + eagerness); `selectSpeakers` takes top-N plus an ice-breaker
-   (`src/lib/engine/intent.ts`, `select.ts`).
-3. **Speech.** Selected characters stream speech; the prompt contains only their
-   subjective scene/memory/relationships/lore (`src/lib/engine/prompt.ts`).
+   gate path. Reconciliation is bounded by three precision tiers (§5.5): only
+   `near`/`related` entities may evolve; `far` ones are frozen.
+2. **Casting (§4.3).** `castTurn` (`director.ts`) splits the present cast into
+   `active` (hard cap `maxActiveAgents`, run as agents) and `ambient` (no agent
+   loop) — "a bustling market is not thirty agents."
+3. **Active agents (§4.4).** `runActiveAgents` (`agent-runtime.ts`) runs only the
+   active cast: each decides in parallel whether to speak (speak/pass + eagerness,
+   `intent.ts`/`select.ts`), then selected characters stream speech. Context passes
+   the single perception boundary (§4.2): `resolvePerception` (`perception.ts`) is
+   the sole producer of a witness-scoped `CharacterProjection` (scene, own memory —
+   retrieval lives here now — stance toward present targets, triggered lore), with a
+   standing assertion that no out-of-world field leaks in; `renderProjection`
+   (`prompt.ts`) is the thin prose renderer. Agents emit prose only; they never
+   mutate state.
 4. **Director.** Updates a tension scalar and inserts narration when tension rises
-   sharply (`≥ 1.5`) or is already high (`≥ 7`) and still climbing; at high
-   tension it can introduce an offstage character (`src/lib/engine/director.ts`,
-   `introduce.ts`).
+   sharply (`≥ 1.5`) or is already high (`≥ 7`) and still climbing; surfacing of an
+   offstage character is a Director decision (`decideSurfacing`, §4.3) —
+   world-consistent, never through the player's door (`director.ts`, `introduce.ts`).
 5. **World Reactor.** The LLM reads what happened this turn (prompt carries
    physics + red lines as soft constraints; evidence-first) and proposes
-   `Delta[]`; each is `validateDelta`'d (structural/spatial + red-line keyword
-   screen + no-op discard) → `applyDelta` (immutable) → logged
-   (`src/lib/engine/reactor.ts`, `src/lib/world/delta.ts`).
+   `Delta[]`; the WriteGate `validateDelta`'s each (structural/spatial + red-line
+   keyword screen + no-op discard) → `applyDelta` (immutable) → logs it
+   (`src/lib/engine/reactor.ts`, `write-gate.ts`, `src/lib/world/delta.ts`). The
+   `setRelationship`-reason→memory side effect runs as a post-commit hook.
 6. **Memory.** Each character writes what it witnessed as observations, with
-   periodic reflection (`src/lib/memory/`).
+   periodic reflection (`src/lib/memory/`). Memories carry provenance/confidence
+   (§4.5): observations are `witnessed`/full/confident, hearsay is `heard`/partial
+   and less confident, reflections are `inferred`; `scoreMemories` multiplies by
+   confidence so low-confidence records surface less forcefully. Fields are additive
+   (legacy memories default to witnessed/full).
 
 The model never writes the world directly — it proposes, the engine validates.
 Illegal changes (e.g. moving to a nonexistent room) are dropped.
@@ -81,9 +111,10 @@ reruns the same input — so a regenerate does not leak old-branch state.
   There is **no** `narration` rule and **no** `ruleSkills` field.
 - **`WorldState`** (mutable): `currentLocationId`, `time`, `locations`, `objects`,
   `roster` (incl. the player `you`'s `condition`), `flags`, `tension`,
-  `relationships` (a signed affinity ledger with decaying evidence), `lore`. There
-  is **no** `pressureLines`, `facts`, `beliefs`, `offstage`, or `timeline`
-  structure, and **no** instance-private `characters` map.
+  `relationships` (a signed affinity ledger with decaying evidence), `lore`, and
+  `pressureLines` (§4.6 — structured threads: id/summary/status/intensity, advanced
+  only via thread deltas through the gate). There is **no** `facts`, `beliefs`, or
+  `timeline` structure yet; the three-tier offstage precision is still Phase 1.
 - **Relationships** (`src/lib/world/relationship.ts`):
   `{ affinity, disposition?, evidence[], sinceDay }` — affinity is a signed number
   clamped to [-100, 100], decaying linearly toward 0 over game-days while keeping
@@ -153,23 +184,26 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 
 | Design requirement | Today |
 |---|---|
-| Single write gate as a module | logic exists but is inline in `turn.ts` / `delta.ts`, not an extracted `WriteGate` |
-| Single perception boundary as a module | de-facto in `prompt.ts`; not isolated; no standing isolation assertions |
-| Director casting (active-agent cap, ambient cast) | intent runs for all present characters; surfacing is a hardcoded `tension ≥ 6` grab, not Director casting |
-| Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
-| Thread state (structured pressure lines) | only an implicit `tension` scalar + Director heuristics |
-| Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
-| Observation provenance / confidence / distortion | `Memory` has kind/importance; no provenance/confidence/distortion fields |
-| Three-tier offstage precision | `evolveWhileAway` treats all offstage agents uniformly |
-| Narration as transduction + cheap guard | narration is free prose; no transduction-from-snapshot, no consistency guard |
+| Single write gate as a module | **done** (§4.1) — extracted `WriteGate` (`write-gate.ts`); sole caller of `applyDelta`/`appendDeltaLog`, records rejections |
+| Per-instance operation lock | **done** (§4.0) — `lock.ts`; serializes turns, supersede drops stale writes |
+| Single perception boundary as a module | **done** (§4.2) — `perception.ts` `resolvePerception` is the sole producer; out-of-world standing assertion in place. Power surfaces (Director Notes / Scene Contract / God / cross-world taste) still unbuilt |
+| Director casting (active-agent cap, ambient cast) | **done** (§4.3/§4.4) — `castTurn` caps active agents + splits ambient; `runActiveAgents` runs only the active cast; `decideSurfacing` replaces the heuristic. Salience-driven active selection is Phase 1 |
+| Studio instrumentation / Context Inspector | **scaffolded** (§4.7) — `trace.ts` per-turn `TraceCollector` (commits/rejections/casting/threads) + in-memory inspector channel, threaded through the gate; out-of-world, never persisted, never in a projection. No UI yet |
+| Canon hardness (3 tiers) | **done** (§5.1) — `facts` on `WorldState` with `ambient/anchored/core`; `setFact` delta with gate rules: a harder fact can't be overturned by a softer source, and only `god` may write/revise `core`. Reactor parser wired; reactor prompt to mint facts lands with §5.4/§5.8 |
+| Thread state (structured pressure lines) | **done** (§4.6/§5.2) — `pressureLines` with kind/playerKnown/nextSign; open/advance/resolve deltas (gate-only); fairness rule (no strong consequence while the player knows nothing); `selectActiveThreads` lets the Director pick 1–2. Three-tier offstage precision still pending |
+| Belief graph (fact × observer read view) | **done** (§5.3) — `belief.ts` `beliefOf`/`assembleBeliefGraph`: pure read view over witness-scoped memory yielding knows/believes/suspects/unaware/wrong + evidence links; zero writes. Not yet wired into Director/Inspector/Atlas UI |
+| Observation provenance / confidence / distortion | **done** (§4.5/§5.4) — `Memory` carries the subjective-record fields (additive), stamped by observe/gossip/reflect; confidence folded into retrieval; renderer hedges low-confidence memories and surfaces interpretation so characters act on what they *believe*. Belief graph (§5.3) reads this substrate |
+| Three-tier offstage precision | **done** (§5.5) — `offstage.ts` `classifyPrecision` (near/related/far from scene proximity + thread links); `boundOffstageDeltas` freezes far entities; `evolveWhileAway` is bounded to near/related and lists the evolvable scope in its prompt. This is the shared reconcile core for the Phase 2 god-edit reconcile |
+| Narration as transduction + cheap guard | **partial** (§5.8) — `guard.ts` `consistencyGuard` screens ambient narration for cheap high-value slips (names an offstage entity) and the turn drops a slipping beat (trace-noted). Full prose-from-snapshot transduction + lawful-distortion seed rule still pending |
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |
 | God-edit witness-scoped reconcile | no God/Studio edit path |
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
-| Doorway Library UI + exit settlement + echoes | storage is ready; no library page, no settlement/echo |
-| Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
+| Doorway Library UI + exit settlement + echoes | **done** (§5.6) — `deriveSettlement` stored each turn; `composeReturnEcho` emits a return-open beat on re-entry; the Library card surfaces a one-line settlement hook (candidate / unresolved / bond) as "what pulls you back" |
+| Funnel metrics (return-rate) | **done** (§5.9) — `funnel.ts` `recordFunnel` + pure `computeFunnel`; stages fired from the loop: open-door / first-action / ten-minute-retain (play page), first-consequence (turn, first anchored fact), return / pin (library). `card-dwell` (discovery feed) is the one remaining top-of-funnel hook |
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
-| Object/character on-demand fleshing | only location fleshing is wired |
+| Object/character on-demand fleshing | **done** (§5.7) — `fleshObject`/`fleshCharacter` deltas promote a stub to fleshed; `retireEntity` archives (presence flag, never deletes). Reactor parser wired; LLM flesh-producers for objects/characters still to author |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
+| Bilingual (zh/en) as two single-language deployments | foundation built — `NEXT_PUBLIC_LOCALE` build constant, typed UI catalog + `t()`, en UI authored, `<html lang>` from build, locale-aware fonts, accent-themed chrome; both builds pass. Remaining: en world/seed content pool + language-facing prompt extraction (zh first) |
 
 Every implemented durable change already rides `propose → validate → apply → log`,
 and no second runtime exists — so the gaps above are additive work on the existing

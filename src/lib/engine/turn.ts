@@ -1,23 +1,28 @@
 import type { WorldSeed, WorldState, WorldInstance, ChatMessage, Message, Memory, TurnSnapshot } from "../types";
 import type { Repository } from "../storage";
-import type { Delta, DeltaSource } from "../world/delta";
-import { validateDelta, applyDelta } from "../world/delta";
-import { buildCharacterPrompt, presentCharacters, stripSpeakerPrefix } from "./prompt";
-import { decideIntent } from "./intent";
-import { selectSpeakers, type Candidate } from "./select";
+import type { Delta } from "../world/delta";
+import { commit, type GateCtx, type ProposalSource } from "./write-gate";
+import { instanceLock, type LockToken } from "./lock";
+import { TraceCollector, emitTrace } from "./trace";
+import { consistencyGuard, guardSnapshot } from "./guard";
+import { presentCharacters } from "./prompt";
+import { runActiveAgents } from "./agent-runtime";
 import { DEFAULT_ENGINE_CONFIG } from "./config";
 import { newId } from "../id";
 import { nextTime } from "../clock";
-import { scoreMemories } from "../memory/retrieve";
-import { keywordsOf } from "../memory/keywords";
 import { buildObservations, buildSelfMemory } from "../memory/observe";
 import { propagateGossip } from "../memory/gossip";
 import { shouldReflect, reflect } from "../memory/reflect";
-import { updateTension, maybeDirect } from "./director";
-import { offstageCharacterIds, introduceCharacter, introductionBeat } from "./introduce";
+import { updateTension, maybeDirect, castTurn, decideSurfacing } from "./director";
+import { introduceCharacter, introductionBeat } from "./introduce";
 import { react } from "./reactor";
 import { evolveWhileAway } from "../world/offscreen";
 import { fleshStubLocation } from "../world/flesh";
+import { deriveSettlement, composeReturnEcho } from "../world/settlement";
+import { recordFunnel } from "../taste/funnel";
+
+/** 触发回归 echo 的最短离场时长(§5.6):与离场演化同档,1 小时。 */
+const RETURN_ECHO_MS = 3_600_000;
 
 export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
 
@@ -111,8 +116,24 @@ export async function maybeReflect({ repo, charIds, characterNameById, llm }: Ma
   }
 }
 
-/** 多发言者自由发言回合：用户消息 → 校验并应用 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
-export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm, onEvent }: RunTurnArgs): Promise<void> {
+/**
+ * 多发言者自由发言回合(对外入口)。先取得 per-instance 实例锁(§4.0),保证同一世界一次
+ * 只提交一个回合;真正的回合体在锁内执行,结束/异常都释放锁。
+ */
+export async function runTurn(args: RunTurnArgs): Promise<void> {
+  const lockToken = await instanceLock.acquire(args.instanceId);
+  try {
+    await runTurnBody(args, lockToken);
+  } finally {
+    instanceLock.release(lockToken);
+  }
+}
+
+/** 回合体:用户消息 → WriteGate 提交 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
+async function runTurnBody(
+  { seed, repo, instanceId, input, deltas = [], llm, onEvent }: RunTurnArgs,
+  lockToken: LockToken,
+): Promise<void> {
   let inst = await repo.getInstance(instanceId);
   if (!inst) throw new Error(`实例 ${instanceId} 不存在`);
 
@@ -123,21 +144,36 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
 
   let state = inst.state;
 
-  // 事件日志:本回合号 + 把每条落库 delta 追加到 per-instance 日志(归因 source/cause/世界时间)
+  // 本回合号
   const turn = (inst.turn ?? 0) + 1;
-  const logDelta = (delta: Delta, source: DeltaSource) =>
-    repo.appendDeltaLog({
-      id: newId("dl"), instanceId, turn, source, cause: input,
-      gameDay: state.time.day, gameClock: state.time.clock, at: nextTime(), delta,
-    });
+
+  // Studio 追踪(§4.7):本回合的 out-of-world 诊断流(提交/拒绝/选角/触发的压力线)。
+  // 仅内存、不持久化、绝不进投影(§4.2 断言守护)。
+  const trace = new TraceCollector(instanceId, turn);
+
+  // WriteGate(§4.1):唯一的持久化写入口。每批提议带来源/cause,校验→按序应用→落日志,
+  // 返回新 state 与拒绝记录。这里以当前 state 现场构造 ctx,提交后回写 state。
+  const gateCommit = async (proposals: Delta[], source: ProposalSource) => {
+    const ctx: GateCtx = { state, rules: seed.rules, instanceId, turn, repo, trace };
+    const res = await commit(ctx, proposals.map((delta) => ({ delta, source, cause: input })));
+    state = res.state;
+    return res;
+  };
 
   // 离场演化:玩家回来时,按离开时长懒补这段时间里合理发生的平静变化(交互驱动:离开即冻结)
   const msAway = inst.lastSeenAt ? Math.max(0, Date.now() - inst.lastSeenAt) : 0;
   const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway, llm });
-  for (const d of awayDeltas) {
-    const v = validateDelta(state, seed.rules, d);
-    if (v.ok) { state = applyDelta(state, d); await logDelta(d, "offscreen"); }
-    else console.warn(`[offscreen] 丢弃非法 delta: ${v.reason}`);
+  await gateCommit(awayDeltas, "offscreen");
+
+  // 回归 echo(§5.6):离开够久且有上次的结算记录时,插一条玩家可见的"回归开场"节拍
+  // (消费一个候选钩子 + bond beat)。在快照前追加——它反映的离场变化已落库,不应被回滚。
+  if (msAway >= RETURN_ECHO_MS && inst.settlement) {
+    const echo = composeReturnEcho(inst.settlement, Math.round(msAway / 3_600_000));
+    if (echo) {
+      const echoBeat: Message = { id: newId("n"), instanceId, role: "system", speakerId: null, content: echo, narration: true, createdAt: nextTime() };
+      await repo.appendMessage(echoBeat);
+      onEvent?.({ type: "narration", id: echoBeat.id, content: echo });
+    }
   }
 
   const snapshot = await captureTurnSnapshot(repo, instanceId, input, state);
@@ -146,61 +182,22 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
     const userMsg: Message = { id: newId("m"), instanceId, role: "user", speakerId: null, content: input, createdAt: nextTime() };
     await repo.appendMessage(userMsg);
 
-    for (const d of deltas) {
-      const v = validateDelta(state, seed.rules, d);
-      if (v.ok) { state = applyDelta(state, d); await logDelta(d, "user"); }
-      else console.warn(`[turn] 丢弃非法 delta: ${v.reason}`);
-    }
+    await gateCommit(deltas, "user");
 
     // 用户这句作为观察写给当前在场者（witness 作用域）
     const userName = "你";
     for (const obs of buildObservations(state, { speakerName: userName, text: input })) await repo.appendMemory(obs);
 
     const config = DEFAULT_ENGINE_CONFIG;
-    let budget = config.maxConsecutiveAiTurns;
-    let lastSpeakerId: string | null = null;
-    const speakerIds: string[] = [];
 
-    while (budget > 0) {
-      const present = presentCharacters(seed, state);
-      const candidates = present.filter((c) => c.id !== lastSpeakerId);
-      if (candidates.length === 0) break;
+    // 导演选角(§4.3):谁是本回合的 active agent(跑完整意图→发言→记忆回路),谁是 ambient
+    // 群演(不跑 agent 回路)。硬上限 = config.maxActiveAgents;其余为 ambient。
+    const casting = castTurn({ seed, state, maxActive: config.maxActiveAgents });
+    trace.setCasting(casting);
+    const activeChars = presentCharacters(seed, state).filter((c) => casting.active.includes(c.id));
 
-      // 并行意图判断（各用自身近段观察作上下文）
-      const cands: Candidate[] = await Promise.all(candidates.map(async (c) => {
-        const recent = (await repo.listMemories(c.id)).slice(-8);
-        const intent = await decideIntent({ seed, state, character: c, recent, llm });
-        return { id: c.id, ...intent };
-      }));
-
-      const sel = selectSpeakers(cands, config.maxSpeakersPerRound);
-      if (sel.ids.length === 0) break;
-
-      for (const id of sel.ids) {
-        if (budget <= 0) break;
-        const speaker = present.find((c) => c.id === id);
-        if (!speaker) continue;
-        const own = await repo.listMemories(speaker.id);
-        const memories = scoreMemories(own, keywordsOf(input), { topK: 6 });
-        const recent = own.slice(-8); // witness 作用域：只用该角色自己的观察
-        const msgs = buildCharacterPrompt(seed, state, speaker, { memories, recent });
-
-        const replyId = newId("m");
-        onEvent?.({ type: "speaker-start", id: replyId, speakerId: speaker.id, speakerName: speaker.name });
-        const { content } = await llm(msgs, (d) => onEvent?.({ type: "delta", id: replyId, text: d }));
-        const clean = stripSpeakerPrefix(speaker.name, content);
-        onEvent?.({ type: "speaker-end", id: replyId, content: clean });
-
-        const reply: Message = { id: replyId, instanceId, role: "assistant", speakerId: speaker.id, content: clean, createdAt: nextTime() };
-        await repo.appendMessage(reply);
-        // 该发言作为观察写给当前在场者（含后续发言者，从而看到刚说的话）
-        for (const obs of buildObservations(state, { speakerName: speaker.name, text: clean })) await repo.appendMemory(obs);
-        if (!speakerIds.includes(speaker.id)) speakerIds.push(speaker.id);
-        lastSpeakerId = speaker.id;
-        budget--;
-      }
-      if (sel.forced) break; // 破冰只破一次，随即交回用户
-    }
+    // AgentRuntime(§4.4):active 角色跑 perceive→intent→speak→remember;只产散文,不改世界态。
+    const { speakerIds } = await runActiveAgents({ seed, state, repo, instanceId, input, llm, onEvent, activeChars, config });
 
     // 导演：按本回合最后一句更新张力，必要时插一条世界旁白
     const allMsgs = await repo.listMessages(instanceId);
@@ -211,21 +208,24 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
     state = { ...state, tension: tensionAfter };
     const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
     if (beat) {
-      await repo.appendMessage(beat);
-      onEvent?.({ type: "narration", id: beat.id, content: beat.content });
+      // §5.8 cheap consistency guard:环境旁白若点了一个并不在场的角色名,判定为漏陷并丢弃该旁白。
+      const guard = consistencyGuard(beat.content, guardSnapshot(state));
+      if (guard.ok) {
+        await repo.appendMessage(beat);
+        onEvent?.({ type: "narration", id: beat.id, content: beat.content });
+      } else {
+        trace.note(`旁白漏陷,已丢弃:点到不在场的 ${guard.slips.join("、")}`);
+      }
     }
 
-    // 张力攒高且有幕后角色时，God 拉一个入场制造转折（每回合至多一次）
-    if (tensionAfter >= 6) {
-      const off = offstageCharacterIds(seed, state);
-      if (off.length > 0) {
-        const enterId = off[0];
-        const enterName = state.roster[enterId]?.name ?? seed.characters.find((c) => c.id === enterId)?.name ?? "某人";
-        state = introduceCharacter(state, enterId, state.currentLocationId);
-        const introBeat = introductionBeat(instanceId, enterName);
-        await repo.appendMessage(introBeat);
-        onEvent?.({ type: "narration", id: introBeat.id, content: introBeat.content });
-      }
+    // 导演决定是否让幕后角色登场制造转折(§4.3:whether/whom/how,世界一致,绝不经玩家之门)
+    const surfacing = decideSurfacing(seed, state, tensionAfter);
+    if (surfacing) {
+      const enterName = state.roster[surfacing.who]?.name ?? seed.characters.find((c) => c.id === surfacing.who)?.name ?? "某人";
+      state = introduceCharacter(state, surfacing.who, state.currentLocationId);
+      const introBeat = introductionBeat(instanceId, enterName);
+      await repo.appendMessage(introBeat);
+      onEvent?.({ type: "narration", id: introBeat.id, content: introBeat.content });
     }
 
     // 世界反应器：LLM 提议结构化 delta，逐条验证后应用，持久化到 state
@@ -240,25 +240,28 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
     const nameById: Record<string, string> = {};
     for (const [id, obj] of Object.entries(state.roster)) nameById[id] = obj.name;
     const reactorDeltas = await react({ state, recentLines, nameById, llm, rules: seed.rules });
-    for (const d of reactorDeltas) {
-      const v = validateDelta(state, seed.rules, d);
-      if (!v.ok) { console.warn(`[reactor] 丢弃非法 delta: ${v.reason}`); continue; }
-      state = applyDelta(state, d);
-      await logDelta(d, "reactor");
-      // evidence→记忆:关系调整的"凭什么"也成为当事人(fromId)的一条主观观察,进入检索与反思
+    const reactorRes = await gateCommit(reactorDeltas, "reactor");
+    // 后置钩子(在 gate 之外,因为它写记忆而非世界态):evidence→记忆——关系调整的"凭什么"
+    // 也成为当事人(fromId)的一条主观观察,进入检索与反思。仅对**已落库**的 delta 触发。
+    for (const d of reactorRes.committed) {
       if (d.kind === "setRelationship" && d.reason?.trim()) {
         await repo.appendMemory(buildSelfMemory(d.fromId, `（我记下）${d.reason.trim()}`, 6));
       }
+    }
+
+    // §5.9 漏斗:玩家造成的**第一条 anchored 事实** = first-consequence。每实例只触发一次。
+    const anchoredNow = reactorRes.committed.some((d) => d.kind === "setFact" && (d.hardness ?? "ambient") !== "ambient");
+    if (anchoredNow) {
+      const log = await repo.listDeltaLog(instanceId);
+      const priorAnchored = log.some((e) => e.turn < turn && e.delta.kind === "setFact" && ((e.delta as { hardness?: string }).hardness ?? "ambient") !== "ambient");
+      if (!priorAnchored) recordFunnel(repo, "first-consequence", seed);
     }
 
     // stub→fleshed:玩家踏入的当前地点若仍是 stub,世界当场把它充实为 fleshed
     const here = state.locations[state.currentLocationId];
     if (here?.detail === "stub") {
       const fd = await fleshStubLocation(seed, here, llm);
-      if (fd) {
-        const v = validateDelta(state, seed.rules, fd);
-        if (v.ok) { state = applyDelta(state, fd); await logDelta(fd, "flesh"); }
-      }
+      if (fd) await gateCommit([fd], "flesh");
     }
 
     // 传话:同场 NPC 把最显著的近期一手观察口耳相传 → 在场他人获得二手 hearsay 记忆
@@ -274,7 +277,16 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       }
     }
 
-    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now() });
+    // 实例锁(§4.0):若本回合在执行期间被 regenerate/fork/god-edit 取代,丢弃其写入——
+    // 回滚到回合起点快照,不持久化。串行(单标签页)场景下永不命中。
+    if (instanceLock.isStale(lockToken)) {
+      await restoreTurnSnapshot(repo, instanceId, inst, snapshot, inst.lastTurnSnapshot);
+      emitTrace(trace.finish("stale-dropped"));
+      return;
+    }
+
+    // §5.6 退场结算:每回合末派生并存储,确保玩家随时离开都有最新的结算记录可供回归 echo。
+    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now(), settlement: deriveSettlement(state) });
 
     // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
     await maybeReflect({
@@ -283,8 +295,11 @@ export async function runTurn({ seed, repo, instanceId, input, deltas = [], llm,
       characterNameById: (id) => state.roster[id]?.name ?? seed.characters.find((c) => c.id === id)?.name ?? id,
       llm,
     });
+
+    emitTrace(trace.finish("completed"));
   } catch (e) {
     await restoreTurnSnapshot(repo, instanceId, inst, snapshot, inst.lastTurnSnapshot);
+    emitTrace(trace.finish("rolled-back"));
     throw e;
   }
 }
@@ -298,6 +313,9 @@ export interface RegenerateLastTurnArgs {
 }
 
 export async function regenerateLastTurn({ seed, repo, instanceId, llm, onEvent }: RegenerateLastTurnArgs): Promise<void> {
+  // 取代该实例上仍在执行的回合(§4.0):其写入将被判定为 stale 而丢弃。
+  instanceLock.supersede(instanceId);
+
   const inst = await repo.getInstance(instanceId);
   if (!inst) throw new Error(`实例 ${instanceId} 不存在`);
   const snapshot = inst.lastTurnSnapshot;

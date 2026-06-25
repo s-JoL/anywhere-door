@@ -270,6 +270,34 @@ sample, and the *real* "changes because of me" loop is exactly what the key
 unlocks). The cold-start pool is the keyless on-ramp; live creation and reactive
 play are the BYO-key engine.
 
+### 2.7 Two languages, one kernel (why zh/en are forced; why nothing duplicates)
+
+The medium is text (1.5), so the medium *is a language* — there is no
+language-neutral way to deliver reactivity depth to a human. The value only lands
+if the prose, the voices, the shell, and *the kind of world on offer* feel native
+to the reader. Two facts force the shape:
+
+1. **Audience and taste.** The two largest pools of readers a small team can serve
+   *natively* are Chinese and English — and different communities are drawn to
+   different stories, so the offering itself (not just the wording) must differ per
+   language. The product is bilingual-first, not English-with-translation.
+2. **The kernel is language-agnostic (1.4).** The hub is a state machine keyed on
+   stable identifiers; truth, the change log, identity, validation, and the
+   perception boundary never depend on a display string. The *run logic* is the
+   same in any language.
+
+These compose into the deployment model: **zh and en ship as two separate
+single-language deployments of one shared kernel.** Each deployment diverges only
+at the surface — its UI (designed natively, not string-swapped), its story/seed
+content (authored natively for that community, not translated), and its
+language-facing prompt wording (prompt *logic* shared, wording per language).
+Everything below — the world model and run logic — is one engine, unduplicated.
+Splitting per deployment buys native feel and per-community taste at the cost of
+*surface and content* work only; it never forks the world, because the axiom's
+single source of truth sits below language entirely. This is the same
+render-vs-truth split as narration (1.4 outward) applied to the whole product
+surface.
+
 ## Part 3 — The architecture, as a corollary of the product
 
 ### 3.1 The world's engineering definition

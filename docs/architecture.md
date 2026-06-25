@@ -242,6 +242,29 @@ cases the product requires — a character sees only part, misunderstands,
 misremembers, or perceives a rule-warped version — are all expressed through these
 fields, not a separate unreliable-narrator code path.
 
+### 5.5 Locale and language (deployment-level, render-layer only)
+
+Language is **not** part of the hub. The world model — identity, state fields,
+change vocabulary, the log, validation — is keyed on **stable identifiers**, never
+on display strings, so the run logic is identical in any language (charter
+§15.14). zh and en ship as **separate single-language deployments** of this one
+kernel, the locale fixed at build/deploy time (a deploy constant, not a per-user
+runtime field). Locale enters only at surfaces:
+
+- **UI** — the deployment's shell, rendered in its language.
+- **Story / seed content** — each deployment carries its own community's content
+  pool; a world is authored natively in the deployment's language, not translated.
+- **Language-facing prompts** — narration/transduction (§8), generation, and
+  character prompts select per-language wording; prompt *logic* is shared.
+
+Consequences for the rest of the architecture: the **PerceptionResolver** and
+**WriteGate** are locale-blind (they move identifiers and structured facts); only
+the language-facing prompt builders and the **shell** consult locale. Entity
+*display names* are per-language labels attached to a stable id, never the id
+itself. Because the two deployments share the kernel but never share a runtime
+instance (storage is per-origin), there is no cross-locale state and no
+per-language fork of truth.
+
 ## 6. Perception Production
 
 The landing point of "the hub tells each one what they perceive":
@@ -547,3 +570,7 @@ candidates are never written to state.
 11. Authored edits reconcile by witness scope and supersede, never delete.
 12. Taste shapes new doors, never in-world character knowledge.
 13. Record = snapshot + append-only log; history is never deleted.
+14. Language is render-layer only and deployment-level: the kernel is keyed on
+    stable identifiers and identical across languages; zh and en ship as separate
+    single-language deployments (UI + content + prompt wording per language); no
+    per-language runtime fork, no cross-locale state (§5.5).

@@ -356,6 +356,12 @@ on per-turn-budget grounds (§16), not architecture.
 13. **Unrestricted adult fiction by default.** Red lines are platform baseline
     plus user/creator/scene constraints; boundary control belongs in product
     surfaces, never in hidden prompt accidents.
+14. **Language-agnostic kernel.** The world-running logic — the hub, change log,
+    entity identity, validation, perception, and turn flow — is identical across
+    languages and keyed on stable identifiers, never display strings. Per-language
+    difference is confined to UI, story/seed content, and language-facing prompt
+    wording (§17). zh and en ship as separate deployments of this one kernel; there
+    is no per-language fork of the run logic and no second source of truth.
 
 ## 16. Scope
 
@@ -376,7 +382,39 @@ cannot), large-scale numeric simulation (per-turn budget, not architecture), and
 real-human multiplayer / social deduction (single-player private instances).
 These are deliberate scope choices, not accidental gaps.
 
-## 17. Agent Working Rules
+## 17. Language and Localization
+
+Anywhere Door is **bilingual-first: Chinese and English are both primary
+audiences**, not a base language with translation bolted on. The medium is text,
+so the medium *is* a language; the product must feel native in each — and because
+different communities are drawn to different stories, **each language is its own
+product surface, not a skin over a shared one.**
+
+**Two single-language deployments, one kernel.** zh and en ship as **separate
+deployments**, selected at build/deploy time — **not a runtime language switch.**
+Each deployment is single-language end to end: its own UI, its own community's
+story pool, its own language-facing prompts. The user is simply on the deployment
+for their language; there is no in-app locale toggle.
+
+**What is shared vs. what diverges:**
+
+- **Shared (one kernel):** the world-running logic — the hub / state machine, the
+  write gate, the perception boundary, the turn flow, validation, storage. This is
+  *language-agnostic* (§15.14): identical code, identical run logic, keyed on
+  stable identifiers, never display strings.
+- **Diverges per language:** the **UI** (designed natively — typography, density,
+  voice — not a string-swapped clone), the **story / seed content** (authored
+  natively for each community, not machine-translated — different communities like
+  different worlds), and the **language-facing prompt wording** (the text that makes
+  the model read and produce that language). Prompt *structure and logic* stay
+  shared; only the wording differs.
+
+**Why this is safe for the axiom.** Because the run logic is language-agnostic
+(§15.14), splitting into two deployments duplicates *surface and content*, never
+the world model — two deployments of one engine, each speaking one language to one
+community. No second source of truth, no forked runtime.
+
+## 18. Agent Working Rules
 
 - Read this charter before any product or architecture decision.
 - Treat docs 1–4 (§ authority order) as the design; treat `current-state.md` as

@@ -2,19 +2,61 @@
 
 :root {
   color-scheme: dark;
-  /* 雨夜·無燈酒馆 —— 暗湿沥青 + 一盏暖灯 + 透雨霓虹 */
+
+  /* ── surface palette (world-agnostic chrome) ── */
   --ink: #0b0e14;
   --ink-2: #10151f;
   --glass: rgba(18, 24, 36, 0.55);
   --line: rgba(201, 210, 224, 0.1);
+  --mist: #dbe1ec;
+  --smoke: #7c8699;
+
+  /* ── accent roles (per-world; default = warm lamp) ── */
   --lamp: #f0c36b;
   --lamp-soft: rgba(240, 195, 107, 0.16);
   --rose: #ff3d7f;
   --teal: #38e1c8;
-  --mist: #dbe1ec;
-  --smoke: #7c8699;
-  --serif: "Songti SC", "Noto Serif SC", "STSong", "STZhongsong", ui-serif, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  /* The active accent. Chrome uses lamp; a world Play screen overrides
+     --accent inline (style={{ "--accent": seedAccent }}) so each world wears
+     its own mood without baking one world's skin into the global chrome. */
+  --accent: var(--lamp);
+  --accent-soft: var(--lamp-soft);
+
+  /* ── typography: locale-aware families (build-time, driven by <html lang>) ── */
+  --font-cjk-serif: "Songti SC", "Noto Serif SC", "STSong", "STZhongsong", ui-serif, serif;
+  --font-cjk-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  --font-latin-serif: "Iowan Old Style", "Palatino Linotype", "Source Serif 4", Georgia, ui-serif, serif;
+  --font-latin-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
+  --serif: var(--font-cjk-serif);
+  --sans: var(--font-cjk-sans);
+  --prose-leading: 1.85; /* CJK reads well a touch tighter than Latin */
+
+  /* ── type scale ── */
+  --fs-eyebrow: 10.5px;
+  --fs-meta: 11.5px;
+  --fs-label: 12.5px;
+  --fs-body: 15px;
+  --fs-prose: 15.5px;
+  --fs-title: 1rem;
+  --fs-hook: 1.35rem;
+  --fs-hero: 2.4rem;
+
+  /* ── spacing / radius scale ── */
+  --gap-1: 0.5rem;
+  --gap-2: 0.75rem;
+  --gap-3: 1rem;
+  --gap-4: 1.5rem;
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 24px;
+}
+
+/* English deployment: swap to Latin families + looser prose leading. The
+   <html lang> attribute is set from LOCALE (src/lib/i18n/locale.ts). */
+:root:lang(en) {
+  --serif: var(--font-latin-serif);
+  --sans: var(--font-latin-sans);
+  --prose-leading: 1.7;
 }
 
 * { box-sizing: border-box; }
@@ -27,44 +69,51 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 沉浸世界背景：灯光从顶部漫下，霓虹在两侧渗，底部潮湿压暗 */
+/* ── world-agnostic chrome background (feed / library / settings / create) ──
+   Neutral dark wash + a soft accent glow from the top. No world-specific
+   texture: the chrome is the browser, not any one world's skin. */
+.app-bg::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% -10%, var(--accent-soft), transparent 60%),
+    linear-gradient(180deg, #0c1019 0%, var(--ink) 46%, #07090e 100%);
+}
+
+/* ── immersive world background (Play) ──
+   Accent-tinted glow so each world wears its own mood; a faint rain-like
+   texture keeps the lean-in atmosphere. Override --accent per world. */
 .world-bg::before {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(125% 65% at 50% -12%, var(--lamp-soft), transparent 58%),
-    radial-gradient(75% 50% at 112% 4%, rgba(255, 61, 127, 0.1), transparent 55%),
-    radial-gradient(70% 50% at -12% 22%, rgba(56, 225, 200, 0.07), transparent 55%),
+    radial-gradient(125% 65% at 50% -12%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 58%),
+    radial-gradient(70% 50% at 112% 4%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
     linear-gradient(180deg, #0c1019 0%, var(--ink) 42%, #07090e 100%);
 }
-/* 极淡斜向雨丝纹理 */
 .world-bg::after {
-  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04;
   background-image: repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.55) 0 1px, transparent 1px 8px);
 }
 
-/* 顶部世界状态条 */
-.eyebrow { font-size: 10.5px; letter-spacing: 0.34em; color: var(--smoke); text-transform: uppercase; }
+/* ── primitives ── */
+.eyebrow { font-size: var(--fs-eyebrow); letter-spacing: 0.34em; color: var(--smoke); text-transform: uppercase; }
 .presence-dot {
-  width: 6px; height: 6px; border-radius: 99px; background: var(--lamp);
-  box-shadow: 0 0 9px var(--lamp);
+  width: 6px; height: 6px; border-radius: 99px; background: var(--accent);
+  box-shadow: 0 0 9px var(--accent);
 }
-
-/* 角色名标 */
-.tag { font-size: 11px; letter-spacing: 0.14em; color: var(--lamp); }
-/* 动作（）压暗成斜体 */
+.tag { font-size: 11px; letter-spacing: 0.14em; color: var(--accent); }
 .act { color: var(--smoke); font-style: italic; }
 
-/* God 旁白过场字幕（签名元素） */
+/* God narration interlude (signature element) */
 .narr {
-  font-family: var(--serif); color: #d3bd8e; font-size: 15px; line-height: 1.95;
+  font-family: var(--serif); color: #d3bd8e; font-size: var(--fs-prose); line-height: 1.95;
   letter-spacing: 0.03em; text-align: center;
 }
 .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
 
-/* 玩家自己的话：左侧霓虹细线 */
+/* player's own line */
 .you-line { border-left: 2px solid var(--rose); box-shadow: -8px 0 24px -16px var(--rose); }
 
-.caret::after { content: "▌"; color: var(--lamp); margin-left: 1px; animation: blink 1.05s steps(2) infinite; }
+.caret::after { content: "▌"; color: var(--accent); margin-left: 1px; animation: blink 1.05s steps(2) infinite; }
 
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
@@ -72,46 +121,32 @@ body {
 @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @keyframes breathe { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.85; } }
 
-/* Door-opening transition: two panels part from the center revealing warm lamp light */
-@keyframes door-left {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
-}
-@keyframes door-right {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(100%); }
-}
-@keyframes door-light {
-  0%   { opacity: 0; }
-  30%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-/* Settle animation for arriving in a world */
-@keyframes door-arrive {
-  from { opacity: 0; transform: scale(0.985); }
-  to   { opacity: 1; transform: none; }
-}
+/* Door-opening transition */
+@keyframes door-left  { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+@keyframes door-right { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+@keyframes door-light { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes door-arrive { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
 
 .rise { animation: rise 0.5s ease both; }
 .pulse { animation: pulse 2.6s ease-in-out infinite; }
 .breathe { animation: breathe 1.7s ease-in-out infinite; }
 .sweep {
-  background: linear-gradient(90deg, transparent 38%, rgba(240, 195, 107, 0.16) 50%, transparent 62%);
+  background: linear-gradient(90deg, transparent 38%, var(--accent-soft) 50%, transparent 62%);
   background-size: 220% 100%; animation: sweep 1.7s ease both;
 }
 .door-arrive { animation: door-arrive 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 
-/* 沉浸输入 */
+/* ── form field ── */
 .field {
   background: var(--glass); border: 1px solid var(--line); color: var(--mist);
-  border-radius: 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--radius); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
 .field::placeholder { color: var(--smoke); }
 .field:focus {
-  outline: none; border-color: rgba(240, 195, 107, 0.42);
-  box-shadow: 0 0 0 1px rgba(240, 195, 107, 0.22), 0 0 28px rgba(240, 195, 107, 0.08);
+  outline: none; border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.send-glow { box-shadow: 0 0 22px -4px var(--lamp); }
+.send-glow { box-shadow: 0 0 22px -4px var(--accent); }
 .glass-bar { background: rgba(8, 11, 17, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 
 @media (prefers-reduced-motion: reduce) {
