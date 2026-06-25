@@ -242,6 +242,32 @@ cases the product requires — a character sees only part, misunderstands,
 misremembers, or perceives a rule-warped version — are all expressed through these
 fields, not a separate unreliable-narrator code path.
 
+### 5.5 Locale and language (a render-layer concern)
+
+Language is **not** part of the hub. The world model — identity, state fields,
+change vocabulary, the log, validation — is keyed on **stable identifiers**, never
+on display strings, so the same instance is coherent regardless of language
+(charter §15.14). Locale enters at exactly two render/interaction surfaces and
+nowhere else:
+
+- **Story locale** is a field of the world contract (alongside the narration rule,
+  §5.1): it sets the language the world is authored and transduced in — the prose,
+  character voice, cold-open, and lore are produced in it. It is fixed per world,
+  not per turn, and travels with the seed; an instance does not fork by language.
+- **Interface locale** is a **client/user-layer preference**, outside the world
+  instance — like the Taste Chronicle and Door Passport (§5.1), it lives in the
+  user/taste layer, never in WorldState, so it structurally cannot reach a
+  character through the perception boundary. The shell, controls, and
+  player-safe projections (echoes, suggested actions) render in it.
+
+Consequences for the rest of the architecture: the **PerceptionResolver** and
+**WriteGate** are locale-blind (they move identifiers and structured facts); only
+the **narration/transduction** step (§8) and the **shell** consult locale.
+Entity *display names* are per-locale labels attached to a stable id, never the
+id itself — so cross-locale play and any future re-skin never rewrite truth. The
+feed/taste layer may filter doors by the user's readable story locales; this is a
+ranking input, not a world fact.
+
 ## 6. Perception Production
 
 The landing point of "the hub tells each one what they perceive":
@@ -547,3 +573,6 @@ candidates are never written to state.
 11. Authored edits reconcile by witness scope and supersede, never delete.
 12. Taste shapes new doors, never in-world character knowledge.
 13. Record = snapshot + append-only log; history is never deleted.
+14. Language is render-layer only: the kernel is keyed on stable identifiers; story
+    locale is a world-contract field, interface locale is a user-layer preference;
+    neither forks truth and neither crosses the perception boundary (§5.5).

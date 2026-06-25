@@ -356,6 +356,11 @@ on per-turn-budget grounds (§16), not architecture.
 13. **Unrestricted adult fiction by default.** Red lines are platform baseline
     plus user/creator/scene constraints; boundary control belongs in product
     surfaces, never in hidden prompt accidents.
+14. **Language-agnostic kernel.** The hub, change log, entity identity, and
+    validation are keyed on stable identifiers, never display strings. Locale —
+    both the **story locale** and the **interface locale**, independently chosen
+    (§17) — lives only in the render / interaction layer. There is no per-language
+    fork of truth and no second world per language.
 
 ## 16. Scope
 
@@ -376,7 +381,41 @@ cannot), large-scale numeric simulation (per-turn budget, not architecture), and
 real-human multiplayer / social deduction (single-player private instances).
 These are deliberate scope choices, not accidental gaps.
 
-## 17. Agent Working Rules
+## 17. Language and Localization
+
+Anywhere Door is **bilingual-first: Chinese and English are both primary
+audiences**, not a base language with translation bolted on. The medium is text,
+so the medium *is* a language; the product must feel native in each.
+
+**Two independent locales.** Language splits into two axes that the user sets
+separately:
+
+- **Story locale** — the language a world is *authored and played* in: its prose,
+  character voices, lore, narration rule, cold-open. It is a property of the world.
+- **Interface locale** — the language of the product shell the user reads around
+  the world: feed chrome, controls, the Doorway Library, settings. It is a
+  property of the user.
+
+These are chosen independently. A reader with an English interface may open a
+Chinese-authored world (and the reverse); the shell is in their language while the
+world speaks its own. The interface locale never silently rewrites a world's story
+locale.
+
+**Designed per locale, not translated.** Story and UI are **separately designed**
+for each language, while the **kernel is shared, single, and unduplicated**
+(§15.14). A world's story is authored natively in its locale — tone, idiom,
+cultural texture — not machine-translated from a master language; the UI is
+designed natively per locale — typography, density, voice — not a string-swapped
+clone. The quality bar is *"feels native in each,"* judged independently per
+language, never *"correctly translated."*
+
+**Why this is safe for the axiom.** Because the kernel is language-agnostic
+(§15.14), language is purely a render / interaction concern: the same hub, the same
+write gate, the same perception boundary serve every locale. Separating *design*
+per language therefore costs no second source of truth — it duplicates surface,
+never world.
+
+## 18. Agent Working Rules
 
 - Read this charter before any product or architecture decision.
 - Treat docs 1–4 (§ authority order) as the design; treat `current-state.md` as

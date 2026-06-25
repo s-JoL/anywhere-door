@@ -270,6 +270,34 @@ sample, and the *real* "changes because of me" loop is exactly what the key
 unlocks). The cold-start pool is the keyless on-ramp; live creation and reactive
 play are the BYO-key engine.
 
+### 2.7 Two languages, one kernel (why zh/en are forced; why nothing duplicates)
+
+The medium is text (1.5), so the medium *is a language* — there is no
+language-neutral way to deliver reactivity depth to a human. The value only lands
+if the prose, the voices, and the shell feel native to the reader. Two facts then
+force the shape:
+
+1. **Audience.** The two largest pools of readers who can be served *natively*
+   (authored, not translated) by a small team are Chinese and English. So the
+   product is bilingual-first, not English-with-translation.
+2. **The kernel is language-agnostic (1.4).** The hub is a state machine keyed on
+   stable identifiers; truth, the change log, identity, validation, and the
+   perception boundary never depend on a display string. Language lives entirely
+   in the two render/interaction surfaces: how the world *tells its truth*
+   (narration + character voice) and how the *shell* speaks to the user.
+
+These compose into the locale model: **language splits into a *story locale*
+(a property of the world — how it is authored and played) and an *interface
+locale* (a property of the user — the shell around the world), chosen
+independently.** Because language is render-layer only, the two surfaces are
+**designed separately per language** — native authoring, native UI, judged as
+*"feels native,"* not *"correctly translated"* — while the **engine underneath is
+one, shared, and unduplicated.** Separating design per language buys cultural
+fidelity at the cost of *surface* work only; it never forks the world, because the
+axiom's single source of truth sits below language entirely. This is the same
+render-vs-truth split as narration (1.4 outward) applied to the choice of human
+language.
+
 ## Part 3 — The architecture, as a corollary of the product
 
 ### 3.1 The world's engineering definition

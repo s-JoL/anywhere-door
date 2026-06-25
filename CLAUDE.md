@@ -17,8 +17,12 @@ Docs 5–6 are where the current codebase and the migration path live.
 4. `docs/architecture.md` — the ideal world-runtime: topology, modules, turn
    flow, data-model direction, the living-world mechanics, entity genesis.
 5. `docs/current-state.md` — **non-authoritative** snapshot of what the code does
-   today. The only doc that names code symbols/paths.
+   today. Names code symbols/paths (as do the working docs below).
 6. `docs/roadmap.md` — the migration path from (5) to (3)/(4).
+
+Non-authoritative working docs (for review/planning, not design authority; may
+name code like doc 5): `docs/ui-redesign-proposal.md` — the bilingual-surface +
+UI optimization plan.
 
 Older `.superpowers/` reports are historical evidence, never authority.
 
