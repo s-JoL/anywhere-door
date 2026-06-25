@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getRepository } from "@/lib/storage";
 import { derivePresentation } from "@/lib/world/presentation";
+import { recordFunnel } from "@/lib/taste/funnel";
 import { useDoorEnter } from "@/app/DoorTransition";
 import { t } from "@/lib/i18n";
 import type { WorldInstance, WorldSeed } from "@/lib/types";
@@ -13,7 +14,15 @@ type Row = {
   title: string;
   accent: string;
   location: string;
+  hook: string;
 };
+
+/** A one-line "what's pulling you back" from the exit settlement (§5.6). */
+function settlementHook(instance: WorldInstance): string {
+  const s = instance.settlement;
+  if (!s) return "";
+  return s.candidates[0] || s.unresolved[0] || (s.bond ? `${s.bond.who}：${s.bond.stance}` : "");
+}
 
 function relTime(ts: number | undefined): string {
   if (!ts) return "";
@@ -26,9 +35,8 @@ function relTime(ts: number | undefined): string {
   return t("library.daysAgo", { n: Math.floor(h / 24) });
 }
 
-function DoorRow({ row, onPin, onEnter }: { row: Row; onPin: (r: Row) => void; onEnter: (seedId: string) => void }) {
-  const { instance, seed, title, accent, location } = row;
-  const seedId = seed?.id ?? instance.seedId;
+function DoorRow({ row, onPin, onEnter }: { row: Row; onPin: (r: Row) => void; onEnter: (r: Row) => void }) {
+  const { instance, title, accent, location } = row;
   const when = relTime(instance.lastSeenAt ?? instance.updatedAt);
   return (
     <div
@@ -36,7 +44,7 @@ function DoorRow({ row, onPin, onEnter }: { row: Row; onPin: (r: Row) => void; o
       style={{ ["--accent" as string]: accent, borderLeft: `2px solid ${accent}` }}
     >
       <button
-        onClick={() => onEnter(seedId)}
+        onClick={() => onEnter(row)}
         className="flex flex-1 flex-col items-start gap-1 text-left transition active:scale-[0.99]"
         aria-label={t("library.resume")}
       >
@@ -48,6 +56,11 @@ function DoorRow({ row, onPin, onEnter }: { row: Row; onPin: (r: Row) => void; o
           {location}
           {when && <span>· {t("library.lastSeen", { when })}</span>}
         </span>
+        {row.hook && (
+          <span className="mt-0.5 line-clamp-1 text-[11.5px] italic text-[var(--smoke)]/80" style={{ fontFamily: "var(--serif)" }}>
+            ↩ {row.hook}
+          </span>
+        )}
       </button>
       <button
         onClick={() => onPin(row)}
@@ -83,6 +96,7 @@ export default function LibraryPage() {
         title: seed?.title ?? t("library.locationUnknown"),
         accent: pres?.accent ?? "var(--lamp)",
         location,
+        hook: settlementHook(instance),
       };
     });
     setRows(built);
@@ -95,12 +109,16 @@ export default function LibraryPage() {
 
   async function onPin(r: Row) {
     const repo = getRepository();
-    await repo.upsertInstance({ ...r.instance, pinned: !r.instance.pinned });
+    const nextPinned = !r.instance.pinned;
+    await repo.upsertInstance({ ...r.instance, pinned: nextPinned });
+    if (nextPinned && r.seed) recordFunnel(repo, "pin", r.seed); // §5.9 funnel: pin
     await refresh();
   }
 
-  function onEnter(seedId: string) {
-    enter(`/play?world=${seedId}`);
+  function onEnter(r: Row) {
+    // §5.9 funnel: reopening an already-opened world is a return.
+    if (r.seed) recordFunnel(getRepository(), "return", r.seed);
+    enter(`/play?world=${r.seed?.id ?? r.instance.seedId}`);
   }
 
   const pinned = rows.filter((r) => r.instance.pinned);

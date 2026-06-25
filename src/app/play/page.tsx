@@ -8,6 +8,7 @@ import { streamChat } from "@/lib/llm/stream";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { derivePresentation } from "@/lib/world/presentation";
 import { recordDwell } from "@/lib/taste/record";
+import { recordFunnel } from "@/lib/taste/funnel";
 import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
@@ -56,6 +57,8 @@ function PlayInner() {
   const streamingId = useRef<string | null>(null);
   const turnCountRef = useRef(0);
   const dwellFiredRef = useRef(false);
+  const openDoorFiredRef = useRef(false);
+  const firstActionFiredRef = useRef(false);
 
   const nameOf = useCallback(
     (id: string | null | undefined) =>
@@ -85,6 +88,7 @@ function PlayInner() {
       const repo = getRepository();
       const loaded = (await repo.getSeed(worldId)) ?? DEMO_SEED;
       setSeed(loaded);
+      if (!openDoorFiredRef.current) { openDoorFiredRef.current = true; recordFunnel(repo, "open-door", loaded); } // §5.9 funnel
       const resolve = (id: string | null | undefined) =>
         loaded.characters.find((c) => c.id === id)?.name ?? t("play.someone");
       const iid = await ensureInstanceForSeed(worldId);
@@ -92,6 +96,13 @@ function PlayInner() {
       await reload(iid, resolve);
     })();
   }, [worldId, reload]);
+
+  // §5.9 funnel: still here after ten minutes → a retention signal.
+  useEffect(() => {
+    if (!seed) return;
+    const id = setTimeout(() => recordFunnel(getRepository(), "ten-minute-retain", seed), 10 * 60 * 1000);
+    return () => clearTimeout(id);
+  }, [seed]);
 
   // 贴近底部时才自动吸底，避免打断上翻；流式逐字用 auto 防抖
   useEffect(() => {
@@ -122,6 +133,7 @@ function PlayInner() {
     setBusy(true);
     setErr("");
     setNeedsKey(false);
+    if (!firstActionFiredRef.current) { firstActionFiredRef.current = true; recordFunnel(getRepository(), "first-action", seed); } // §5.9 funnel
     setItems((xs) => [...xs, { id: `u-${Date.now()}`, kind: "user", content: text }]);
     try {
       const cfg = resolveModelConfig(seed, getUserConfig());
