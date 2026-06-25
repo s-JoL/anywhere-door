@@ -2,6 +2,7 @@ import type { Delta } from "@/lib/world/delta";
 import type { WorldState, WorldRules, WorldSeed, ChatMessage } from "@/lib/types";
 import type { LlmFn } from "@/lib/engine/turn";
 import { parseDeltas } from "@/lib/engine/reactor";
+import { classifyPrecision, boundOffstageDeltas } from "@/lib/world/offstage";
 
 /**
  * 离场演化(轴5)。
@@ -36,12 +37,18 @@ export function buildOffscreenPrompt(seed: WorldSeed, state: WorldState, hoursAw
   // 离场演化读取活跃压力线(§4.6):让"这段时间里合理发生的事"沿已有悬念线推进,而非凭空。
   const active = (state.pressureLines ?? []).filter((p) => p.status !== "resolved");
   const threads = active.map((p) => `  ${p.id}（强度${p.intensity}）: ${p.summary}`).join("\n");
+  // 三档精度(§5.5):只有 near/related 的角色可被演化,far 冻结。把可演化范围告知模型。
+  const evolvable = Object.keys(state.roster)
+    .filter((id) => id !== "you" && classifyPrecision(state, id) !== "far")
+    .map((id) => `  ${id}: ${state.roster[id]?.name ?? id}（${classifyPrecision(state, id)}）`)
+    .join("\n");
   const user =
     `【世界观】${seed.worldview}\n` +
     `【当前地点】${loc?.name ?? state.currentLocationId}\n` +
     `【时间】第${state.time.day}天 ${state.time.clock}\n` +
     `【角色名册】\n${roster || "（无）"}\n` +
-    `【进行中的压力线】\n${threads || "（无）"}\n\n` +
+    `【进行中的压力线】\n${threads || "（无）"}\n` +
+    `【可演化范围(仅这些角色可变,其余冻结)】\n${evolvable || "（无）"}\n\n` +
     `玩家离开了约 ${hoursAway} 小时。请只输出这段时间里**合理发生**的 Delta JSON 数组（没有合理变化就输出 []）：`;
   return [
     { role: "system", content: OFFSCREEN_SYSTEM },
@@ -55,7 +62,8 @@ export async function evolveWhileAway(ctx: OffscreenContext): Promise<Delta[]> {
   const hoursAway = Math.min(MAX_HOURS, Math.round(msAway / HOUR_MS));
   try {
     const { content } = await llm(buildOffscreenPrompt(seed, state, hoursAway));
-    return parseDeltas(content);
+    // 三档精度硬约束:丢弃任何作用于 far(冻结)实体的提议;世界级 delta(时间/线)放行。
+    return boundOffstageDeltas(state, parseDeltas(content));
   } catch {
     return [];
   }

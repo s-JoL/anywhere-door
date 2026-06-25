@@ -54,7 +54,8 @@ applies in order, logs with attribution, and records rejections. One turn:
    (`src/lib/world/offscreen.ts`) triggers only after an absence (`Date.now() -
    lastSeenAt`, ≥ 1h). The LLM proposes calm plausible changes (characters move,
    time passes, object states, relationships fade), committed through the same
-   validate/apply/log path. Reconciliation is **uniform** — no precision tiers.
+   gate path. Reconciliation is bounded by three precision tiers (§5.5): only
+   `near`/`related` entities may evolve; `far` ones are frozen.
 2. **Casting (§4.3).** `castTurn` (`director.ts`) splits the present cast into
    `active` (hard cap `maxActiveAgents`, run as agents) and `ambient` (no agent
    loop) — "a bustling market is not thirty agents."
@@ -192,7 +193,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Thread state (structured pressure lines) | **done** (§4.6/§5.2) — `pressureLines` with kind/playerKnown/nextSign; open/advance/resolve deltas (gate-only); fairness rule (no strong consequence while the player knows nothing); `selectActiveThreads` lets the Director pick 1–2. Three-tier offstage precision still pending |
 | Belief graph (fact × observer read view) | **done** (§5.3) — `belief.ts` `beliefOf`/`assembleBeliefGraph`: pure read view over witness-scoped memory yielding knows/believes/suspects/unaware/wrong + evidence links; zero writes. Not yet wired into Director/Inspector/Atlas UI |
 | Observation provenance / confidence / distortion | **done** (§4.5) — `Memory` has provenance/confidence/interpretation/perceptionQuality/distortion/evidenceLinks/branchId (additive); stamped by observe/gossip/reflect; confidence folded into retrieval. Belief graph (§5) reads this substrate |
-| Three-tier offstage precision | `evolveWhileAway` treats all offstage agents uniformly |
+| Three-tier offstage precision | **done** (§5.5) — `offstage.ts` `classifyPrecision` (near/related/far from scene proximity + thread links); `boundOffstageDeltas` freezes far entities; `evolveWhileAway` is bounded to near/related and lists the evolvable scope in its prompt. This is the shared reconcile core for the Phase 2 god-edit reconcile |
 | Narration as transduction + cheap guard | narration is free prose; no transduction-from-snapshot, no consistency guard |
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |
 | God-edit witness-scoped reconcile | no God/Studio edit path |
