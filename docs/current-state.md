@@ -28,14 +28,18 @@ A mobile-first, pure-web app:
   diversity.
 - Persistent instances/history exist in storage; there is **no** Doorway Library
   UI yet.
-- **The product is single-language (Chinese) and hardcoded.** `src/app/layout.tsx`
-  fixes `<html lang="zh">`; every UI string is a Chinese literal inline in JSX
-  (e.g. `推门进入`, `张力`, `上滑，换一个世界`, `世界正在苏醒`); `globals.css` bakes
-  one dark "rainy-inn" theme with CJK serif fonts (`Songti SC`). There is **no**
-  string/prompt extraction, no build-time locale constant, no English deployment,
-  and no per-language content pool. The target two-deployment bilingual model
-  (design docs §17 / §2.5 / §5.5) is entirely unbuilt — only the hardcoded-zh build
-  exists.
+- **Bilingual foundation built; zh is the live deployment.** A build-time locale
+  constant (`NEXT_PUBLIC_LOCALE`, `src/lib/i18n/locale.ts`) selects the deployment
+  language; `src/app/layout.tsx` sets `<html lang>` from it. UI strings are
+  extracted into a typed catalog (`src/lib/i18n/messages/{zh,en}.ts` + `t()`), zh
+  as source of truth and en authored natively. `globals.css` now carries a token
+  layer (type scale, spacing, `--accent`) and splits a world-agnostic chrome
+  background (`.app-bg`) from the per-world accent-tinted Play background
+  (`.world-bg`); fonts switch CJK→Latin under `:lang(en)`. Both `zh` and
+  `NEXT_PUBLIC_LOCALE=en` builds pass. **Not yet done:** the en **world/seed
+  content pool** (zh first) and the **language-facing prompt** wording (engine
+  prompts in `src/lib/engine/prompt.ts`, `world/generate.ts` are still Chinese) —
+  both deferred per the "zh first" decision.
 
 ## 3. The turn loop (`src/lib/engine/turn.ts`)
 
@@ -173,12 +177,12 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |
 | God-edit witness-scoped reconcile | no God/Studio edit path |
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
-| Doorway Library UI + exit settlement + echoes | storage is ready; no library page, no settlement/echo |
+| Doorway Library UI + exit settlement + echoes | Library page exists (`src/app/library/page.tsx`, `listInstances` + pin/unpin, last-seen); exit settlement + echo logic still missing |
 | Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
 | Object/character on-demand fleshing | only location fleshing is wired |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
-| Bilingual (zh/en) as two single-language deployments | none; only a hardcoded-zh build exists — `lang="zh"` fixed, UI strings inline Chinese literals, no string/prompt extraction, no build-time locale constant, no en deployment or en content pool |
+| Bilingual (zh/en) as two single-language deployments | foundation built — `NEXT_PUBLIC_LOCALE` build constant, typed UI catalog + `t()`, en UI authored, `<html lang>` from build, locale-aware fonts, accent-themed chrome; both builds pass. Remaining: en world/seed content pool + language-facing prompt extraction (zh first) |
 
 Every implemented durable change already rides `propose → validate → apply → log`,
 and no second runtime exists — so the gaps above are additive work on the existing

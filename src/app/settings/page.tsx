@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getUserConfig, setUserConfig, clearUserConfig, type UserConfig } from "@/lib/settings/user-config";
 import { testModel } from "@/lib/llm/test-model";
+import { t } from "@/lib/i18n";
 import type { ProviderId } from "@/lib/types";
 
 const PROVIDERS: { id: ProviderId; label: string }[] = [
   { id: "openrouter", label: "OpenRouter" },
-  { id: "deepseek", label: "DeepSeek 官方" },
+  { id: "deepseek", label: t("settings.provider.deepseek") },
 ];
 
 /** 每个供应商的若干常用模型 id，供 datalist 提示（非强制）。 */
@@ -60,7 +61,7 @@ export default function SettingsPage() {
       reasoningEnabled: form.reasoningEnabled,
     });
     if (res.ok) setTest({ kind: "ok", latency: Date.now() - t0 });
-    else setTest({ kind: "err", message: res.error ?? "未知错误" });
+    else setTest({ kind: "err", message: res.error ?? t("settings.unknownError") });
   }
 
   function onSave() {
@@ -83,26 +84,26 @@ export default function SettingsPage() {
   const testing = test.kind === "testing";
 
   return (
-    <main className="world-bg relative mx-auto flex min-h-[100dvh] max-w-md flex-col door-arrive">
+    <main className="app-bg relative mx-auto flex min-h-[100dvh] max-w-md flex-col door-arrive">
       <header
         className="glass-bar relative z-10 shrink-0 border-b border-[var(--line)] px-5 pb-3"
         style={{ paddingTop: "max(0.9rem, env(safe-area-inset-top))" }}
       >
         <div className="flex items-center justify-between">
-          <div className="eyebrow">任意门 · 模型设置</div>
+          <div className="eyebrow">{t("settings.eyebrow")}</div>
           <Link href="/" className="text-[12.5px] text-[var(--smoke)] transition hover:text-[var(--mist)]">
-            ← 返回
+            {t("common.back")}
           </Link>
         </div>
         <h1 className="mt-1 text-[1.15rem] text-[var(--mist)]" style={{ fontFamily: "var(--serif)" }}>
-          自带模型 key
+          {t("settings.title")}
         </h1>
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col gap-5 px-5 py-6">
         {/* Provider */}
         <label className="flex flex-col gap-2">
-          <span className="eyebrow">供应商</span>
+          <span className="eyebrow">{t("settings.provider")}</span>
           <select
             className="field px-3.5 py-3 text-[15px]"
             value={form.provider}
@@ -118,7 +119,7 @@ export default function SettingsPage() {
 
         {/* API Key */}
         <label className="flex flex-col gap-2">
-          <span className="eyebrow">API Key</span>
+          <span className="eyebrow">{t("settings.apiKey")}</span>
           <div className="relative">
             <input
               className="field w-full px-3.5 py-3 pr-16 text-[15px]"
@@ -133,17 +134,17 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setShowKey((s) => !s)}
               aria-pressed={showKey}
-              aria-label={showKey ? "隐藏 key" : "显示 key"}
+              aria-label={showKey ? t("settings.hideKeyAria") : t("settings.showKeyAria")}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[12px] text-[var(--smoke)] transition hover:text-[var(--mist)]"
             >
-              {showKey ? "隐藏" : "显示"}
+              {showKey ? t("settings.hide") : t("settings.show")}
             </button>
           </div>
         </label>
 
         {/* Model */}
         <label className="flex flex-col gap-2">
-          <span className="eyebrow">模型</span>
+          <span className="eyebrow">{t("settings.model")}</span>
           <input
             className="field px-3.5 py-3 text-[15px]"
             type="text"
@@ -151,7 +152,7 @@ export default function SettingsPage() {
             value={form.model}
             autoComplete="off"
             spellCheck={false}
-            placeholder="模型 id"
+            placeholder={t("settings.modelPlaceholder")}
             onChange={(e) => patch({ model: e.target.value })}
           />
           <datalist id="model-suggestions">
@@ -164,8 +165,8 @@ export default function SettingsPage() {
         {/* Reasoning toggle */}
         <label className="flex cursor-pointer items-center justify-between gap-3">
           <span className="flex flex-col">
-            <span className="text-[14px] text-[var(--mist)]">推理模式</span>
-            <span className="text-[11.5px] text-[var(--smoke)]">仅部分模型支持（OpenRouter reasoning）。</span>
+            <span className="text-[14px] text-[var(--mist)]">{t("settings.reasoning")}</span>
+            <span className="text-[11.5px] text-[var(--smoke)]">{t("settings.reasoningHint")}</span>
           </span>
           <input
             type="checkbox"
@@ -183,13 +184,13 @@ export default function SettingsPage() {
             disabled={testing}
             className="field send-glow flex items-center justify-center gap-2 px-4 py-3 text-[14px] text-[var(--lamp)] transition active:scale-[0.98] disabled:opacity-50 disabled:shadow-none"
           >
-            {testing ? <span className="breathe">◍ 正在连接…</span> : "测试可用"}
+            {testing ? <span className="breathe">{t("settings.testing")}</span> : t("settings.test")}
           </button>
           {test.kind === "ok" && (
-            <p className="text-[13px] text-[var(--teal)]">✓ 可用 · {test.latency}ms</p>
+            <p className="text-[13px] text-[var(--teal)]">{t("settings.testOk", { ms: test.latency })}</p>
           )}
           {test.kind === "err" && (
-            <p className="text-[13px] text-[var(--rose)]">✗ {test.message}</p>
+            <p className="text-[13px] text-[var(--rose)]">{t("settings.testErr", { msg: test.message })}</p>
           )}
         </div>
 
@@ -201,21 +202,19 @@ export default function SettingsPage() {
             className="field flex-1 px-4 py-3 text-[14px] text-[var(--mist)] transition active:scale-[0.98]"
             style={{ borderColor: "rgba(240, 195, 107, 0.42)" }}
           >
-            保存
+            {t("settings.save")}
           </button>
           <button
             type="button"
             onClick={onClear}
             className="px-3 py-3 text-[13px] text-[var(--smoke)] underline-offset-4 transition hover:text-[var(--mist)] hover:underline"
           >
-            清除
+            {t("settings.clear")}
           </button>
         </div>
-        {saved && <p className="text-[13px] text-[var(--teal)]">已保存 · 默认与生成的世界将用你的配置运行</p>}
+        {saved && <p className="text-[13px] text-[var(--teal)]">{t("settings.saved")}</p>}
 
-        <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--smoke)]">
-          key 仅保存在<span className="text-[var(--mist)]"> 这台浏览器（本地）</span>，绝不会上传到任何服务器。
-        </p>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--smoke)]">{t("settings.privacy")}</p>
       </div>
     </main>
   );

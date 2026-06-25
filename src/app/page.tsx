@@ -14,6 +14,7 @@ import { tagsOfSeed } from "@/lib/taste/tags";
 import { ensureGeneratedPool } from "@/lib/world/pregenerate";
 import { streamChat } from "@/lib/llm/stream";
 import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
+import { t } from "@/lib/i18n";
 import type { WorldSeed } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -76,9 +77,9 @@ function useTypewriter(text: string, active: boolean, charPerMs = 0.06): string 
 // Intensity indicator
 // ---------------------------------------------------------------------------
 const INTENSITY_META = {
-  calm:     { label: "平和", color: "var(--lamp)" },
-  charged:  { label: "烈度", color: "var(--rose)" },
-  explicit: { label: "热烈", color: "#ff6b6b" },
+  calm:     { labelKey: "intensity.calm", color: "var(--lamp)" },
+  charged:  { labelKey: "intensity.charged", color: "var(--rose)" },
+  explicit: { labelKey: "intensity.explicit", color: "#ff6b6b" },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -127,6 +128,7 @@ function WorldPanel({
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        ["--accent" as string]: accent,
       }}
     >
       {/* Per-world accent tint — radial glow from top */}
@@ -139,7 +141,7 @@ function WorldPanel({
 
       {/* ── Top eyebrow ── */}
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
+        <div className="eyebrow">{t("brand.eyebrow")}</div>
         {/* Intensity indicator */}
         <div className="flex items-center gap-1.5">
           <span
@@ -147,7 +149,7 @@ function WorldPanel({
             style={{ background: intensityMeta.color, boxShadow: `0 0 7px ${intensityMeta.color}` }}
           />
           <span className="eyebrow" style={{ color: intensityMeta.color }}>
-            {intensityMeta.label}
+            {t(intensityMeta.labelKey)}
           </span>
         </div>
       </div>
@@ -223,7 +225,7 @@ function WorldPanel({
             backdropFilter: "blur(12px)",
           }}
         >
-          推门进入 <span className="text-[17px]">➤</span>
+          {t("feed.cta")} <span className="text-[17px]">➤</span>
         </button>
       </div>
 
@@ -231,7 +233,7 @@ function WorldPanel({
       {isFirst && (
         <div className="relative z-10 flex flex-col items-center gap-1 pb-6">
           <span className="text-[18px] text-[var(--smoke)] pulse">↑</span>
-          <span className="eyebrow text-[var(--smoke)]">上滑，换一个世界</span>
+          <span className="eyebrow text-[var(--smoke)]">{t("feed.swipeHint")}</span>
         </div>
       )}
     </section>
@@ -254,15 +256,15 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       const card = parseCardFile(file.name, bytes);
-      if (!card) { setImportError("这张卡读不出来，换一张试试"); return; }
+      if (!card) { setImportError(t("feed.create.importError")); return; }
       const suffix = Math.random().toString(36).slice(2, 8);
       const seed = cardToSeed(card, DEMO_SEED.modelConfig, Date.now(), suffix);
-      if (!seed) { setImportError("这张卡读不出来，换一张试试"); return; }
+      if (!seed) { setImportError(t("feed.create.importError")); return; }
       await getRepository().upsertSeed(seed);
       recordAuthor(getRepository(), seed);
       onImportSuccess();
     } catch {
-      setImportError("这张卡读不出来，换一张试试");
+      setImportError(t("feed.create.importError"));
     }
   }
 
@@ -277,7 +279,7 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
       />
 
       <div className="relative z-10 flex items-center justify-between px-6 pt-6">
-        <div className="eyebrow">任意门 · ANYWHERE DOOR</div>
+        <div className="eyebrow">{t("brand.eyebrow")}</div>
       </div>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
@@ -285,10 +287,10 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
           className="mb-2 text-[1.6rem] leading-snug text-[var(--mist)]"
           style={{ fontFamily: "var(--serif)" }}
         >
-          造一个属于你的世界
+          {t("feed.create.title")}
         </div>
         <p className="mb-8 max-w-[18rem] text-[13px] text-[var(--smoke)]">
-          带上你的设定、你的角色——或者导入一张角色卡，让世界从你开始。
+          {t("feed.create.desc")}
         </p>
 
         <div className="flex flex-col items-center gap-3 w-full max-w-[240px]">
@@ -297,14 +299,14 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
             className="w-full rounded-2xl border border-[var(--lamp)] bg-[var(--ink-2)]/50 px-6 py-3 text-center text-[14px] text-[var(--lamp)] transition active:scale-[0.97]"
             style={{ fontFamily: "var(--serif)", backdropFilter: "blur(12px)" }}
           >
-            ✎ 造一个世界
+            {t("feed.create.make")}
           </Link>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-full rounded-2xl border border-[var(--line)] bg-[var(--ink-2)]/40 px-6 py-3 text-[14px] text-[var(--smoke)] transition hover:border-[var(--smoke)] active:scale-[0.97]"
             style={{ backdropFilter: "blur(12px)" }}
           >
-            导入角色卡
+            {t("feed.create.import")}
           </button>
           {importError && <p className="text-[11px] text-red-400">{importError}</p>}
         </div>
@@ -313,7 +315,7 @@ function CreatePanel({ onImportSuccess }: { onImportSuccess: () => void }) {
       </div>
 
       <div className="relative z-10 pb-6 text-center">
-        <div className="text-[11px] text-[var(--smoke)]">自带模型 key · 本地优先 · 不设限</div>
+        <div className="text-[11px] text-[var(--smoke)]">{t("feed.create.footer")}</div>
       </div>
     </section>
   );
@@ -471,10 +473,19 @@ export default function Home() {
       className="h-[100dvh] w-full overflow-y-auto overscroll-none snap-y snap-mandatory"
     >
       <Overlay />
-      {/* 低调的设置入口：固定在右上角，不参与 snap 流，不拦截滚动手势 */}
+      {/* 低调的入口：门廊馆 + 设置，固定右上角，不参与 snap，不拦截滚动手势 */}
+      <Link
+        href="/library"
+        aria-label={t("feed.library")}
+        title={t("feed.library")}
+        className="fixed right-14 z-30 flex h-9 w-9 items-center justify-center rounded-full text-[16px] text-[var(--smoke)] opacity-55 transition hover:opacity-100"
+        style={{ top: "max(0.9rem, env(safe-area-inset-top))" }}
+      >
+        🚪
+      </Link>
       <Link
         href="/settings"
-        aria-label="模型设置"
+        aria-label={t("common.settings")}
         className="fixed right-4 z-30 flex h-9 w-9 items-center justify-center rounded-full text-[16px] text-[var(--smoke)] opacity-55 transition hover:opacity-100"
         style={{ top: "max(0.9rem, env(safe-area-inset-top))" }}
       >
@@ -498,7 +509,7 @@ export default function Home() {
       ))}
       {seeds.length === 0 && (
         <section className="h-[100dvh] w-full snap-start flex items-center justify-center world-bg">
-          <div className="text-[13px] text-[var(--smoke)] pulse">世界正在苏醒…</div>
+          <div className="text-[13px] text-[var(--smoke)] pulse">{t("feed.waking")}</div>
         </section>
       )}
       <CreatePanel onImportSuccess={refreshSeeds} />

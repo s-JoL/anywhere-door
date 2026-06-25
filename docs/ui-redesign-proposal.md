@@ -137,20 +137,24 @@ locale skins share one structure:
   toggle, no config. (Supersedes the earlier interface-locale switch.)
 - Stories authored natively per community, not translated; separate content pools.
 - Kernel = shared world-running logic; only UI, content, and prompt wording differ.
+- **Content bootstrap: zh first.** Ship the zh deployment first; the `en` catalog
+  and content pool are stubbed now and authored natively in a later pass.
+- **One repo + build flag.** `NEXT_PUBLIC_LOCALE` selects the deployment; no harder
+  split unless the surfaces diverge a lot later.
+- **Full redesign this pass.** Token system + string/prompt extraction +
+  theme-decouple **and** the Play de-chat + Doorway Library land together (P0–P3),
+  not as follow-ups.
 
-**Still open:**
+**Still open:** none — implementation proceeds on the sequencing below.
 
-1. **Content bootstrap order** — author the built-in / cold-start pool natively in
-   *both* zh and en now, or ship the zh deployment first and build the en content
-   pool second?
-2. **Shared repo, two builds vs. harder split** — one codebase + a build flag (my
-   recommendation: one repo, `NEXT_PUBLIC_LOCALE`), or split further later if the
-   surfaces diverge a lot?
-3. **Redesign depth this pass** — token system + string/prompt extraction +
-   theme-decouple only, leaving Library and Play-de-chat as follow-ups; or include
-   the full Play + Library redesign now (bigger, fewer round-trips)?
+## 6. Sequencing & status
 
-## 6. Suggested sequencing (once approved)
+> **Status (first implementation pass, zh-first):** P0 done; P1 UI done (en
+> catalog authored, `<html lang>` from build, both `zh`/`en` builds green) with en
+> **content pool** and **language-facing prompt** wording deferred (zh first); P2
+> done (world-agnostic chrome + per-world accent, feed/play localized, raw tension
+> meter removed); P3 Library page done, exit-settlement/echo logic still deferred
+> to the engine roadmap. All 427 tests + typecheck + both builds pass.
 
 - **P0 — Foundations, zero visual change.** Token layer + component primitives;
   extract every inline string behind `t()` with a `zh` catalog reproducing today's
