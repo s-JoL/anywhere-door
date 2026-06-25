@@ -152,6 +152,10 @@ Delta JSON 格式（13 种，选用实际发生的）：
 {"kind":"establishCharacter","id":"新角色id","name":"角色名","role":"一句话身份/定位","goal":"(可选)当前目标","locationId":"<locations中的id>"}
 {"kind":"moveObject","objectId":"<objects中的id>","toLocationId":"<locations中的id>"}
 {"kind":"setObjectLocked","objectId":"<objects中的id>","locked":false}
+{"kind":"setFact","id":"新事实id","entityId":"<这条事实关于谁/什么，可省>","field":"维度如hidden/state/promise","value":"事实内容","hardness":"anchored"}
+{"kind":"openThread","id":"新线索id","summary":"玩家可见的一句话悬念","intensity":1-10,"playerKnown":true或false,"nextSign":"下一个该让玩家看到的征兆"}
+{"kind":"advanceThread","id":"已有线索id","intensityDelta":1,"playerKnown":true,"nextSign":"新征兆"}
+{"kind":"resolveThread","id":"已有线索id"}
 
 当出现一扇会挡路的门/闸/障碍时,把它作为物体确立(establishObject 填 gates=它把守通往的地点id、locked=是否锁着);上锁的门会**阻止角色或镜头**穿过它通往 gates 指向的地点。门被打开/撬开/解锁时用 setObjectLocked 把 locked 置为 false,被重新锁上则置 true。只在门的开合确实发生时才发。
 
@@ -171,6 +175,10 @@ Delta JSON 格式（13 种，选用实际发生的）：
 
 当某人对另一人（或对玩家"你"）的态度因刚发生的事**实质改变**时，用 setRelationship 记一次**调整**：affinityDelta 为好感增减（正=拉近，负=疏远，量级约 5–30 看事情轻重），reason 写**凭什么**（一句简短理由），disposition 可选地给一个当下态度短语。只在确有改变时发，不要每回合重复。
 【物品归属即后果】上面【场景内物品】里标了"属某人"的物品有主人。当有人**拿走/扣留/损毁**他人之物（尤见 moveObject 把带 owner 的物品挪走、且取者非物主），物主会因此**疏远取者**：补一条 setRelationship(fromId=物主, toId=取者, 负 affinityDelta, reason 写明拿了什么)。
+
+【固化为事实(canon 硬度)】当玩家的动作**确立了一个日后需要被尊重、不能被随手推翻的真相**时，用 setFact 记下，hardness 填 "anchored"——典型如：玩家把某物藏在某处、上了锁、立了一个会约束后续的承诺/交易、揭破了一个真相。anchored 事实之后不会被轻易翻案("我把钥匙藏好了，它就一直藏着")。只在确有这种持久后果时发；琐碎或会自然变化的状态用 setObjectState/setCondition，不要用 setFact。绝不要发 hardness:"core"(那是世界基石，只有作者能定)。
+
+【压力线(悬念/后果线)】当一条**会持续发酵的张力**首次成形(一笔欠债、一个迫近的威胁、一个有暴露风险的秘密)，用 openThread 开一条：summary 用玩家能看懂的一句话，intensity 估其紧迫度，playerKnown 标玩家此刻是否已察觉，nextSign 写"下一步该让玩家看到的征兆"。已有线索因刚发生的事**升温/变化**时用 advanceThread。**公平铁律**：玩家还完全不知情的线，不能被一下子推到强后果(intensity≥8)——要么先用 nextSign 给征兆并把 playerKnown 置 true，要么只小幅升温。线索了结时用 resolveThread。已有线索见下方【进行中的压力线】，不要重复开。
 
 只输出 JSON 数组，不要其他文字。`;
 
@@ -198,12 +206,27 @@ Delta JSON 格式（13 种，选用实际发生的）：
     .filter(Boolean)
     .join("、");
 
+  const factList = (state.facts ?? [])
+    .map((f) => `  ${f.id}: ${f.entityId ? `${f.entityId}.` : ""}${f.field}=${f.value}（${f.hardness}）`)
+    .join("\n");
+
+  const threadList = (state.pressureLines ?? [])
+    .filter((p) => p.status !== "resolved")
+    .map((p) => `  ${p.id}: ${p.summary}（强度${p.intensity}，玩家${p.playerKnown ? "已知" : "未知"}）`)
+    .join("\n");
+
   const user = `【当前场景】${loc?.name ?? state.currentLocationId}（id: ${state.currentLocationId}）
 【相邻地点】${connections || "（无）"}
 【时间】第${state.time.day}天 ${state.time.clock}，${state.time.lighting}
 
 【已有世界设定关键词】（这些 canon 已存在，不要用 establishLore 重复）
 ${loreKeys || "（无）"}
+
+【已确立的事实】（setFact 已记，不要重复；更硬的不可被推翻）
+${factList || "（无）"}
+
+【进行中的压力线】（已开的线，用 advanceThread/resolveThread 推进，不要重复 openThread）
+${threadList || "（无）"}
 
 【角色名册】（id: 名字，括号内为当前体态条件）
 ${rosterList || "（无）"}
