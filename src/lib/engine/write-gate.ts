@@ -17,6 +17,7 @@
 import type { WorldState, WorldRules } from "../types";
 import type { Delta, DeltaSource, DeltaLogEntry } from "../world/delta";
 import { validateDelta, applyDelta } from "../world/delta";
+import type { GateTrace } from "./trace";
 import { newId } from "../id";
 import { nextTime } from "../clock";
 
@@ -54,6 +55,8 @@ export interface GateCtx {
   logger?: (msg: string) => void;
   /** Injectable monotonic timestamp (defaults to nextTime) for deterministic tests. */
   now?: () => number;
+  /** Studio trace (§4.7). Out-of-world diagnostics; never crosses the boundary. */
+  trace?: GateTrace;
 }
 
 type Repo = { appendDeltaLog: (e: DeltaLogEntry) => Promise<void> };
@@ -75,9 +78,11 @@ export async function commit(ctx: GateCtx, proposals: Proposal[]): Promise<Commi
     if (!v.ok) {
       rejected.push({ delta: p.delta, reason: v.reason, source: p.source });
       warn(`[${p.source}] 丢弃非法 delta: ${v.reason}`);
+      ctx.trace?.recordRejection(p.source, p.delta, v.reason);
       continue;
     }
     state = applyDelta(state, p.delta);
+    ctx.trace?.recordCommit(p.source, p.delta);
     // Log reads game time from the post-apply state (an advanceTime delta is logged
     // at the time it produced) — matching the prior inline behavior.
     await ctx.repo.appendDeltaLog({

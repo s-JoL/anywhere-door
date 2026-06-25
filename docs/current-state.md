@@ -187,6 +187,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Per-instance operation lock | **done** (§4.0) — `lock.ts`; serializes turns, supersede drops stale writes |
 | Single perception boundary as a module | **done** (§4.2) — `perception.ts` `resolvePerception` is the sole producer; out-of-world standing assertion in place. Power surfaces (Director Notes / Scene Contract / God / cross-world taste) still unbuilt |
 | Director casting (active-agent cap, ambient cast) | **done** (§4.3/§4.4) — `castTurn` caps active agents + splits ambient; `runActiveAgents` runs only the active cast; `decideSurfacing` replaces the heuristic. Salience-driven active selection is Phase 1 |
+| Studio instrumentation / Context Inspector | **scaffolded** (§4.7) — `trace.ts` per-turn `TraceCollector` (commits/rejections/casting/threads) + in-memory inspector channel, threaded through the gate; out-of-world, never persisted, never in a projection. No UI yet |
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
 | Thread state (structured pressure lines) | **scaffolded** (§4.6) — `pressureLines` on `WorldState` + open/advance/resolve thread deltas (gate-only); `evolveWhileAway` reads active threads. Three-tier precision still Phase 1 |
 | Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
