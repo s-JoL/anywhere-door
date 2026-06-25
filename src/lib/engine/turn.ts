@@ -3,6 +3,7 @@ import type { Repository } from "../storage";
 import type { Delta } from "../world/delta";
 import { commit, type GateCtx, type ProposalSource } from "./write-gate";
 import { instanceLock, type LockToken } from "./lock";
+import { TraceCollector, emitTrace } from "./trace";
 import { presentCharacters } from "./prompt";
 import { runActiveAgents } from "./agent-runtime";
 import { DEFAULT_ENGINE_CONFIG } from "./config";
@@ -140,10 +141,14 @@ async function runTurnBody(
   // 本回合号
   const turn = (inst.turn ?? 0) + 1;
 
+  // Studio 追踪(§4.7):本回合的 out-of-world 诊断流(提交/拒绝/选角/触发的压力线)。
+  // 仅内存、不持久化、绝不进投影(§4.2 断言守护)。
+  const trace = new TraceCollector(instanceId, turn);
+
   // WriteGate(§4.1):唯一的持久化写入口。每批提议带来源/cause,校验→按序应用→落日志,
   // 返回新 state 与拒绝记录。这里以当前 state 现场构造 ctx,提交后回写 state。
   const gateCommit = async (proposals: Delta[], source: ProposalSource) => {
-    const ctx: GateCtx = { state, rules: seed.rules, instanceId, turn, repo };
+    const ctx: GateCtx = { state, rules: seed.rules, instanceId, turn, repo, trace };
     const res = await commit(ctx, proposals.map((delta) => ({ delta, source, cause: input })));
     state = res.state;
     return res;
@@ -171,6 +176,7 @@ async function runTurnBody(
     // 导演选角(§4.3):谁是本回合的 active agent(跑完整意图→发言→记忆回路),谁是 ambient
     // 群演(不跑 agent 回路)。硬上限 = config.maxActiveAgents;其余为 ambient。
     const casting = castTurn({ seed, state, maxActive: config.maxActiveAgents });
+    trace.setCasting(casting);
     const activeChars = presentCharacters(seed, state).filter((c) => casting.active.includes(c.id));
 
     // AgentRuntime(§4.4):active 角色跑 perceive→intent→speak→remember;只产散文,不改世界态。
@@ -244,6 +250,7 @@ async function runTurnBody(
     // 回滚到回合起点快照,不持久化。串行(单标签页)场景下永不命中。
     if (instanceLock.isStale(lockToken)) {
       await restoreTurnSnapshot(repo, instanceId, inst, snapshot, inst.lastTurnSnapshot);
+      emitTrace(trace.finish("stale-dropped"));
       return;
     }
 
@@ -256,8 +263,11 @@ async function runTurnBody(
       characterNameById: (id) => state.roster[id]?.name ?? seed.characters.find((c) => c.id === id)?.name ?? id,
       llm,
     });
+
+    emitTrace(trace.finish("completed"));
   } catch (e) {
     await restoreTurnSnapshot(repo, instanceId, inst, snapshot, inst.lastTurnSnapshot);
+    emitTrace(trace.finish("rolled-back"));
     throw e;
   }
 }
