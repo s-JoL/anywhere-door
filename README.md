@@ -164,7 +164,7 @@ npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 充实 · 离场 · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/`(观察 · 检索 · 反思 · 传话)· `src/lib/storage/`(IndexedDB · 事件日志)· `src/app/`(feed · play · settings)。
-设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章)· [`docs/superpowers/specs/2026-06-24-overall-product-design.md`](docs/superpowers/specs/2026-06-24-overall-product-design.md)(最新整体产品设计)· [`docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md`](docs/superpowers/specs/2026-06-24-world-runtime-technical-design.md)(世界 runtime / agent 架构)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)· [`docs/DESIGN.md`](docs/DESIGN.md)(当前架构)· [`docs/ROADMAP.md`](docs/ROADMAP.md)(路线图)。
+设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章 · 公理与不变量)· [`docs/first-principles.md`](docs/first-principles.md)(第一性推导)· [`docs/product-design.md`](docs/product-design.md)(产品真值)· [`docs/architecture.md`](docs/architecture.md)(理想世界 runtime + 活世界机制)· [`docs/current-state.md`](docs/current-state.md)(当前代码事实)· [`docs/roadmap.md`](docs/roadmap.md)(迁移路线)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)。
 
 ---
 
@@ -176,7 +176,7 @@ npm run typecheck
 
 ## ✦ 路线图(节选)
 
-Doorway Library · Input Channels / Director Notes · 行为序列驱动的 Taste Chronicle · Door Passport · World Atlas / Context Inspector · Timeline Forks · Seed Studio · Director Profiles · Home/Base/Anchor。详见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
+内置无 key 冷启动世界池 · 事实硬度与显式暗线 · Doorway Library + 关门结算/回声 · Input Channels / Director Notes · 行为序列驱动的 Taste Chronicle · Belief Graph · 三级离场精度 · 会计算的 Director(game-y 世界)· Door Passport · World Atlas / Context Inspector · Timeline Forks · Seed Studio。详见 [`docs/roadmap.md`](docs/roadmap.md)。
 
 ## ✦ License
 
