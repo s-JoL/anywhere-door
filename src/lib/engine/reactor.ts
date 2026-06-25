@@ -20,6 +20,7 @@ const VALID_KINDS = new Set([
   "openThread",
   "advanceThread",
   "resolveThread",
+  "setFact",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -65,6 +66,8 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "advanceThread" && typeof item.id === "string") {
         result.push(item as Delta);
       } else if (item.kind === "resolveThread" && typeof item.id === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "setFact" && typeof item.id === "string" && typeof item.field === "string" && typeof item.value === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;

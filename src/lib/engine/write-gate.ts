@@ -74,7 +74,7 @@ export async function commit(ctx: GateCtx, proposals: Proposal[]): Promise<Commi
   const rejected: RejectionRecord[] = [];
 
   for (const p of proposals) {
-    const v = validateDelta(state, ctx.rules, p.delta);
+    const v = validateDelta(state, ctx.rules, p.delta, p.source);
     if (!v.ok) {
       rejected.push({ delta: p.delta, reason: v.reason, source: p.source });
       warn(`[${p.source}] 丢弃非法 delta: ${v.reason}`);

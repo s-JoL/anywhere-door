@@ -84,6 +84,29 @@ export interface WorldState {
   lore?: LoreEntry[];
   /** 结构化压力线 / 悬念线(§4.6)。导演读取;只经 thread delta(过写入口)推进。 */
   pressureLines?: PressureLine[];
+  /** 硬度分级的事实(§5.1 canon 硬度)。只经 setFact(过写入口)写入。 */
+  facts?: Fact[];
+}
+
+/**
+ * Canon 硬度三档(§5.1):
+ * ambient 氛围(可被任何更可信来源改写) · anchored 锚定(reactor/角色不能推翻,
+ * 唯 god 编辑可改) · core 内核(世界基石,唯 god 编辑可改)。
+ * 事实只在**需要持久、需要校验、或影响未来行为**时才升格,默认保持 ambient。
+ */
+export type Hardness = "ambient" | "anchored" | "core";
+
+/**
+ * 一条分级事实(§5.1)。按 (entityId, field) 唯一:它是该维度"此刻的真相"。
+ * 矛盾 = 同 (entityId, field) 不同 value;更硬的事实不可被更软的来源推翻。
+ */
+export interface Fact {
+  id: string;
+  entityId?: string;   // 事实关于谁/什么(省略表示世界级事实)
+  field: string;       // 维度,如 "location" / "hidden" / "alive"
+  value: string;       // 断言的值
+  hardness: Hardness;
+  sinceDay?: number;   // 该事实确立/最近改写的世界日
 }
 
 /** 压力线状态:潜伏 / 活跃 / 已了结。 */
