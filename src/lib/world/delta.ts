@@ -16,9 +16,9 @@ export type Delta =
   | { kind: "moveObject"; objectId: string; toLocationId: string }
   | { kind: "setObjectLocked"; objectId: string; locked: boolean }
   | { kind: "fleshLocation"; locationId: string; description: string; gist?: string }
-  // ——— §4.6 压力线 / 悬念线(只经写入口推进) ———
-  | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[] }
-  | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved" }
+  // ——— §4.6/§5.2 压力线 / 悬念线(只经写入口推进) ———
+  | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[]; threadKind?: string; playerKnown?: boolean; nextSign?: string }
+  | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved"; playerKnown?: boolean; nextSign?: string }
   | { kind: "resolveThread"; id: string }
   // ——— §5.1 分级事实(canon 硬度;只经写入口) ———
   | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness }
@@ -108,6 +108,9 @@ function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][str
 
 /** 硬度档次序(用于比较)。 */
 const HARDNESS_RANK: Record<Hardness, number> = { ambient: 0, anchored: 1, core: 2 };
+
+/** 压力线"强后果"强度阈值(§5.2 公平规则)。 */
+const STRONG_THREAD_INTENSITY = 8;
 
 /**
  * 来源可写入的最高硬度(§5.1 权威分级):只有 god 编辑能写/改 core;
@@ -239,7 +242,14 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       return { ok: true };
     }
     case "advanceThread": {
-      if (!(state.pressureLines ?? []).some((p) => p.id === d.id)) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      const line = (state.pressureLines ?? []).find((p) => p.id === d.id);
+      if (!line) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      // 公平规则(§5.2):玩家尚不知情的线,不得被推进到"强后果"强度。
+      const resultIntensity = Math.max(0, Math.min(10, line.intensity + (d.intensityDelta ?? 0)));
+      const resultKnown = d.playerKnown ?? line.playerKnown ?? false;
+      if (resultIntensity >= STRONG_THREAD_INTENSITY && !resultKnown) {
+        return { ok: false, reason: "公平:玩家尚不知情,压力线不能升到强后果(需先给出征兆)" };
+      }
       return { ok: true };
     }
     case "resolveThread": {
@@ -459,6 +469,9 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
         intensity: Math.max(0, Math.min(10, d.intensity ?? 3)),
         ...(d.relatedCharacterIds ? { relatedCharacterIds: d.relatedCharacterIds } : {}),
         ...(d.relatedLocationIds ? { relatedLocationIds: d.relatedLocationIds } : {}),
+        ...(d.threadKind ? { kind: d.threadKind } : {}),
+        ...(d.playerKnown !== undefined ? { playerKnown: d.playerKnown } : {}),
+        ...(d.nextSign ? { nextSign: d.nextSign } : {}),
         updatedDay: state.time.day,
       };
       return { ...state, pressureLines: [...(state.pressureLines ?? []), line] };
@@ -471,6 +484,8 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
           intensity: Math.max(0, Math.min(10, p.intensity + (d.intensityDelta ?? 0))),
           summary: d.summary ?? p.summary,
           status: d.status ?? p.status,
+          ...(d.playerKnown !== undefined ? { playerKnown: d.playerKnown } : {}),
+          ...(d.nextSign ? { nextSign: d.nextSign } : {}),
           updatedDay: state.time.day,
         };
       });

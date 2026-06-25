@@ -129,6 +129,12 @@ export interface PressureLine {
   relatedCharacterIds?: string[];
   relatedLocationIds?: string[];
   updatedDay?: number;           // 最近一次推进的世界日
+  /** 线索类别(如 debt / secret / threat),供导演分类与排序。 */
+  kind?: string;
+  /** 玩家是否已知情(§5.2 公平:不知情的线不得升到强后果)。 */
+  playerKnown?: boolean;
+  /** 下一个该让玩家看到的"征兆"(diegetic 提示,非裸数值)。 */
+  nextSign?: string;
 }
 
 export interface WorldPresentation {

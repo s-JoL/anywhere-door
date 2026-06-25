@@ -1,4 +1,4 @@
-import type { WorldSeed, WorldState, Message } from "../types";
+import type { WorldSeed, WorldState, Message, PressureLine } from "../types";
 import type { LlmFn } from "./turn";
 import { newId } from "../id";
 import { nextTime } from "../clock";
@@ -55,6 +55,17 @@ export function decideSurfacing(seed: WorldSeed, state: WorldState, tension: num
   const off = offstageCharacterIds(seed, state);
   if (off.length === 0) return null;
   return { who: off[0], how: "adjacent" };
+}
+
+/**
+ * §5.2 The Director picks the 1–2 active pressure lines to lean on this turn —
+ * highest-intensity active threads first. Read-only; advancing them is a gate commit.
+ */
+export function selectActiveThreads(state: WorldState, max = 2): PressureLine[] {
+  return (state.pressureLines ?? [])
+    .filter((p) => p.status === "active")
+    .sort((a, b) => b.intensity - a.intensity)
+    .slice(0, max);
 }
 
 /** 纯：根据最近一句更新张力（冲突/动作/强标点升，平淡衰减），钳 0–10。 */
