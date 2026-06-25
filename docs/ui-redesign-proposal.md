@@ -11,9 +11,10 @@
 
 Two asks, one effort:
 
-1. **Bilingual-first (zh / en).** Story and UI designed *natively per language*,
-   the kernel shared (charter §17). Story locale (a world property) and interface
-   locale (a user property) chosen independently.
+1. **Bilingual-first (zh / en) as two deployments.** UI, story content, and prompt
+   wording designed *natively per language*; the world-running kernel shared
+   (charter §17). zh and en ship as separate single-language deployments, locale
+   fixed at build time — not a runtime toggle.
 2. **A large UI optimization.** The current UI is a single hardcoded-Chinese skin
    of one world's mood; it needs to become a clean, themeable, two-locale surface
    for a *browser of many worlds*.
@@ -42,43 +43,52 @@ transition, the per-world accent color, the typewriter cold-open, the restrained
 "breathe/rise/pulse" motion language, local-first taste tracking. The redesign
 should preserve this character, not replace it.
 
-## 2. Proposed architecture — the locale model in code
+## 2. Proposed architecture — two deployments, one kernel
 
-Two independent axes (design: §2.5 / §5.5), kernel untouched (§15.14):
+Per charter §17 / `architecture.md` §5.5: zh and en ship as **two separate
+single-language deployments of one codebase**, the locale fixed at build/deploy
+time — **not a runtime toggle, no per-user config.** This is simpler than an in-app
+i18n switch and matches the decision that the two communities get different
+stories, not one catalog translated.
 
-### 2.1 Interface locale (user-layer preference)
+### 2.1 Build-time locale constant
 
-- Add `interfaceLocale: "zh" | "en"` to the user config (`src/lib/settings/
-  user-config.ts`), persisted local-first like the API key. Default: detect from
-  `navigator.language`, fall back to `zh`.
-- A tiny client i18n boundary — **no heavyweight router**. Recommendation: a
-  minimal `src/lib/i18n/` with `messages/zh.ts` + `messages/en.ts` (typed key →
-  string, ICU-style interpolation only where needed) and a `useT()` hook +
-  `<LocaleProvider>`. Rationale: the app is a local-first client SPA; `next-intl`
-  route segments (`/en/...`) add URL/routing weight we don't need. (Open for
-  debate — see §5.)
-- `<html lang>` is set dynamically from the interface locale.
-- Locale never enters WorldState → it structurally cannot reach a character
-  (architecture §5.5). It lives only in the shell + player-safe projections.
+- A single build-time constant selects the deployment's language, e.g.
+  `NEXT_PUBLIC_LOCALE = "zh" | "en"`, read once into a typed `LOCALE`. Each deploy
+  target (e.g. `zh.…` and `en.…`) builds with one value.
+- `<html lang>` is set from `LOCALE` at build, not from `navigator.language`.
+- No runtime locale switch, no `interfaceLocale` user-config field, no `/en/` route
+  segments. (This supersedes the earlier interface-locale-toggle sketch.)
 
-### 2.2 Story locale (world property)
+### 2.2 UI strings (per-language catalog, selected at build)
 
-- Add `storyLocale: "zh" | "en"` to `WorldSeed` (`src/lib/types.ts`), carried in
-  the seed contract beside the (future) narration rule.
-- `world/generate.ts` generates a world *natively* in a target story locale
-  (prompted to author, not translate); built-in cold-start seeds are authored per
-  locale.
-- The feed (`rankFeed` / presentation) labels and filters by story locale: show
-  worlds in the user's readable story locales (default = interface locale, with an
-  explicit **"show both"** toggle). A door is judged in a language the reader feels.
-- Entity/world **display names become per-locale labels on a stable id** — the id
-  is the truth, the label is render-layer; cross-locale play never rewrites state.
+- Extract every inline Chinese string behind a typed catalog: `src/lib/i18n/
+  messages/{zh,en}.ts` + a `t(key, params?)` resolving against `LOCALE`. No
+  provider/router needed — `LOCALE` is constant per build.
+- The `zh` catalog reproduces today's copy exactly; `en` is authored natively
+  (voice, not literal translation).
 
-### 2.3 What stays language-agnostic (must not regress)
+### 2.3 Language-facing prompts (wording per language, logic shared)
 
-`WorldState`, `deltaLog`, identity, `validateDelta`/`applyDelta`, and the
-perception prompt builder move identifiers and structured facts only. No
-per-language fork of an instance; no second source of truth.
+- The prompt builders (`src/lib/engine/prompt.ts`, `world/generate.ts`, reactor /
+  director prompts) keep one **shared structure**; only the language-specific
+  wording is selected by `LOCALE`. Run logic, schemas, and validation are identical
+  across deployments.
+
+### 2.4 Story / seed content (per-deployment pool)
+
+- Each deployment carries its **own** cold-start / built-in seed pool, authored
+  natively for that community (`src/lib/world/seed-*`, `bootstrap.ts`). Generated
+  worlds are produced in the deployment's language. There is no shared catalog
+  translated between them.
+
+### 2.5 What stays language-agnostic (must not regress)
+
+- `WorldState`, `deltaLog`, identity, `validateDelta`/`applyDelta`, the turn loop,
+  and the perception boundary move identifiers and structured facts only — **one
+  shared kernel**, byte-identical across deployments. Storage is per-origin
+  (IndexedDB), so the two deployments are naturally separate instances with no
+  cross-locale state.
 
 ## 3. Proposed design system
 
@@ -87,10 +97,11 @@ locale skins share one structure:
 
 - **Type scale** — a named ramp (`--fs-eyebrow … --fs-hero`) instead of
   `text-[10.5px]`. **Locale-aware families:** `--font-cjk` (Songti/Noto Serif SC)
-  and `--font-latin` (a Latin serif for world prose + a Latin sans for chrome),
-  selected by interface locale for the shell and by *story locale* for world prose.
-  Line-height/tracking tuned per script (CJK wants tighter leading than the current
-  `1.75`/`1.95` for Latin).
+  and `--font-latin` (a Latin serif for world prose + a Latin sans for chrome).
+  Since language is fixed per deployment (`LOCALE`), the family set is chosen at
+  build — the zh build ships CJK, the en build ships Latin. Line-height/tracking
+  tuned per script (CJK wants tighter leading than the current `1.75`/`1.95` for
+  Latin).
 - **Color roles, theme-decoupled** — keep `--lamp/--rose/--mist/--smoke` as
   *roles*, but split the **base chrome theme** (neutral, world-agnostic) from the
   **per-world accent/mood** (the existing `pres.accent` + intensity). The rainy-inn
@@ -105,8 +116,8 @@ locale skins share one structure:
 
 - **Feed** — trim toward "door crack, not encyclopedia": hook hero stays; soften
   competing chrome (genre/mood chips + cast + intensity all at once); make the
-  base background world-agnostic so each card's accent reads. Add a per-card story-
-  locale tag and the "show both" control.
+  base background world-agnostic so each card's accent reads. (All worlds are in
+  the deployment's language, so no per-card locale tag is needed.)
 - **Play** — de-chat: stronger scene framing over bubbles; **remove the raw
   `张力 N` meter from default play** (A6), express pressure diegetically; keep
   narration interludes (the signature element). Channels (§11) and suggested
@@ -114,31 +125,42 @@ locale skins share one structure:
 - **Doorway Library (new)** — a first-class return surface: opened worlds, pins,
   last location / unresolved tension / latest consequence, light return hints
   (`product-design.md` §3.3). This is also where return-rate becomes visible.
-- **Settings** — interface-locale switch + story-locale reading preference,
-  alongside the existing key field.
+- **Settings** — the existing key field; no language switch (language is the
+  deployment). Optionally a link to the other-language deployment.
 - **Create** — localized; unchanged in function.
 
-## 5. Decisions I need from you before building
+## 5. Decisions — resolved and still open
 
-1. **i18n approach** — minimal custom catalog (my recommendation) vs. `next-intl`
-   with locale routes. Affects URL shape and dependency weight.
-2. **Cold-start worlds across locales** — author the built-in pool *natively in
-   both* zh and en (more authoring), or seed one locale first and grow? 
-3. **Default feed mix** — show only the interface-locale's story worlds by default
-   (cleaner), or both with a tag (more content, more mixed)?
-4. **Redesign depth this pass** — token system + bilingual + theme-decouple only,
-   leaving Library/Play-de-chat as follow-ups; or include the full Play + Library
-   redesign now (bigger, but fewer round-trips).
+**Resolved by your direction:**
+
+- Two separate single-language deployments, locale fixed at build time — no runtime
+  toggle, no config. (Supersedes the earlier interface-locale switch.)
+- Stories authored natively per community, not translated; separate content pools.
+- Kernel = shared world-running logic; only UI, content, and prompt wording differ.
+
+**Still open:**
+
+1. **Content bootstrap order** — author the built-in / cold-start pool natively in
+   *both* zh and en now, or ship the zh deployment first and build the en content
+   pool second?
+2. **Shared repo, two builds vs. harder split** — one codebase + a build flag (my
+   recommendation: one repo, `NEXT_PUBLIC_LOCALE`), or split further later if the
+   surfaces diverge a lot?
+3. **Redesign depth this pass** — token system + string/prompt extraction +
+   theme-decouple only, leaving Library and Play-de-chat as follow-ups; or include
+   the full Play + Library redesign now (bigger, fewer round-trips)?
 
 ## 6. Suggested sequencing (once approved)
 
 - **P0 — Foundations, zero visual change.** Token layer + component primitives;
-  extract every inline string behind `useT()` with a `zh` catalog that reproduces
-  today's copy exactly. (Pure refactor; `npm test/build/typecheck` stays green.)
-- **P1 — Bilingual live.** `interfaceLocale` + `en` catalog + dynamic `<html
-  lang>`; `storyLocale` on the seed; feed labels/filters; locale-aware typography.
+  extract every inline string behind `t()` with a `zh` catalog reproducing today's
+  copy; introduce the `LOCALE` build constant defaulted to `zh`. (Pure refactor;
+  `npm test/build/typecheck` stays green; the live zh build is unchanged.)
+- **P1 — Second deployment stands up.** `en` catalog + per-language prompt wording
+  + `<html lang>` from `LOCALE`; an `en` build target with its own (initial)
+  content pool. zh and en now deploy independently from one kernel.
 - **P2 — Surface redesign.** World-agnostic chrome + per-world mood; Feed trim;
-  Play de-chat + remove raw meter.
-- **P3 — Doorway Library.** The return surface.
+  Play de-chat + remove the raw tension meter (A6); native per-language typography.
+- **P3 — Doorway Library.** The return surface, in both deployments.
 
 Each step is independently shippable and reversible.

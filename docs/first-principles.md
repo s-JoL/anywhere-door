@@ -274,29 +274,29 @@ play are the BYO-key engine.
 
 The medium is text (1.5), so the medium *is a language* — there is no
 language-neutral way to deliver reactivity depth to a human. The value only lands
-if the prose, the voices, and the shell feel native to the reader. Two facts then
-force the shape:
+if the prose, the voices, the shell, and *the kind of world on offer* feel native
+to the reader. Two facts force the shape:
 
-1. **Audience.** The two largest pools of readers who can be served *natively*
-   (authored, not translated) by a small team are Chinese and English. So the
-   product is bilingual-first, not English-with-translation.
+1. **Audience and taste.** The two largest pools of readers a small team can serve
+   *natively* are Chinese and English — and different communities are drawn to
+   different stories, so the offering itself (not just the wording) must differ per
+   language. The product is bilingual-first, not English-with-translation.
 2. **The kernel is language-agnostic (1.4).** The hub is a state machine keyed on
    stable identifiers; truth, the change log, identity, validation, and the
-   perception boundary never depend on a display string. Language lives entirely
-   in the two render/interaction surfaces: how the world *tells its truth*
-   (narration + character voice) and how the *shell* speaks to the user.
+   perception boundary never depend on a display string. The *run logic* is the
+   same in any language.
 
-These compose into the locale model: **language splits into a *story locale*
-(a property of the world — how it is authored and played) and an *interface
-locale* (a property of the user — the shell around the world), chosen
-independently.** Because language is render-layer only, the two surfaces are
-**designed separately per language** — native authoring, native UI, judged as
-*"feels native,"* not *"correctly translated"* — while the **engine underneath is
-one, shared, and unduplicated.** Separating design per language buys cultural
-fidelity at the cost of *surface* work only; it never forks the world, because the
-axiom's single source of truth sits below language entirely. This is the same
-render-vs-truth split as narration (1.4 outward) applied to the choice of human
-language.
+These compose into the deployment model: **zh and en ship as two separate
+single-language deployments of one shared kernel.** Each deployment diverges only
+at the surface — its UI (designed natively, not string-swapped), its story/seed
+content (authored natively for that community, not translated), and its
+language-facing prompt wording (prompt *logic* shared, wording per language).
+Everything below — the world model and run logic — is one engine, unduplicated.
+Splitting per deployment buys native feel and per-community taste at the cost of
+*surface and content* work only; it never forks the world, because the axiom's
+single source of truth sits below language entirely. This is the same
+render-vs-truth split as narration (1.4 outward) applied to the whole product
+surface.
 
 ## Part 3 — The architecture, as a corollary of the product
 

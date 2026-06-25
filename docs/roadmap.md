@@ -99,16 +99,16 @@ it feel personal (`product-design.md` §26 MVP).
     (`architecture.md` §7.7).
 12. **Timeline hygiene.** Keep regenerate/rewind/fork from leaking old-branch
     state.
-13. **Bilingual surface + UI redesign (zh/en).** Stand up the locale model
-    (`product-design.md` §2.5, `architecture.md` §5.5): an **interface-locale**
-    layer (extract every inline Chinese string behind an i18n boundary; `lang`
-    follows the user; per-locale typography) and a **story-locale** field on the
-    seed so worlds declare the language they are authored/played in, with the feed
-    filtering by readable story locales. This is paired with the broader UI
-    optimization tracked in `ui-redesign-proposal.md` (information architecture,
-    feed/play/library redesign, a shared design system with two native locale
-    skins). Kernel stays language-agnostic — identifiers only, no per-language fork
-    (charter §15.14). Sequencing detail lives in the proposal doc.
+13. **Two single-language deployments + UI redesign (zh/en).** Stand up the
+    bilingual model (`product-design.md` §2.5, `architecture.md` §5.5) as **two
+    separate deployments of one kernel**, locale fixed at build/deploy time (not a
+    runtime switch): extract every inline string and language-facing prompt behind
+    a build-time locale constant; native per-language UI/typography; a per-language
+    story/seed content pool. Paired with the broader UI optimization in
+    `ui-redesign-proposal.md` (information architecture, feed/play/library
+    redesign, a shared design system with two native locale skins). The
+    world-running engine stays one shared, language-agnostic kernel — identifiers
+    only, no per-language runtime fork (charter §15.14). Sequencing in the proposal.
 
 (The game-y / agentic-Director rule-skill path is **not** in Phase 1 — it moves to
 Phase 2, after the drama/return loop is shown to retain. The architecture supports
