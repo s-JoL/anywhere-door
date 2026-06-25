@@ -3,14 +3,13 @@ import type { Repository } from "../storage";
 import type { Delta } from "../world/delta";
 import { commit, type GateCtx, type ProposalSource } from "./write-gate";
 import { instanceLock, type LockToken } from "./lock";
-import { buildCharacterPrompt, presentCharacters, stripSpeakerPrefix } from "./prompt";
+import { presentCharacters, stripSpeakerPrefix, renderProjection } from "./prompt";
+import { resolvePerception } from "./perception";
 import { decideIntent } from "./intent";
 import { selectSpeakers, type Candidate } from "./select";
 import { DEFAULT_ENGINE_CONFIG } from "./config";
 import { newId } from "../id";
 import { nextTime } from "../clock";
-import { scoreMemories } from "../memory/retrieve";
-import { keywordsOf } from "../memory/keywords";
 import { buildObservations, buildSelfMemory } from "../memory/observe";
 import { propagateGossip } from "../memory/gossip";
 import { shouldReflect, reflect } from "../memory/reflect";
@@ -193,10 +192,11 @@ async function runTurnBody(
         if (budget <= 0) break;
         const speaker = present.find((c) => c.id === id);
         if (!speaker) continue;
+        // 单一感知边界(§4.2):角色上下文只经 resolvePerception 产出(witness 作用域:
+        // 仅用该角色自己的观察),再交渲染器转成 prompt。记忆检索就发生在边界内。
         const own = await repo.listMemories(speaker.id);
-        const memories = scoreMemories(own, keywordsOf(input), { topK: 6 });
-        const recent = own.slice(-8); // witness 作用域：只用该角色自己的观察
-        const msgs = buildCharacterPrompt(seed, state, speaker, { memories, recent });
+        const projection = resolvePerception({ seed, state, ownMemories: own, query: input }, speaker);
+        const msgs = renderProjection(seed, projection);
 
         const replyId = newId("m");
         onEvent?.({ type: "speaker-start", id: replyId, speakerId: speaker.id, speakerName: speaker.name });

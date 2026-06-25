@@ -58,8 +58,12 @@ applies in order, logs with attribution, and records rejections. One turn:
 2. **Intent.** Each present character decides in parallel whether to speak
    (speak/pass + eagerness); `selectSpeakers` takes top-N plus an ice-breaker
    (`src/lib/engine/intent.ts`, `select.ts`).
-3. **Speech.** Selected characters stream speech; the prompt contains only their
-   subjective scene/memory/relationships/lore (`src/lib/engine/prompt.ts`).
+3. **Speech.** Selected characters stream speech. Context passes the single
+   perception boundary (§4.2): `resolvePerception` (`src/lib/engine/perception.ts`)
+   is the sole producer of a witness-scoped `CharacterProjection` (scene, own
+   memory — retrieval lives here now — stance toward present targets, triggered
+   lore), with a standing assertion that no out-of-world field leaks in;
+   `renderProjection` (`prompt.ts`) is the thin prose renderer.
 4. **Director.** Updates a tension scalar and inserts narration when tension rises
    sharply (`≥ 1.5`) or is already high (`≥ 7`) and still climbing; at high
    tension it can introduce an offstage character (`src/lib/engine/director.ts`,
@@ -173,7 +177,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 |---|---|
 | Single write gate as a module | **done** (§4.1) — extracted `WriteGate` (`write-gate.ts`); sole caller of `applyDelta`/`appendDeltaLog`, records rejections |
 | Per-instance operation lock | **done** (§4.0) — `lock.ts`; serializes turns, supersede drops stale writes |
-| Single perception boundary as a module | de-facto in `prompt.ts`; not isolated; no standing isolation assertions |
+| Single perception boundary as a module | **done** (§4.2) — `perception.ts` `resolvePerception` is the sole producer; out-of-world standing assertion in place. Power surfaces (Director Notes / Scene Contract / God / cross-world taste) still unbuilt |
 | Director casting (active-agent cap, ambient cast) | intent runs for all present characters; surfacing is a hardcoded `tension ≥ 6` grab, not Director casting |
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
 | Thread state (structured pressure lines) | only an implicit `tension` scalar + Director heuristics |
