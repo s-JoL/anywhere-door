@@ -55,19 +55,22 @@ applies in order, logs with attribution, and records rejections. One turn:
    lastSeenAt`, ≥ 1h). The LLM proposes calm plausible changes (characters move,
    time passes, object states, relationships fade), committed through the same
    validate/apply/log path. Reconciliation is **uniform** — no precision tiers.
-2. **Intent.** Each present character decides in parallel whether to speak
-   (speak/pass + eagerness); `selectSpeakers` takes top-N plus an ice-breaker
-   (`src/lib/engine/intent.ts`, `select.ts`).
-3. **Speech.** Selected characters stream speech. Context passes the single
-   perception boundary (§4.2): `resolvePerception` (`src/lib/engine/perception.ts`)
-   is the sole producer of a witness-scoped `CharacterProjection` (scene, own
-   memory — retrieval lives here now — stance toward present targets, triggered
-   lore), with a standing assertion that no out-of-world field leaks in;
-   `renderProjection` (`prompt.ts`) is the thin prose renderer.
+2. **Casting (§4.3).** `castTurn` (`director.ts`) splits the present cast into
+   `active` (hard cap `maxActiveAgents`, run as agents) and `ambient` (no agent
+   loop) — "a bustling market is not thirty agents."
+3. **Active agents (§4.4).** `runActiveAgents` (`agent-runtime.ts`) runs only the
+   active cast: each decides in parallel whether to speak (speak/pass + eagerness,
+   `intent.ts`/`select.ts`), then selected characters stream speech. Context passes
+   the single perception boundary (§4.2): `resolvePerception` (`perception.ts`) is
+   the sole producer of a witness-scoped `CharacterProjection` (scene, own memory —
+   retrieval lives here now — stance toward present targets, triggered lore), with a
+   standing assertion that no out-of-world field leaks in; `renderProjection`
+   (`prompt.ts`) is the thin prose renderer. Agents emit prose only; they never
+   mutate state.
 4. **Director.** Updates a tension scalar and inserts narration when tension rises
-   sharply (`≥ 1.5`) or is already high (`≥ 7`) and still climbing; at high
-   tension it can introduce an offstage character (`src/lib/engine/director.ts`,
-   `introduce.ts`).
+   sharply (`≥ 1.5`) or is already high (`≥ 7`) and still climbing; surfacing of an
+   offstage character is a Director decision (`decideSurfacing`, §4.3) —
+   world-consistent, never through the player's door (`director.ts`, `introduce.ts`).
 5. **World Reactor.** The LLM reads what happened this turn (prompt carries
    physics + red lines as soft constraints; evidence-first) and proposes
    `Delta[]`; the WriteGate `validateDelta`'s each (structural/spatial + red-line
@@ -178,7 +181,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Single write gate as a module | **done** (§4.1) — extracted `WriteGate` (`write-gate.ts`); sole caller of `applyDelta`/`appendDeltaLog`, records rejections |
 | Per-instance operation lock | **done** (§4.0) — `lock.ts`; serializes turns, supersede drops stale writes |
 | Single perception boundary as a module | **done** (§4.2) — `perception.ts` `resolvePerception` is the sole producer; out-of-world standing assertion in place. Power surfaces (Director Notes / Scene Contract / God / cross-world taste) still unbuilt |
-| Director casting (active-agent cap, ambient cast) | intent runs for all present characters; surfacing is a hardcoded `tension ≥ 6` grab, not Director casting |
+| Director casting (active-agent cap, ambient cast) | **done** (§4.3/§4.4) — `castTurn` caps active agents + splits ambient; `runActiveAgents` runs only the active cast; `decideSurfacing` replaces the heuristic. Salience-driven active selection is Phase 1 |
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
 | Thread state (structured pressure lines) | only an implicit `tension` scalar + Director heuristics |
 | Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
