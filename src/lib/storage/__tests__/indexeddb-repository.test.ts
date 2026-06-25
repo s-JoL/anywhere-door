@@ -11,7 +11,7 @@ function inst(id: string): WorldInstance {
 
 describe("IndexedDbRepository", () => {
   beforeEach(async () => {
-    // 重置单例并删除数据库以隔离用例
+    // Reset the singleton and delete the database to isolate each test case.
     resetRepository();
     indexedDB.deleteDatabase("anywhere-door");
   });

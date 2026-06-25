@@ -9,7 +9,7 @@ const mem = (over: Partial<Memory>): Memory => ({
 });
 
 describe("§5.4 subjective records wired into narration", () => {
-  it("hedges a low-confidence memory with 不确定", () => {
+  it("hedges a low-confidence memory with an uncertain marker", () => {
     const c = DEMO_SEED.characters[0];
     const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {
       memories: [mem({ text: "据说后巷有杀手", confidence: 0.3, provenance: "heard" })],

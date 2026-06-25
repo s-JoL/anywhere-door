@@ -1,19 +1,19 @@
 /**
- * gossip.ts — 传话/声誉:同场角色之间的口耳相传(轴4 的延伸)。
+ * gossip.ts — gossip/reputation: word-of-mouth among co-present characters (an extension of axis 4).
  *
- * 印证 Generative Agents「斯坦福小镇」机制:无需专门的传播代码,信息靠
- * **见证 → 同场 → 转述 → 记住** 自然扩散。本模块做一个**廉价、确定性、有界**的版本:
- * 当 ≥2 个 NPC 同处一场景,每人把自己**最显著的近期一手观察**说给在场其他人,
- * 对方据此获得一条 `hearsay`(二手)记忆——降权、去重、不会再被当一手转述出去。
+ * Validates the Generative Agents "Stanford town" mechanic: no dedicated propagation code is needed; information
+ * spreads naturally via **witness → co-presence → retell → remember**. This module does a **cheap, deterministic, bounded**
+ * version: when ≥2 NPCs share a scene, each tells everyone else present their **most salient recent firsthand observation**,
+ * and the listener gains one `hearsay` (secondhand) memory from it — downweighted, deduplicated, and never retold as firsthand again.
  *
- * 纯函数:给定在场者与各自近期记忆,返回需要写入的新 hearsay 记忆。
+ * Pure function: given the present parties and their recent memories, returns the new hearsay memories to be written.
  */
 import type { Memory } from "../types";
 import { keywordsOf } from "./keywords";
 import { newId } from "../id";
 import { nextTime } from "../clock";
 
-/** 去掉观察文本开头的「发言者：」前缀,留事件本身。 */
+/** Strip the leading "speaker:" prefix from observation text, leaving the event itself. */
 function stripObsPrefix(text: string): string {
   const i = text.indexOf("：");
   return i > 0 && i <= 8 ? text.slice(i + 1) : text;
@@ -22,8 +22,8 @@ function stripObsPrefix(text: string): string {
 export interface Gossiper { id: string; name: string }
 
 /**
- * @param present       同场 NPC(玩家排除在外)
- * @param recentByChar  每个 NPC 的近期记忆(用于挑可传的事 + 去重)
+ * @param present       co-present NPCs (the player is excluded)
+ * @param recentByChar  each NPC's recent memories (used to pick what to retell + deduplicate)
  */
 export function propagateGossip(
   present: Gossiper[],
@@ -34,7 +34,7 @@ export function propagateGossip(
   const minImportance = opts?.minImportance ?? 6;
   const out: Memory[] = [];
   for (const teller of present) {
-    // 只转述**一手观察**里最显著的一条(hearsay/reflection 不再外传,避免无限套娃)
+    // Retell only the most salient single **firsthand observation** (hearsay/reflection is not retold further, to avoid infinite nesting)
     const firsthand = (recentByChar[teller.id] ?? []).filter((m) => m.kind === "observation");
     if (!firsthand.length) continue;
     const top = firsthand.reduce((a, b) => (b.importance > a.importance ? b : a));
@@ -44,9 +44,9 @@ export function propagateGossip(
     for (const listener of present) {
       if (listener.id === teller.id) continue;
       const known = recentByChar[listener.id] ?? [];
-      if (known.some((m) => m.text === text)) continue; // 已经听过,不重复
+      if (known.some((m) => m.text === text)) continue; // already heard, don't repeat
       const t = nextTime();
-      // 二手转述:provenance=heard,置信度从转述者自己的置信再打折(<一手),感知质量 partial
+      // Secondhand retelling: provenance=heard, confidence discounted further from the teller's own confidence (< firsthand), perception quality partial
       const tellerConfidence = top.confidence ?? 1;
       out.push({
         id: newId("mem"),

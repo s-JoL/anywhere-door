@@ -16,7 +16,7 @@ const seed = { id: "s1", title: "T", worldview: "雨夜霓虹城", rules, openin
 const HOUR = 3_600_000;
 const deltaLlm = async (_m: ChatMessage[]) => ({ content: '[{"kind":"advanceTime","clock":"黄昏","dayDelta":0},{"kind":"setCondition","entityId":"c1","condition":"打了个盹，眼神松了些"}]' });
 
-describe("evolveWhileAway (离场演化)", () => {
+describe("evolveWhileAway (offstage evolution)", () => {
   function ctx(over: Partial<OffscreenContext>): OffscreenContext {
     return { seed, state, rules, msAway: 0, ...over };
   }

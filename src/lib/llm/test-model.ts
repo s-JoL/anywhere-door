@@ -1,7 +1,7 @@
 import type { ModelConfig } from "../types";
 import { streamChat } from "./stream";
 
-/** 连通测试：发一句最小请求，能流式拿到任意内容即视为可用。 */
+/** Connectivity test: send a minimal request; if any content streams back, consider it usable. */
 export async function testModel(cfg: ModelConfig): Promise<{ ok: boolean; error?: string }> {
   try {
     const { content } = await streamChat({ cfg, messages: [{ role: "user", content: "ping，请只回一个字。" }] });

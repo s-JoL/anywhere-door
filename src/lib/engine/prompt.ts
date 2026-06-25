@@ -6,7 +6,7 @@ import { resolvePerception, type CharacterProjection } from "./perception";
 // visibleScene lives on the perception boundary now; re-exported for back-compat.
 export { visibleScene } from "./perception";
 
-/** 去掉角色误加在开头的「自己名字：」前缀。 */
+/** Strip the "own name:" prefix a character may mistakenly prepend. */
 export function stripSpeakerPrefix(name: string, text: string): string {
   const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return text.replace(new RegExp(`^\\s*${esc}\\s*[:：]\\s*`), "");
@@ -34,7 +34,7 @@ export function renderProjection(seed: WorldSeed, p: CharacterProjection): ChatM
     ? `【硬事实(绝不矛盾)】${[p.identity.gender, p.identity.age, p.identity.body, p.identity.hardFacts].filter(Boolean).join("；")}`
     : "";
 
-  // §5.4 把主观记录字段渲进叙述:低置信加"不确定"对冲,主观解读随行——角色据其**所信**行动。
+  // §5.4 render subjective record fields into the narrative: low confidence adds an "uncertain" hedge, subjective interpretation rides along — the character acts on what they **believe**.
   const memLine = (m: CharacterProjection["memories"][number]): string => {
     const hedge = (m.confidence ?? 1) < 0.5 ? "（不确定）" : "";
     const interp = m.interpretation?.trim() ? `（我的理解：${m.interpretation.trim()}）` : "";

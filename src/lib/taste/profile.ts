@@ -1,7 +1,7 @@
 import type { TasteEvent, TasteEventKind, WorldSeed } from "@/lib/types";
 import { tagsOfSeed } from "./tags";
 
-// 仅前四类是排序信号;漏斗事件(§5.9)是 out-of-world 指标,对口味画像权重为 0。
+// Only the first four categories are ranking signals; funnel events (§5.9) are out-of-world metrics and carry weight 0 in the taste profile.
 export const EVENT_WEIGHT: Partial<Record<TasteEventKind, number>> = {
   enter: 1,
   dwell: 3,

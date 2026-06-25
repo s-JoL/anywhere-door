@@ -41,7 +41,7 @@ export interface RankOpts {
   mmrLambda?: number;    // default 0.5 — diversity penalty weight
   freshPenalty?: number; // default 0.5 — subtracted from base score for recently-seen seeds (exact id)
   /**
-   * Category-level 防腻: tag → recent prevalence in [0,1] across recently-seen seeds.
+   * Category-level anti-staleness: tag → recent prevalence in [0,1] across recently-seen seeds.
    * A seed sharing tags with the recent feed is damped even if its own id is fresh.
    */
   recentTags?: Record<string, number>;

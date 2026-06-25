@@ -5,23 +5,26 @@ import { parseDeltas } from "@/lib/engine/reactor";
 import { classifyPrecision, boundOffstageDeltas } from "@/lib/world/offstage";
 
 /**
- * 离场演化(轴5)。
+ * Offstage evolution (axis 5).
  *
- * 与「交互驱动演化:离开即冻结」一致——世界不在你离开时实时推进,而是在你**回来**时,
- * 按离开时长**懒补**这段时间里合理会发生的平静变化。提议 Delta[](与 World Reactor 同币),
- * 调用方([`turn.ts`])以 source="offscreen" 经唯一写入口 WriteGate(§4.1)校验→应用→落日志。
+ * Consistent with "interaction-driven evolution: leaving freezes" — the world
+ * doesn't advance in real time while you're away; instead, when you **return**,
+ * it **lazily backfills** the calm changes that would reasonably have happened over
+ * that span. Proposes Delta[] (same currency as the World Reactor); the caller
+ * ([`turn.ts`]) runs them with source="offscreen" through the single write gate
+ * WriteGate (§4.1): validate → apply → log.
  */
 export interface OffscreenContext {
   seed: WorldSeed;
   state: WorldState;
   rules: WorldRules;
-  msAway: number; // 距玩家上次交互的真实毫秒数(0 表示未知/刚来)
+  msAway: number; // real milliseconds since the player's last interaction (0 means unknown/just arrived)
   llm?: LlmFn;
 }
 
 const HOUR_MS = 3_600_000;
-const MIN_AWAY_MS = HOUR_MS;   // 离开不足 1 小时不演化
-const MAX_HOURS = 72;          // 演化烈度的封顶(离开再久也不爆改)
+const MIN_AWAY_MS = HOUR_MS;   // less than 1 hour away → no evolution
+const MAX_HOURS = 72;          // cap on evolution intensity (no runaway changes no matter how long away)
 
 const OFFSCREEN_SYSTEM =
   "你是世界的**离场演化器**。玩家离开了这个世界一段时间,期间世界继续平静地存在。" +
@@ -34,10 +37,10 @@ const OFFSCREEN_SYSTEM =
 export function buildOffscreenPrompt(seed: WorldSeed, state: WorldState, hoursAway: number): ChatMessage[] {
   const roster = Object.entries(state.roster).map(([id, o]) => `  ${id}: ${o.name}${o.condition ? `（${o.condition}）` : ""}`).join("\n");
   const loc = state.locations[state.currentLocationId];
-  // 离场演化读取活跃压力线(§4.6):让"这段时间里合理发生的事"沿已有悬念线推进,而非凭空。
+  // Offstage evolution reads active pressure lines (§4.6): let "what reasonably happened over this span" advance along existing suspense threads, not out of thin air.
   const active = (state.pressureLines ?? []).filter((p) => p.status !== "resolved");
   const threads = active.map((p) => `  ${p.id}（强度${p.intensity}）: ${p.summary}`).join("\n");
-  // 三档精度(§5.5):只有 near/related 的角色可被演化,far 冻结。把可演化范围告知模型。
+  // Three precision tiers (§5.5): only near/related characters can evolve, far is frozen. Tell the model the evolvable scope.
   const evolvable = Object.keys(state.roster)
     .filter((id) => id !== "you" && classifyPrecision(state, id) !== "far")
     .map((id) => `  ${id}: ${state.roster[id]?.name ?? id}（${classifyPrecision(state, id)}）`)
@@ -62,7 +65,7 @@ export async function evolveWhileAway(ctx: OffscreenContext): Promise<Delta[]> {
   const hoursAway = Math.min(MAX_HOURS, Math.round(msAway / HOUR_MS));
   try {
     const { content } = await llm(buildOffscreenPrompt(seed, state, hoursAway));
-    // 三档精度硬约束:丢弃任何作用于 far(冻结)实体的提议;世界级 delta(时间/线)放行。
+    // Three-tier precision hard constraint: drop any proposal acting on a far (frozen) entity; world-level deltas (time/threads) pass through.
     return boundOffstageDeltas(state, parseDeltas(content));
   } catch {
     return [];

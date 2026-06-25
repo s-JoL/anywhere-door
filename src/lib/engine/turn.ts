@@ -21,7 +21,7 @@ import { fleshStubLocation } from "../world/flesh";
 import { deriveSettlement, composeReturnEcho } from "../world/settlement";
 import { recordFunnel } from "../taste/funnel";
 
-/** 触发回归 echo 的最短离场时长(§5.6):与离场演化同档,1 小时。 */
+/** Minimum offstage duration to trigger a return echo (§5.6): same tier as offstage evolution, 1 hour. */
 const RETURN_ECHO_MS = 3_600_000;
 
 export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
@@ -117,8 +117,9 @@ export async function maybeReflect({ repo, charIds, characterNameById, llm }: Ma
 }
 
 /**
- * 多发言者自由发言回合(对外入口)。先取得 per-instance 实例锁(§4.0),保证同一世界一次
- * 只提交一个回合;真正的回合体在锁内执行,结束/异常都释放锁。
+ * Multi-speaker free-utterance turn (public entry). First acquires the per-instance
+ * instance lock (§4.0), ensuring one world commits only one turn at a time; the real
+ * turn body runs inside the lock, and the lock is released on completion or exception.
  */
 export async function runTurn(args: RunTurnArgs): Promise<void> {
   const lockToken = await instanceLock.acquire(args.instanceId);
@@ -129,7 +130,7 @@ export async function runTurn(args: RunTurnArgs): Promise<void> {
   }
 }
 
-/** 回合体:用户消息 → WriteGate 提交 delta → 写用户观察 → 在场角色按意图轮流发言（witness 作用域上下文）。 */
+/** Turn body: user message → WriteGate commits deltas → write user observation → onstage characters take turns speaking by intent (witness-scoped context). */
 async function runTurnBody(
   { seed, repo, instanceId, input, deltas = [], llm, onEvent }: RunTurnArgs,
   lockToken: LockToken,
@@ -137,22 +138,22 @@ async function runTurnBody(
   let inst = await repo.getInstance(instanceId);
   if (!inst) throw new Error(`实例 ${instanceId} 不存在`);
 
-  // 确保玩家 "you" 在名册中（供 reactor/prompts 使用），但绝不加入 presentCharacterIds
+  // Ensure the player "you" is in the roster (for reactor/prompts), but never add to presentCharacterIds
   if (!inst.state.roster["you"]) {
     inst = { ...inst, state: { ...inst.state, roster: { ...inst.state.roster, you: { name: "你" } } } };
   }
 
   let state = inst.state;
 
-  // 本回合号
+  // This turn's number
   const turn = (inst.turn ?? 0) + 1;
 
-  // Studio 追踪(§4.7):本回合的 out-of-world 诊断流(提交/拒绝/选角/触发的压力线)。
-  // 仅内存、不持久化、绝不进投影(§4.2 断言守护)。
+  // Studio trace (§4.7): this turn's out-of-world diagnostic stream (commits/rejections/casting/triggered pressure lines).
+  // In-memory only, not persisted, never enters a projection (§4.2 assertion guard).
   const trace = new TraceCollector(instanceId, turn);
 
-  // WriteGate(§4.1):唯一的持久化写入口。每批提议带来源/cause,校验→按序应用→落日志,
-  // 返回新 state 与拒绝记录。这里以当前 state 现场构造 ctx,提交后回写 state。
+  // WriteGate (§4.1): the single durable write entry. Each batch of proposals carries source/cause, validate → apply in order → log,
+  // returning the new state and rejection records. Here ctx is built from the current state on the spot, and state is written back after commit.
   const gateCommit = async (proposals: Delta[], source: ProposalSource) => {
     const ctx: GateCtx = { state, rules: seed.rules, instanceId, turn, repo, trace };
     const res = await commit(ctx, proposals.map((delta) => ({ delta, source, cause: input })));
@@ -160,13 +161,13 @@ async function runTurnBody(
     return res;
   };
 
-  // 离场演化:玩家回来时,按离开时长懒补这段时间里合理发生的平静变化(交互驱动:离开即冻结)
+  // Offstage evolution: when the player returns, lazily backfill the plausible calm changes over the away duration (interaction-driven: leaving freezes the world)
   const msAway = inst.lastSeenAt ? Math.max(0, Date.now() - inst.lastSeenAt) : 0;
   const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway, llm });
   await gateCommit(awayDeltas, "offscreen");
 
-  // 回归 echo(§5.6):离开够久且有上次的结算记录时,插一条玩家可见的"回归开场"节拍
-  // (消费一个候选钩子 + bond beat)。在快照前追加——它反映的离场变化已落库,不应被回滚。
+  // Return echo (§5.6): when away long enough and a prior settlement record exists, insert a player-visible "return opening" beat
+  // (consuming one candidate hook + bond beat). Appended before the snapshot — the offstage changes it reflects are already persisted and should not be rolled back.
   if (msAway >= RETURN_ECHO_MS && inst.settlement) {
     const echo = composeReturnEcho(inst.settlement, Math.round(msAway / 3_600_000));
     if (echo) {
@@ -184,22 +185,22 @@ async function runTurnBody(
 
     await gateCommit(deltas, "user");
 
-    // 用户这句作为观察写给当前在场者（witness 作用域）
+    // The user's line is written as an observation to the currently onstage characters (witness-scoped)
     const userName = "你";
     for (const obs of buildObservations(state, { speakerName: userName, text: input })) await repo.appendMemory(obs);
 
     const config = DEFAULT_ENGINE_CONFIG;
 
-    // 导演选角(§4.3):谁是本回合的 active agent(跑完整意图→发言→记忆回路),谁是 ambient
-    // 群演(不跑 agent 回路)。硬上限 = config.maxActiveAgents;其余为 ambient。
+    // Director casting (§4.3): who is an active agent this turn (runs the full intent→speak→memory loop), and who is an ambient
+    // extra (does not run the agent loop). Hard cap = config.maxActiveAgents; the rest are ambient.
     const casting = castTurn({ seed, state, maxActive: config.maxActiveAgents });
     trace.setCasting(casting);
     const activeChars = presentCharacters(seed, state).filter((c) => casting.active.includes(c.id));
 
-    // AgentRuntime(§4.4):active 角色跑 perceive→intent→speak→remember;只产散文,不改世界态。
+    // AgentRuntime (§4.4): active characters run perceive→intent→speak→remember; prose only, no world-state mutation.
     const { speakerIds } = await runActiveAgents({ seed, state, repo, instanceId, input, llm, onEvent, activeChars, config });
 
-    // 导演：按本回合最后一句更新张力，必要时插一条世界旁白
+    // Director: update tension from this turn's last line, and insert a world narration if needed
     const allMsgs = await repo.listMessages(instanceId);
     const spokenLines = allMsgs.filter((m) => m.role !== "system").slice(-6).map((m) => m.content);
     const lastLine = spokenLines[spokenLines.length - 1] ?? input;
@@ -208,7 +209,7 @@ async function runTurnBody(
     state = { ...state, tension: tensionAfter };
     const beat = await maybeDirect({ instanceId, state, recentLines: spokenLines, tensionBefore, tensionAfter, llm });
     if (beat) {
-      // §5.8 cheap consistency guard:环境旁白若点了一个并不在场的角色名,判定为漏陷并丢弃该旁白。
+      // §5.8 cheap consistency guard: if an ambient narration names a character who is not onstage, treat it as a slip and discard the narration.
       const guard = consistencyGuard(beat.content, guardSnapshot(state));
       if (guard.ok) {
         await repo.appendMessage(beat);
@@ -218,7 +219,7 @@ async function runTurnBody(
       }
     }
 
-    // 导演决定是否让幕后角色登场制造转折(§4.3:whether/whom/how,世界一致,绝不经玩家之门)
+    // Director decides whether to surface an offstage character for a twist (§4.3: whether/whom/how, world-consistent, never through the player's door)
     const surfacing = decideSurfacing(seed, state, tensionAfter);
     if (surfacing) {
       const enterName = state.roster[surfacing.who]?.name ?? seed.characters.find((c) => c.id === surfacing.who)?.name ?? "某人";
@@ -228,7 +229,7 @@ async function runTurnBody(
       onEvent?.({ type: "narration", id: introBeat.id, content: introBeat.content });
     }
 
-    // 世界反应器：LLM 提议结构化 delta，逐条验证后应用，持久化到 state
+    // World Reactor: LLM proposes structured deltas, validated one by one then applied, persisted to state
     const allMsgsForReactor = await repo.listMessages(instanceId);
     const recentLines = allMsgsForReactor
       .filter((m) => m.role !== "system")
@@ -241,15 +242,15 @@ async function runTurnBody(
     for (const [id, obj] of Object.entries(state.roster)) nameById[id] = obj.name;
     const reactorDeltas = await react({ state, recentLines, nameById, llm, rules: seed.rules });
     const reactorRes = await gateCommit(reactorDeltas, "reactor");
-    // 后置钩子(在 gate 之外,因为它写记忆而非世界态):evidence→记忆——关系调整的"凭什么"
-    // 也成为当事人(fromId)的一条主观观察,进入检索与反思。仅对**已落库**的 delta 触发。
+    // Post hook (outside the gate, since it writes memory not world state): evidence→memory — the "why" behind a relationship adjustment
+    // also becomes a subjective observation for the party (fromId), entering retrieval and reflection. Only triggers on **persisted** deltas.
     for (const d of reactorRes.committed) {
       if (d.kind === "setRelationship" && d.reason?.trim()) {
         await repo.appendMemory(buildSelfMemory(d.fromId, `（我记下）${d.reason.trim()}`, 6));
       }
     }
 
-    // §5.9 漏斗:玩家造成的**第一条 anchored 事实** = first-consequence。每实例只触发一次。
+    // §5.9 funnel: the player's **first anchored fact** = first-consequence. Triggers once per instance only.
     const anchoredNow = reactorRes.committed.some((d) => d.kind === "setFact" && (d.hardness ?? "ambient") !== "ambient");
     if (anchoredNow) {
       const log = await repo.listDeltaLog(instanceId);
@@ -257,14 +258,14 @@ async function runTurnBody(
       if (!priorAnchored) recordFunnel(repo, "first-consequence", seed);
     }
 
-    // stub→fleshed:玩家踏入的当前地点若仍是 stub,世界当场把它充实为 fleshed
+    // stub→fleshed: if the current location the player steps into is still a stub, the world fleshes it out on the spot
     const here = state.locations[state.currentLocationId];
     if (here?.detail === "stub") {
       const fd = await fleshStubLocation(seed, here, llm);
       if (fd) await gateCommit([fd], "flesh");
     }
 
-    // 传话:同场 NPC 把最显著的近期一手观察口耳相传 → 在场他人获得二手 hearsay 记忆
+    // Gossip: co-located NPCs pass along their most salient recent first-hand observations by word of mouth → others present gain second-hand hearsay memories
     {
       const hereNow = state.locations[state.currentLocationId];
       const presentNpcs = (hereNow?.presentCharacterIds ?? [])
@@ -277,18 +278,18 @@ async function runTurnBody(
       }
     }
 
-    // 实例锁(§4.0):若本回合在执行期间被 regenerate/fork/god-edit 取代,丢弃其写入——
-    // 回滚到回合起点快照,不持久化。串行(单标签页)场景下永不命中。
+    // Instance lock (§4.0): if this turn is superseded by regenerate/fork/god-edit while executing, discard its writes —
+    // roll back to the turn-start snapshot, no persistence. Never hit in serial (single-tab) scenarios.
     if (instanceLock.isStale(lockToken)) {
       await restoreTurnSnapshot(repo, instanceId, inst, snapshot, inst.lastTurnSnapshot);
       emitTrace(trace.finish("stale-dropped"));
       return;
     }
 
-    // §5.6 退场结算:每回合末派生并存储,确保玩家随时离开都有最新的结算记录可供回归 echo。
+    // §5.6 exit settlement: derived and stored at every turn's end, ensuring whenever the player leaves there's an up-to-date settlement record for the return echo.
     await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now(), settlement: deriveSettlement(state) });
 
-    // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
+    // Reflection: trigger memory distillation for characters who spoke this turn (only generated when there are enough new observations)
     await maybeReflect({
       repo,
       charIds: speakerIds,
@@ -313,7 +314,7 @@ export interface RegenerateLastTurnArgs {
 }
 
 export async function regenerateLastTurn({ seed, repo, instanceId, llm, onEvent }: RegenerateLastTurnArgs): Promise<void> {
-  // 取代该实例上仍在执行的回合(§4.0):其写入将被判定为 stale 而丢弃。
+  // Supersede the turn still executing on this instance (§4.0): its writes will be judged stale and discarded.
   instanceLock.supersede(instanceId);
 
   const inst = await repo.getInstance(instanceId);

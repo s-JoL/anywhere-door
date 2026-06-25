@@ -113,7 +113,7 @@ export default function CreatePage() {
         <div className="mt-1 text-[13px] tracking-[0.3em] text-[var(--smoke)]">{t("create.subtitle")}</div>
       </header>
 
-      {/* 世界 */}
+      {/* world */}
       <section className="relative z-10 flex flex-col gap-4">
         <div className="eyebrow">{t("create.section.world")}</div>
         <div className="flex flex-col gap-1">
@@ -183,7 +183,7 @@ export default function CreatePage() {
         </details>
       </section>
 
-      {/* 卖相 (可选) */}
+      {/* presentation (optional) */}
       <section className="relative z-10 flex flex-col gap-4">
         <div className="eyebrow">{t("create.section.presentation")}</div>
         <p className="text-[11px] text-[var(--smoke)] -mt-2">
@@ -237,7 +237,7 @@ export default function CreatePage() {
         </div>
       </section>
 
-      {/* 角色 */}
+      {/* characters */}
       <section className="relative z-10 flex flex-col gap-4">
         <div className="eyebrow">{t("create.section.characters")}</div>
         {chars.map((c, i) => (

@@ -6,7 +6,7 @@ import { instantiate } from "../../world/instance";
 import { getRepository, resetRepository } from "../../storage";
 import type { ChatMessage } from "../../types";
 
-// fake llm：判断请求（含"暂停扮演"）→ 返回 speak JSON；否则 → 返回该角色一句台词
+// fake llm: decision request (contains "暂停扮演") → return speak JSON; otherwise → return one line for that character
 function makeLlm(line: (sys: string) => string) {
   return async (messages: ChatMessage[]) => {
     const last = messages[messages.length - 1]?.content ?? "";
@@ -16,12 +16,12 @@ function makeLlm(line: (sys: string) => string) {
   };
 }
 
-// streaming fake llm：判断请求 → speak JSON；生成请求 → 调用 onContent 回调后返回内容
+// streaming fake llm: decision request → speak JSON; generation request → call onContent callback then return content
 function makeStreamingLlm() {
   return async (messages: ChatMessage[], onContent?: (delta: string) => void) => {
     const last = messages[messages.length - 1]?.content ?? "";
     if (last.includes("暂停扮演")) return { content: '{"action":"speak","eagerness":0.8}' };
-    // 生成请求：模拟流式输出两个片段
+    // generation request: simulate streaming two fragments
     onContent?.("片");
     onContent?.("段");
     return { content: "片段" };
@@ -34,7 +34,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
   it("lets present characters speak autonomously and records witness-scoped observations", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w1"));
-    // 两人都想说 → 一轮最多 2 人（DEFAULT maxSpeakersPerRound=2）
+    // both want to speak → at most 2 per round (DEFAULT maxSpeakersPerRound=2)
     const llm = makeLlm((sys) => sys.includes("阿岚") ? "（阿岚擦着杯子）又是你。" : "（老周抬眼）来得正好。");
     await runTurn({ seed: DEMO_SEED, repo, instanceId: "w1", input: "我推门进来。", llm });
 
@@ -42,7 +42,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
     const speakers = msgs.filter((m) => m.role === "assistant").map((m) => m.speakerId);
     expect(speakers).toContain("c-lan");
     expect(speakers).toContain("c-zhou");
-    // 在场双方都获得了观察（含彼此的话）
+    // both present parties get an observation (including each other's lines)
     const lan = await repo.listMemories("c-lan");
     expect(lan.some((m) => m.text.includes("推门进来"))).toBe(true);
   });
@@ -54,8 +54,8 @@ describe("runTurn (multi-speaker free-speech)", () => {
     await runTurn({ seed: DEMO_SEED, repo, instanceId: "w2", input: "嗯。",
       deltas: [{ kind: "setObjectState", objectId: "o-glass", state: "满" }, { kind: "setObjectState", objectId: "ghost", state: "x" }], llm });
     const after = await repo.getInstance("w2");
-    expect(after?.state.objects["o-glass"].state).toBe("满"); // valid 应用
-    expect(after?.state.objects["ghost"]).toBeUndefined();    // invalid 丢弃
+    expect(after?.state.objects["o-glass"].state).toBe("满"); // valid → applied
+    expect(after?.state.objects["ghost"]).toBeUndefined();    // invalid → dropped
   });
 
   it("reactor commits object state and player condition changes", async () => {
@@ -84,7 +84,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-walk"));
 
-    // Fake LLM: reactor prompt → 3 deltas (establish 里屋, move scene, bring 阿岚)
+    // Fake LLM: reactor prompt → 3 deltas (establish 里屋/backroom, move scene, bring 阿岚/c-lan)
     // Other prompts → speak JSON or short line
     const llm = async (messages: ChatMessage[]) => {
       const sys = messages[0]?.content ?? "";
@@ -106,9 +106,9 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.locations["back"]?.name).toBe("里屋");
     expect(after?.state.locations["back"]?.connections).toContain("bar");
     expect(after?.state.locations["bar"]?.connections).toContain("back");
-    // Scene moved to 里屋
+    // Scene moved to 里屋 (backroom)
     expect(after?.state.currentLocationId).toBe("back");
-    // 阿岚 moved to 里屋
+    // 阿岚 (c-lan) moved to 里屋 (backroom)
     expect(after?.state.locations["back"]?.presentCharacterIds).toContain("c-lan");
     expect(after?.state.locations["bar"]?.presentCharacterIds).not.toContain("c-lan");
   });
@@ -153,7 +153,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(after?.state.locations[cur].description).toContain("私室");
   });
 
-  it("writes a setRelationship's reason into the fromId character's memory (evidence→记忆)", async () => {
+  it("writes a setRelationship's reason into the fromId character's memory (evidence → memory)", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-evi"));
     const llm = async (messages: ChatMessage[]) => {
@@ -193,7 +193,7 @@ describe("runTurn (multi-speaker free-speech)", () => {
   it("lazily evolves the world on return after time away (off-screen, source-tagged in the log)", async () => {
     const repo = getRepository();
     const inst = instantiate(DEMO_SEED, 1, "w-away");
-    inst.lastSeenAt = Date.now() - 5 * 3_600_000; // 离开 5 小时
+    inst.lastSeenAt = Date.now() - 5 * 3_600_000; // away for 5 hours
     await repo.upsertInstance(inst);
     const llm = async (messages: ChatMessage[]) => {
       const sys = messages[0]?.content ?? "";
@@ -211,10 +211,10 @@ describe("runTurn (multi-speaker free-speech)", () => {
     expect(log.some((e) => e.source === "offscreen")).toBe(true);
   });
 
-  it("spreads a salient observation between co-present characters as hearsay (传话)", async () => {
+  it("spreads a salient observation between co-present characters as hearsay (gossip)", async () => {
     const repo = getRepository();
     await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-gossip"));
-    // 预置 c-lan 一条显著的一手观察(c-lan 与 c-zhou 同在酒馆)
+    // seed c-lan with one salient first-hand observation (c-lan and c-zhou are both in the bar)
     await repo.appendMemory({ id: "m-salient", charId: "c-lan", kind: "observation", text: "阿岚：那个背双刀的杀手摸进了后巷", keywords: ["杀手", "后巷"], importance: 8, createdAt: 1, lastAccessed: 1 });
     const llm = async (messages: ChatMessage[]) => {
       const sys = messages[0]?.content ?? "";
@@ -240,25 +240,25 @@ describe("runTurn (multi-speaker free-speech)", () => {
       onEvent: (e) => events.push(e),
     });
 
-    // 必须有 speaker-start 事件
+    // must have a speaker-start event
     const starts = events.filter((e) => e.type === "speaker-start");
     expect(starts.length).toBeGreaterThan(0);
 
-    // 必须有 delta 事件
+    // must have delta events
     const deltas = events.filter((e) => e.type === "delta");
     expect(deltas.length).toBeGreaterThan(0);
 
-    // 必须有 speaker-end 事件，内容为去前缀后的文本
+    // must have a speaker-end event whose content is the prefix-stripped text
     const ends = events.filter((e) => e.type === "speaker-end");
     expect(ends.length).toBeGreaterThan(0);
     expect(ends[0].content).toBe("片段");
 
-    // speaker-start 和 speaker-end 的 id 对应同一条持久化消息
+    // speaker-start and speaker-end share the id of the same persisted message
     const startId = starts[0].id;
     const endId = ends[0].id;
     expect(startId).toBe(endId);
 
-    // 持久化消息存在且 content 正确
+    // persisted message exists and has the correct content
     const msgs = await repo.listMessages("w3");
     const persisted = msgs.find((m) => m.id === startId);
     expect(persisted).toBeDefined();

@@ -1,29 +1,30 @@
 /**
- * relationship.ts — 社会因果账本(CK 式好感)的纯函数。
+ * relationship.ts — pure functions for the social-causality ledger (CK-style affinity).
  *
- * 关系是有向的:fromId 对 toId 的态度。好感 `affinity` 锚定在某个世界日,
- * 读取时按经过的天数**朝 0 线性衰减**——好感会淡,但 `evidence`(凭什么)留着。
+ * Relationships are directed: fromId's disposition toward toId. The `affinity` is
+ * anchored at a world day, and on read **decays linearly toward 0** by the number of
+ * days elapsed — affinity fades, but the `evidence` (the why) stays.
  */
 import type { Relationship } from "../types";
 
 export const AFFINITY_MIN = -100;
 export const AFFINITY_MAX = 100;
-export const DECAY_PER_DAY = 2;  // 好感每过一个世界日朝 0 衰减的量
-export const EVIDENCE_CAP = 6;   // 只保留最近的若干条理由
+export const DECAY_PER_DAY = 2;  // amount affinity decays toward 0 per world day
+export const EVIDENCE_CAP = 6;   // keep only the most recent few reasons
 
 export function clampAffinity(n: number): number {
   const v = Math.max(AFFINITY_MIN, Math.min(AFFINITY_MAX, Math.round(n)));
-  return v === 0 ? 0 : v; // 归一 -0 → 0
+  return v === 0 ? 0 : v; // normalize -0 → 0
 }
 
-/** 朝 0 线性衰减:|affinity| 每天减 DECAY_PER_DAY,不过 0。 */
+/** Linear decay toward 0: |affinity| drops by DECAY_PER_DAY each day, not past 0. */
 export function effectiveAffinity(rel: Relationship, currentDay: number): number {
   const days = Math.max(0, currentDay - rel.sinceDay);
   const faded = Math.max(0, Math.abs(rel.affinity) - DECAY_PER_DAY * days);
   return clampAffinity(Math.sign(rel.affinity) * faded);
 }
 
-/** 把好感数值映射成角色能体会的态度词(角色不读裸数字)。 */
+/** Map the affinity number to a disposition word a character can feel (characters don't read raw numbers). */
 export function affinityBand(affinity: number): string {
   if (affinity >= 60) return "信任/亲近";
   if (affinity >= 25) return "友善";
@@ -39,8 +40,9 @@ export interface RelationshipUpdate {
 }
 
 /**
- * 纯:对(可能不存在的)旧关系应用一次调整。
- * 先把旧值衰减到 currentDay,再叠加 affinityDelta、钳位,把 reason 计入证据,重新锚定当天。
+ * Pure: apply one adjustment to a (possibly nonexistent) prior relationship.
+ * First decay the old value to currentDay, then add affinityDelta and clamp, fold
+ * reason into evidence, and re-anchor to the current day.
  */
 export function applyRelationshipUpdate(
   prev: Relationship | undefined,

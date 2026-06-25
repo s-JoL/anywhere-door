@@ -2,7 +2,7 @@ export type ProviderId = "openrouter" | "deepseek";
 
 export interface ModelConfig {
   provider: ProviderId;
-  apiKey: string;       // 空 = 回退 .env（仅 openrouter）
+  apiKey: string;       // empty = fall back to .env (openrouter only)
   model: string;
   reasoningEnabled: boolean;
 }
@@ -15,21 +15,21 @@ export interface Identity { gender?: string; age?: string; body?: string; hardFa
 export interface Character {
   id: string;
   name: string;
-  description: string;   // 设定（含性格）
-  detail?: "stub" | "fleshed";  // 实例内按需生长的角色：stub 待充实，fleshed 已完整（seed 角色视为 fleshed）
-  identity?: Identity;   // 不可变硬事实
-  goal?: string;         // 当前目标（被 God 注入主观 prompt）
-  systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
-  postHistoryInstructions?: string;  // 角色覆盖末尾后置强化（支持 {{original}}）
-  /** 退场归档(§5.7):置真则从在场名单移除,但记录绝不删除。 */
+  description: string;   // setup (includes personality)
+  detail?: "stub" | "fleshed";  // character grown on demand within an instance: stub = to be fleshed out, fleshed = complete (seed characters count as fleshed)
+  identity?: Identity;   // immutable hard facts
+  goal?: string;         // current goal (injected by God into the subjective prompt)
+  systemPrompt?: string;             // character override system prefix (supports {{original}})
+  postHistoryInstructions?: string;  // character override trailing post-history reinforcement (supports {{original}})
+  /** Exit archival (§5.7): when true, removed from the present roster, but the record is never deleted. */
   archived?: boolean;
 }
 
-/** 不可变：世界的"物理法则"，创建后只读。 */
+/** Immutable: the world's "laws of physics", read-only after creation. */
 export interface WorldRules {
-  physics: string;       // 什么可能/不可能
-  setting: string;       // 年代/地点/genre 常量
-  redLines: string[];    // 红线（平台基线 + 创作者追加）
+  physics: string;       // what is possible / impossible
+  setting: string;       // era / place / genre constants
+  redLines: string[];    // red lines (platform baseline + creator additions)
 }
 
 export interface Location {
@@ -50,76 +50,77 @@ export interface WorldObject {
   props: { portable?: boolean; locked?: boolean; owner?: string; gates?: string; [k: string]: unknown };
   locationId: string;
   state?: string;
-  /** 退场归档(§5.7):置真则从在场/可见中移除,但记录绝不删除。 */
+  /** Exit archival (§5.7): when true, removed from present/visible, but the record is never deleted. */
   archived?: boolean;
 }
 
-/** 角色的客观事实投影（秘密/内心不在此）。 */
+/** A character's objective-fact projection (secrets / inner life are not here). */
 export interface CharObjective { name: string; condition?: string }
 
-/** 一条世界设定 / 世界书条目：keys 命中文本时注入 content（按需生长的永久 canon）。 */
+/** A world-setting / lorebook entry: inject `content` when `keys` hit the text (permanent canon grown on demand). */
 export interface LoreEntry { id: string; keys: string[]; content: string }
 
 /**
- * 一条有向社会关系（CK 式好感账本）：
- * `affinity` 为锚定在 `sinceDay` 那天的好感数值（读取时按过去天数朝 0 衰减）；
- * `evidence` 记录"凭什么"（最近若干条理由）；`disposition` 为可选的可读态度短语。
+ * A directed social relationship (CK-style affinity ledger):
+ * `affinity` is the affinity value anchored on the `sinceDay` day (decays toward 0 by elapsed days when read);
+ * `evidence` records "on what grounds" (the most recent few reasons); `disposition` is an optional human-readable attitude phrase.
  */
 export interface Relationship {
-  affinity: number;       // 有符号好感，钳 [-100, 100]，0 = 中立
-  disposition?: string;   // 可选短语，如"记恨在心""戒备松动"
-  evidence: string[];     // 凭什么：最近的理由（capped）
-  sinceDay: number;       // affinity 锚定的世界日（供朝 0 衰减）
+  affinity: number;       // signed affinity, clamped [-100, 100], 0 = neutral
+  disposition?: string;   // optional phrase, e.g. "holding a grudge" / "guard loosening"
+  evidence: string[];     // on what grounds: the most recent reasons (capped)
+  sinceDay: number;       // world day the affinity is anchored to (for decay toward 0)
 }
 
-/** 可变、按需生长。 */
+/** Mutable, grown on demand. */
 export interface WorldState {
   currentLocationId: string;
   time: { day: number; clock: string; lighting: string };
   locations: Record<string, Location>;
   objects: Record<string, WorldObject>;
   roster: Record<string, CharObjective>;
-  /** 实例私有、按需生长的角色（seed 冻结共享，新角色绝不写回 seed）。 */
+  /** Instance-private characters grown on demand (the seed is frozen and shared; new characters are never written back to the seed). */
   characters?: Record<string, Character>;
   flags: Record<string, string | number | boolean>;
   tension?: number;
   relationships?: Record<string, Record<string, Relationship>>;
-  /** 世界书 / canon：关键词触发的永久世界设定，可经 establishLore 按需生长。 */
+  /** Lorebook / canon: permanent world settings triggered by keywords, can be grown on demand via establishLore. */
   lore?: LoreEntry[];
-  /** 结构化压力线 / 悬念线(§4.6)。导演读取;只经 thread delta(过写入口)推进。 */
+  /** Structured pressure lines / suspense threads (§4.6). Read by the Director; advanced only via thread delta (through the WriteGate). */
   pressureLines?: PressureLine[];
-  /** 硬度分级的事实(§5.1 canon 硬度)。只经 setFact(过写入口)写入。 */
+  /** Hardness-graded facts (§5.1 canon hardness). Written only via setFact (through the WriteGate). */
   facts?: Fact[];
 }
 
 /**
- * Canon 硬度三档(§5.1):
- * ambient 氛围(可被任何更可信来源改写) · anchored 锚定(reactor/角色不能推翻,
- * 唯 god 编辑可改) · core 内核(世界基石,唯 god 编辑可改)。
- * 事实只在**需要持久、需要校验、或影响未来行为**时才升格,默认保持 ambient。
+ * Three tiers of canon hardness (§5.1):
+ * ambient (can be rewritten by any more-credible source) · anchored (the Reactor/characters cannot overturn it,
+ * only a god edit can change it) · core (world bedrock, only a god edit can change it).
+ * A fact is promoted only when it **needs to persist, needs validation, or affects future behavior**; it stays ambient by default.
  */
 export type Hardness = "ambient" | "anchored" | "core";
 
 /**
- * 一条分级事实(§5.1)。按 (entityId, field) 唯一:它是该维度"此刻的真相"。
- * 矛盾 = 同 (entityId, field) 不同 value;更硬的事实不可被更软的来源推翻。
+ * A graded fact (§5.1). Unique by (entityId, field): it is "the truth right now" for that dimension.
+ * Contradiction = same (entityId, field) with a different value; a harder fact cannot be overturned by a softer source.
  */
 export interface Fact {
   id: string;
-  entityId?: string;   // 事实关于谁/什么(省略表示世界级事实)
-  field: string;       // 维度,如 "location" / "hidden" / "alive"
-  value: string;       // 断言的值
+  entityId?: string;   // who/what the fact is about (omitted means a world-level fact)
+  field: string;       // dimension, e.g. "location" / "hidden" / "alive"
+  value: string;       // the asserted value
   hardness: Hardness;
-  sinceDay?: number;   // 该事实确立/最近改写的世界日
+  sinceDay?: number;   // world day the fact was established / last rewritten
 }
 
-/** 压力线状态:潜伏 / 活跃 / 已了结。 */
+/** Pressure-line status: latent / active / resolved. */
 export type ThreadStatus = "latent" | "active" | "resolved";
 
 /**
- * 一条结构化压力线(§4.6 / 架构 §5 压力线)。把"张力"从单一标量升级为可命名、可推进、
- * 可了结的悬念线。`summary` 为玩家可见的安全措辞;强度供导演排序。Phase 0 仅脚手架:
- * 字段与 thread delta 就位,三档精度的离场推进在 Phase 1。
+ * A structured pressure line (§4.6 / architecture §5 pressure lines). Upgrades "tension" from a single scalar
+ * into a nameable, advanceable, resolvable suspense thread. `summary` is player-visible safe wording; intensity
+ * is for Director ordering. Phase 0 is scaffolding only: the fields and thread delta are in place; three-tier
+ * offstage advancement lands in Phase 1.
  */
 export interface PressureLine {
   id: string;
@@ -128,25 +129,25 @@ export interface PressureLine {
   intensity: number;             // 0–10
   relatedCharacterIds?: string[];
   relatedLocationIds?: string[];
-  updatedDay?: number;           // 最近一次推进的世界日
-  /** 线索类别(如 debt / secret / threat),供导演分类与排序。 */
+  updatedDay?: number;           // world day of the most recent advancement
+  /** Thread category (e.g. debt / secret / threat), for Director classification and ordering. */
   kind?: string;
-  /** 玩家是否已知情(§5.2 公平:不知情的线不得升到强后果)。 */
+  /** Whether the player already knows (§5.2 fairness: an unknown thread must not escalate to a strong consequence). */
   playerKnown?: boolean;
-  /** 下一个该让玩家看到的"征兆"(diegetic 提示,非裸数值)。 */
+  /** The next "sign" the player should see (diegetic hint, not a bare number). */
   nextSign?: string;
 }
 
 export interface WorldPresentation {
-  genre: string;                                // 主类型 chip
-  mood: string[];                               // 2–3 调性 chip
-  intensity: "calm" | "charged" | "explicit";  // 烈度
-  hook: string;                                 // 冷开场: 1–3 句, 第二人称, 结尾悬住
-  cast: { name: string; line: string }[];       // 每角色一句: 名+一丝悬念
-  accent?: string;                              // 强调色 (hex/rgb/var), 主题化卡片
+  genre: string;                                // primary-genre chip
+  mood: string[];                               // 2–3 tone chips
+  intensity: "calm" | "charged" | "explicit";  // intensity
+  hook: string;                                 // cold open: 1–3 sentences, second person, ends on a cliffhanger
+  cast: { name: string; line: string }[];       // one line per character: name + a hint of suspense
+  accent?: string;                              // accent color (hex/rgb/var), themed card
 }
 
-/** 冻结、共享、人人相同的起点。 */
+/** A frozen, shared starting point identical for everyone. */
 export interface WorldSeed {
   id: string;
   title: string;
@@ -168,7 +169,7 @@ export interface TurnSnapshot {
   createdAt: number;
 }
 
-/** 玩家的私有分叉。 */
+/** The player's private fork. */
 export interface WorldInstance {
   id: string;
   seedId: string;
@@ -176,19 +177,19 @@ export interface WorldInstance {
   createdAt: number;
   updatedAt: number;
   lastTurnSnapshot?: TurnSnapshot;
-  turn?: number; // 已进行的回合数(事件日志归因)
-  lastSeenAt?: number; // 玩家上次交互的真实时间戳(Date.now),供离场演化算"离开多久"
-  pinned?: boolean; // 玩家把这扇门收进"我的门廊"(Doorway Library)
-  /** 离场结算记录(§5.6):退场时派生,供门廊展示与回归 echo。 */
+  turn?: number; // number of turns taken (event-log attribution)
+  lastSeenAt?: number; // real-time timestamp of the player's last interaction (Date.now), used by offstage evolution to compute "how long they've been away"
+  pinned?: boolean; // the player tucked this door into "my doorway" (Doorway Library)
+  /** Exit-settlement record (§5.6): derived on exit, for doorway display and the return echo. */
   settlement?: SettlementRecord;
 }
 
 /**
- * 离场结算(§5.6):玩家离开时对世界状态的一次有界提炼。
- * - `trace`:已发生且站得住的事(anchored+ 事实 / 玩家造成的改变),玩家安全措辞。
- * - `unresolved`:仍悬而未决的(活跃压力线摘要)。
- * - `candidates`:**可能**的开场(回归时的钩子)——注意是候选,**不是**已落库的事实。
- * - `bond`:某人对玩家态度的变化(回归 echo 不只讲世界,也讲关系)。
+ * Exit settlement (§5.6): a bounded distillation of the world state when the player leaves.
+ * - `trace`: things that have happened and hold up (anchored+ facts / player-caused changes), in player-safe wording.
+ * - `unresolved`: things still hanging (active pressure-line summaries).
+ * - `candidates`: **possible** openings (hooks for the return) — note these are candidates, **not** committed facts.
+ * - `bond`: a change in someone's attitude toward the player (the return echo is not just about the world, but also about relationships).
  */
 export interface SettlementRecord {
   trace: string[];
@@ -202,17 +203,17 @@ export interface Message {
   id: string;
   instanceId: string;
   role: ChatMessageRole;
-  speakerId: string | null;  // assistant 时 = characterId
+  speakerId: string | null;  // = characterId when role is assistant
   content: string;
   createdAt: number;
   narration?: boolean;
 }
 
-/** 每角色主观记忆（借 Generative Agents 的 ConceptNode）。 */
+/** Per-character subjective memory (borrowing Generative Agents' ConceptNode). */
 /**
- * 记忆的来源类别(§4.5 / 架构 §5.4 主观记录)。决定可信度与传播规则:
- * witnessed 一手所见 · heard 转述 · inferred 推断/反思 · remembered 回忆 ·
- * revealed 被揭示 · canonized 已固化为正典 · authored 作者注入。
+ * The provenance category of a memory (§4.5 / architecture §5.4 subjective records). Determines credibility and propagation rules:
+ * witnessed (firsthand seen) · heard (hearsay) · inferred (inference/reflection) · remembered (recall) ·
+ * revealed (disclosed) · canonized (already hardened into canon) · authored (author-injected).
  */
 export type Provenance =
   | "witnessed"
@@ -223,7 +224,7 @@ export type Provenance =
   | "canonized"
   | "authored";
 
-/** 感知质量:完整 / 只见局部 / 失真模糊(§5.4 的"只看到一部分""记错了")。 */
+/** Perception quality: full / partial (saw only part) / garbled (distorted, fuzzy) (§5.4's "saw only a part" / "misremembered"). */
 export type PerceptionQuality = "full" | "partial" | "garbled";
 
 export interface Memory {
@@ -231,34 +232,34 @@ export interface Memory {
   charId: string;
   kind: "observation" | "reflection" | "hearsay";
   text: string;
-  keywords: string[];     // 写入时抽取，供关键词相关性近似
+  keywords: string[];     // extracted at write time, for keyword-relevance approximation
   importance: number;     // 1–10
   createdAt: number;
   lastAccessed: number;
-  /** 反思记忆的来源记忆 id 列表（仅 kind:"reflection" 有值）。 */
+  /** List of source-memory ids for a reflection memory (set only for kind:"reflection"). */
   evidence?: string[];
-  // ——— §4.5 主观记录字段(均可选;缺省语义 = witnessed / 满置信 / full) ———
-  /** 来源类别;缺省视为 "witnessed"。 */
+  // ——— §4.5 subjective-record fields (all optional; default semantics = witnessed / full confidence / full) ———
+  /** Provenance category; defaults to "witnessed". */
   provenance?: Provenance;
-  /** 主观置信度 0–1;缺省视为 1。低置信在检索中更弱地浮现。 */
+  /** Subjective confidence 0–1; defaults to 1. Low confidence surfaces more weakly in retrieval. */
   confidence?: number;
-  /** 叠加在原始事实之上的主观解读(§5.4「误解」)。 */
+  /** A subjective reading layered on top of the raw fact (§5.4 "misunderstanding"). */
   interpretation?: string;
-  /** 感知质量;缺省视为 "full"。 */
+  /** Perception quality; defaults to "full". */
   perceptionQuality?: PerceptionQuality;
-  /** 记录与真相的偏离方式(规则扭曲 / 记错)。 */
+  /** How the record deviates from the truth (rule distortion / misremembering). */
   distortion?: string;
-  /** 该记忆所依据的变更日志条目 id(→ deltaLog),供信念图回溯证据。 */
+  /** The change-log entry ids this memory is based on (→ deltaLog), for tracing evidence in the belief graph. */
   evidenceLinks?: string[];
-  /** 产生该记忆的世界分支 id(供分支/重生成隔离)。 */
+  /** The world-branch id that produced this memory (for branch/regeneration isolation). */
   branchId?: string;
 }
 
 /**
- * 本地口味/漏斗事件类别。前四个用于推荐排序;后续 7 个是获取漏斗的各级(§5.9):
+ * Local taste/funnel event categories. The first four feed recommendation ranking; the next 7 are the stages of the acquisition funnel (§5.9):
  * card-dwell → open-door → first-action → ten-minute-retain → first-consequence
- * → return → pin。first-consequence 在玩家造成第一条 anchored 事实时触发。
- * 全程本地优先,绝不上服务器,绝不抵达角色。
+ * → return → pin. first-consequence fires when the player causes their first anchored fact.
+ * Local-first throughout, never sent to a server, never reaches characters.
  */
 export type TasteEventKind =
   | "enter" | "dwell" | "author" | "skip"

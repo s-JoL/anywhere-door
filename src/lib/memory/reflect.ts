@@ -120,7 +120,7 @@ export async function reflect({ characterName, charId, memories, llm, now }: Ref
       evidence: evidenceIds,
       createdAt: t,
       lastAccessed: t,
-      // 反思是从已有记忆推断而来,而非直接所见
+      // A reflection is inferred from existing memories, not directly witnessed
       provenance: "inferred" as const,
       confidence: 0.8,
     };

@@ -11,7 +11,7 @@ const PROVIDERS: { id: ProviderId; label: string }[] = [
   { id: "deepseek", label: t("settings.provider.deepseek") },
 ];
 
-/** 每个供应商的若干常用模型 id，供 datalist 提示（非强制）。 */
+/** A few common model ids per provider, used as datalist hints (not enforced). */
 const MODEL_SUGGESTIONS: Record<ProviderId, string[]> = {
   openrouter: ["deepseek/deepseek-v4-pro", "deepseek/deepseek-chat", "google/gemini-2.5-flash"],
   deepseek: ["deepseek-chat", "deepseek-reasoner"],
@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const [test, setTest] = useState<TestState>({ kind: "idle" });
   const [saved, setSaved] = useState(false);
 
-  // 挂载时载入本地配置（如有）
+  // On mount, load local config if present
   useEffect(() => {
     const existing = getUserConfig();
     if (existing) setForm(existing);

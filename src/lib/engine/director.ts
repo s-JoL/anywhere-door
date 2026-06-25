@@ -41,7 +41,7 @@ export interface Surfacing {
   how: SurfaceHow;
 }
 
-/** 张力到此即触发"该来个人了"。 */
+/** Tension at or above this triggers "someone should arrive". */
 const SURFACE_TENSION = 6;
 
 /**
@@ -68,14 +68,14 @@ export function selectActiveThreads(state: WorldState, max = 2): PressureLine[] 
     .slice(0, max);
 }
 
-/** 纯：根据最近一句更新张力（冲突/动作/强标点升，平淡衰减），钳 0–10。 */
+/** Pure: update tension from the last line (conflict/action/strong punctuation raise it, blandness decays it), clamped 0–10. */
 export function updateTension(prev: number, lastLine: string): number {
   let t = prev;
-  if (/[（(].*[)）]/.test(lastLine)) t += 0.5;          // 有动作
-  if (/[！!?？]/.test(lastLine)) t += 1;                 // 情绪
-  if (/枪|血|死|逃|打|抓|吼|威胁|危险|喊/.test(lastLine)) t += 2; // 冲突词
-  if (lastLine.length <= 6) t -= 1;                      // 短促闲谈
-  t -= 1;                                                // 自然衰减
+  if (/[（(].*[)）]/.test(lastLine)) t += 0.5;          // has action
+  if (/[！!?？]/.test(lastLine)) t += 1;                 // emotion
+  if (/枪|血|死|逃|打|抓|吼|威胁|危险|喊/.test(lastLine)) t += 2; // conflict words
+  if (lastLine.length <= 6) t -= 1;                      // brief small talk
+  t -= 1;                                                // natural decay
   return Math.max(0, Math.min(10, t));
 }
 
@@ -85,7 +85,7 @@ const DIRECTOR_SYSTEM =
 
 export interface NarrateArgs { state: WorldState; recentLines: string[]; llm: LlmFn }
 
-/** 产一句世界旁白；失败/空 → null（降级不插旁白）。 */
+/** Produce one line of world narration; failure/empty → null (degrade by inserting no narration). */
 export async function directorNarrate({ state, recentLines, llm }: NarrateArgs): Promise<string | null> {
   const user =
     `【场景】${state.locations[state.currentLocationId]?.name ?? ""}（${state.time.clock}，${state.time.lighting}）\n` +
@@ -108,15 +108,15 @@ export interface MaybeDirectArgs {
   llm: LlmFn;
 }
 
-/** 张力到此即算"高位"。 */
+/** Tension at or above this counts as "high". */
 const HIGH_TENSION = 7;
 
-/** 节拍决策：张力明显跃升、或已在高位且仍在上行时，插一条世界旁白。返回旁白 Message 或 null。 */
+/** Beat decision: insert a world narration when tension jumps clearly, or is already high and still climbing. Returns a narration Message or null. */
 export async function maybeDirect(args: MaybeDirectArgs): Promise<Message | null> {
   const { instanceId, state, recentLines, tensionBefore, tensionAfter, llm } = args;
-  const rose = tensionAfter - tensionBefore >= 1.5;          // 明显跃升
-  const climbingHigh = tensionAfter >= HIGH_TENSION && tensionAfter > tensionBefore; // 高位仍在上行
-  if (!rose && !climbingHigh) return null; // 高位但持平/衰减的回合不插，天然防刷屏
+  const rose = tensionAfter - tensionBefore >= 1.5;          // clear jump
+  const climbingHigh = tensionAfter >= HIGH_TENSION && tensionAfter > tensionBefore; // high and still climbing
+  if (!rose && !climbingHigh) return null; // high but flat/decaying turns insert nothing, naturally preventing spam
   const line = await directorNarrate({ state, recentLines, llm });
   if (!line) return null;
   return { id: newId("n"), instanceId, role: "system", speakerId: null, content: line, narration: true, createdAt: nextTime() };

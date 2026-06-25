@@ -38,9 +38,9 @@ describe("validateDelta", () => {
     expect(r.ok).toBe(false);
   });
   it("rejects no-op deltas that change nothing (phantom changes)", () => {
-    const s = baseState(); // glass.state="空", c1 无 condition
+    const s = baseState(); // glass.state="空" (empty), c1 has no condition
     expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "空" }).ok).toBe(false);
-    expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "碎了" }).ok).toBe(true); // 真变化仍合法
+    expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "碎了" }).ok).toBe(true); // a real change is still valid
     s.roster.c1.condition = "受伤";
     expect(validateDelta(s, rules, { kind: "setCondition", entityId: "c1", condition: "受伤" }).ok).toBe(false);
     s.objects.glass.props = { locked: true };
@@ -397,7 +397,7 @@ describe("applyDelta (immutable)", () => {
   it("moves a character between locations without mutating input", () => {
     const s = baseState();
     const next = applyDelta(s, { kind: "moveCharacter", characterId: "c1", toLocationId: "street" });
-    expect(s.locations.bar.presentCharacterIds).toEqual(["c1"]); // 原对象未变
+    expect(s.locations.bar.presentCharacterIds).toEqual(["c1"]); // original object unchanged
     expect(next.locations.bar.presentCharacterIds).toEqual([]);
     expect(next.locations.street.presentCharacterIds).toEqual(["c1"]);
   });
@@ -419,7 +419,7 @@ describe("applyDelta (immutable)", () => {
   });
 });
 
-describe("moveObject delta (物理因果: 物体可移动 + portable 强制)", () => {
+describe("moveObject delta (physical causality: objects movable + portable enforced)", () => {
   it("validateDelta accepts relocating a movable object to an existing location", () => {
     const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
     expect(r.ok).toBe(true);
@@ -458,7 +458,7 @@ describe("moveObject delta (物理因果: 物体可移动 + portable 强制)", (
   });
 });
 
-describe("locked passage (上锁的门挡路)", () => {
+describe("locked passage (a locked door blocks movement)", () => {
   // a state where bar has a locked door gating the way to street
   function withDoor(locked: boolean, gates = "street"): WorldState {
     const s = baseState();
@@ -503,7 +503,7 @@ describe("locked passage (上锁的门挡路)", () => {
   });
 });
 
-describe("fleshLocation delta (stub→fleshed 懒充实)", () => {
+describe("fleshLocation delta (stub→fleshed lazy enrichment)", () => {
   it("validateDelta accepts fleshing an existing location", () => {
     const r = validateDelta(baseState(), rules, { kind: "fleshLocation", locationId: "street", description: "湿漉漉的霓虹长街，雨水在裂缝里聚成一条条细河" });
     expect(r.ok).toBe(true);
@@ -525,6 +525,6 @@ describe("fleshLocation delta (stub→fleshed 懒充实)", () => {
   });
   it("applyDelta keeps the prior gist when none is given", () => {
     const next = applyDelta(baseState(), { kind: "fleshLocation", locationId: "street", description: "霓虹长街" });
-    expect(next.locations.street.gist).toBe("湿漉漉的街"); // 原 gist 保留
+    expect(next.locations.street.gist).toBe("湿漉漉的街"); // prior gist retained
   });
 });

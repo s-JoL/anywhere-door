@@ -16,13 +16,13 @@ export type Delta =
   | { kind: "moveObject"; objectId: string; toLocationId: string }
   | { kind: "setObjectLocked"; objectId: string; locked: boolean }
   | { kind: "fleshLocation"; locationId: string; description: string; gist?: string }
-  // ——— §4.6/§5.2 压力线 / 悬念线(只经写入口推进) ———
+  // ——— §4.6/§5.2 pressure lines / suspense threads (advanced only through the write gate) ———
   | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[]; threadKind?: string; playerKnown?: boolean; nextSign?: string }
   | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved"; playerKnown?: boolean; nextSign?: string }
   | { kind: "resolveThread"; id: string }
-  // ——— §5.1 分级事实(canon 硬度;只经写入口) ———
+  // ——— §5.1 graded facts (canon hardness; only through the write gate) ———
   | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness }
-  // ——— §5.7 实体生命周期(stub→fleshed 全类型;归档不删除) ———
+  // ——— §5.7 entity lifecycle (stub→fleshed across all types; archive, never delete) ———
   | { kind: "fleshObject"; objectId: string; state?: string; name?: string }
   | { kind: "fleshCharacter"; characterId: string; description: string; goal?: string }
   | { kind: "retireEntity"; entityId: string; entityType: "character" | "object" };
@@ -30,8 +30,9 @@ export type Delta =
 export type Validation = { ok: true } | { ok: false; reason: string };
 
 /**
- * delta 的来源类别(用于事件日志归因)。与 WriteGate 的 ProposalSource 同义:
- * 每条提议都带来源,落库日志原样记录,供 Context Inspector / 离场对账归因。
+ * Source category of a delta (for event-log attribution). Synonymous with the
+ * WriteGate's ProposalSource: every proposal carries a source, the persisted log
+ * records it verbatim, for Context Inspector / offstage-reconciliation attribution.
  */
 export type DeltaSource =
   | "user"
@@ -43,22 +44,24 @@ export type DeltaSource =
   | "god";
 
 /**
- * 事件日志一条:每个**经校验落库的 delta** 追加一条,记录 turn / 世界时间 / 逻辑时戳 /
- * 触发它的玩家输入。快照是当前态的快读;日志是历史——延时回调 / 声誉 / 离场演化都读它。
+ * One event-log entry: appended for every **validated, persisted delta**, recording
+ * turn / world time / logical timestamp / the player input that triggered it. The
+ * snapshot is a fast read of the current state; the log is history — delayed
+ * callbacks / reputation / offstage evolution all read it.
  */
 export interface DeltaLogEntry {
   id: string;
   instanceId: string;
   turn: number;
   source: DeltaSource;
-  cause: string;        // 触发本回合变化的玩家输入/动作
+  cause: string;        // player input/action that triggered this turn's change
   gameDay: number;
   gameClock: string;
-  at: number;           // 单调逻辑时戳(nextTime)
+  at: number;           // monotonic logical timestamp (nextTime)
   delta: Delta;
 }
 
-/** 一条 delta 里会落进世界的自由文本字段(用于红线筛查)。 */
+/** Free-text fields in a delta that land in the world (used for red-line screening). */
 function freeTextFields(d: Delta): string[] {
   switch (d.kind) {
     case "setObjectState": return [d.state];
@@ -78,9 +81,10 @@ function freeTextFields(d: Delta): string[] {
 }
 
 /**
- * 红线兜底:对 delta 的自由文本做保守的关键词子串筛查。
- * 只在红线词条**字面命中**时拦截 —— 散文式红线(整句)不会误伤合法 delta,
- * 语义层面的约束交给 reactor prompt(软约束)。
+ * Red-line fallback: conservative keyword substring screening over a delta's
+ * free text. Blocks only on a **literal hit** of a red-line entry — prose-style
+ * red lines (full sentences) won't misfire on a legitimate delta; semantic-level
+ * constraints are left to the reactor prompt (soft constraints).
  */
 function screenRedLines(redLines: string[] | undefined, d: Delta): Validation {
   if (!redLines?.length) return { ok: true };
@@ -96,7 +100,7 @@ function screenRedLines(redLines: string[] | undefined, d: Delta): Validation {
   return { ok: true };
 }
 
-/** 物理因果:from 地点里是否有一扇上锁、且把守通往 toId 的门。返回挡路的门(或 null)。 */
+/** Physical causality: is there a locked door in the `from` location that gates passage to toId? Returns the blocking door (or null). */
 function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][string] | undefined, toId: string) {
   if (!from) return null;
   for (const oid of from.objectIds) {
@@ -106,16 +110,18 @@ function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][str
   return null;
 }
 
-/** 硬度档次序(用于比较)。 */
+/** Hardness tier ordering (for comparison). */
 const HARDNESS_RANK: Record<Hardness, number> = { ambient: 0, anchored: 1, core: 2 };
 
-/** 压力线"强后果"强度阈值(§5.2 公平规则)。 */
+/** Pressure-line "strong consequence" intensity threshold (§5.2 fairness rule). */
 const STRONG_THREAD_INTENSITY = 8;
 
 /**
- * 来源可写入的最高硬度(§5.1 权威分级):只有 god 编辑能写/改 core;
- * 其余来源(reactor/角色/离场/充实/物化/导演/用户)至多写到 anchored。
- * "提升权威绝不绕过写入口"——这条由 gate 传入 source 后在此强制。
+ * Highest hardness a source may write (§5.1 authority grading): only god edits
+ * can write/change core; every other source (reactor/character/offstage/flesh/
+ * materializer/director/user) writes at most up to anchored.
+ * "Raising authority never bypasses the write gate" — enforced here once the gate
+ * passes the source in.
  */
 const SOURCE_MAX_HARDNESS: Record<DeltaSource, Hardness> = {
   user: "anchored",
@@ -127,7 +133,7 @@ const SOURCE_MAX_HARDNESS: Record<DeltaSource, Hardness> = {
   god: "core",
 };
 
-/** 守不可变红线、结构完整性与空间规则；状态本身自由变化。source 提供时附加权威校验。 */
+/** Guards immutable red lines, structural integrity, and spatial rules; state itself varies freely. When source is provided, adds authority validation. */
 export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, source?: DeltaSource): Validation {
   const screened = screenRedLines(rules.redLines, d);
   if (!screened.ok) return screened;
@@ -220,7 +226,7 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (!obj) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
       if (!state.locations[d.toLocationId])
         return { ok: false, reason: `目标地点 ${d.toLocationId} 不存在` };
-      // 物理因果:显式标记不可携带的物体搬不走(默认可移动)。
+      // Physical causality: an object explicitly marked non-portable can't be moved (movable by default).
       if (obj.props?.portable === false)
         return { ok: false, reason: `${obj.name} 搬不动` };
       return { ok: true };
@@ -244,7 +250,7 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
     case "advanceThread": {
       const line = (state.pressureLines ?? []).find((p) => p.id === d.id);
       if (!line) return { ok: false, reason: `压力线 ${d.id} 不存在` };
-      // 公平规则(§5.2):玩家尚不知情的线,不得被推进到"强后果"强度。
+      // Fairness rule (§5.2): a thread the player doesn't yet know about must not be advanced to "strong consequence" intensity.
       const resultIntensity = Math.max(0, Math.min(10, line.intensity + (d.intensityDelta ?? 0)));
       const resultKnown = d.playerKnown ?? line.playerKnown ?? false;
       if (resultIntensity >= STRONG_THREAD_INTENSITY && !resultKnown) {
@@ -263,11 +269,11 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (!d.field?.trim()) return { ok: false, reason: "事实 field 不能为空" };
       if (!d.value?.trim()) return { ok: false, reason: "事实 value 不能为空" };
       const proposed: Hardness = d.hardness ?? "ambient";
-      // 权威分级:来源不能写入超过其权限的硬度(只有 god 能立/改 core)。
+      // Authority grading: a source can't write a hardness beyond its permission (only god can set/change core).
       if (source && HARDNESS_RANK[proposed] > HARDNESS_RANK[SOURCE_MAX_HARDNESS[source]]) {
         return { ok: false, reason: `来源 ${source} 无权写入 ${proposed} 级事实` };
       }
-      // canon 硬度:同 (entityId, field) 已有更硬且不同值的事实 → 不可被推翻。
+      // canon hardness: an existing harder fact with a different value for the same (entityId, field) → cannot be overturned.
       const existing = (state.facts ?? []).find((f) => f.entityId === d.entityId && f.field === d.field);
       if (existing && existing.value !== d.value && HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
         return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
@@ -303,7 +309,7 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
   }
 }
 
-/** 不可变应用；调用方应先 validateDelta。 */
+/** Immutable apply; the caller should validateDelta first. */
 export function applyDelta(state: WorldState, d: Delta): WorldState {
   switch (d.kind) {
     case "moveCharacter": {
@@ -500,7 +506,7 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
     case "setFact": {
       const hardness: Hardness = d.hardness ?? "ambient";
       const fact = { id: d.id, field: d.field, value: d.value, hardness, sinceDay: state.time.day, ...(d.entityId ? { entityId: d.entityId } : {}) };
-      // 按 (entityId, field) upsert:该维度的"此刻真相"是单值的。
+      // Upsert by (entityId, field): the "truth right now" for this dimension is single-valued.
       const rest = (state.facts ?? []).filter((f) => !(f.entityId === d.entityId && f.field === d.field));
       return { ...state, facts: [...rest, fact] };
     }
@@ -521,7 +527,7 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
     case "retireEntity": {
       if (d.entityType === "character") {
         const c = state.characters?.[d.entityId];
-        // 从所有场景在场名单移除,但保留角色记录(archived 置真),绝不删除。
+        // Remove from every location's present roster, but keep the character record (set archived true); never delete.
         const locations: WorldState["locations"] = {};
         for (const [id, loc] of Object.entries(state.locations)) {
           locations[id] = { ...loc, presentCharacterIds: loc.presentCharacterIds.filter((x) => x !== d.entityId) };

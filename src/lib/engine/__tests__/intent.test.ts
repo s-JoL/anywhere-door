@@ -44,7 +44,7 @@ describe("decideIntent", () => {
   });
 });
 
-describe("affinityEagernessBoost (社会因果→发言意图)", () => {
+describe("affinityEagernessBoost (social causality → speak intent)", () => {
   function stateWithRel(affinity: number, toId = "you"): WorldState {
     return {
       ...DEMO_SEED.openingState,

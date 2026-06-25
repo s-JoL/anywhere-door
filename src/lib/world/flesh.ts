@@ -1,8 +1,10 @@
 /**
- * flesh.ts — stub→fleshed 懒充实(轴2:按需生长)。
+ * flesh.ts — stub→fleshed lazy fleshing (axis 2: grow on demand).
  *
- * 一处 `detail:"stub"` 的地点在玩家首次踏入时,由世界**当场充实**出更丰富的临场
- * 描述并结晶为 `fleshed`。引擎触发(非 reactor 提议),仍走 fleshLocation delta。
+ * When the player first steps into a `detail:"stub"` location, the world **fleshes
+ * it out on the spot** into a richer in-scene description and crystallizes it to
+ * `fleshed`. Engine-triggered (not a reactor proposal), still goes through the
+ * fleshLocation delta.
  */
 import type { WorldSeed, Location, ChatMessage } from "../types";
 import type { Delta } from "./delta";
@@ -21,7 +23,7 @@ export function buildFleshPrompt(seed: WorldSeed, loc: Location): ChatMessage[] 
   ];
 }
 
-/** 首次到访充实一处 stub 地点：产一条 fleshLocation delta；失败/空 → null（降级不充实）。 */
+/** Flesh out a stub location on first visit: emit one fleshLocation delta; failure/empty → null (degrade to no fleshing). */
 export async function fleshStubLocation(seed: WorldSeed, loc: Location, llm: LlmFn): Promise<Delta | null> {
   try {
     const { content } = await llm(buildFleshPrompt(seed, loc));

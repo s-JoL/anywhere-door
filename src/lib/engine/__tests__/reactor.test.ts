@@ -229,7 +229,7 @@ describe("parseDeltas", () => {
 });
 
 describe("buildReactorPrompt", () => {
-  it("system message contains 世界状态记录器", () => {
+  it("system message contains the world-state recorder header", () => {
     const msgs = buildReactorPrompt(baseState(), [], { "c-lan": "阿岚", you: "你" });
     expect(msgs[0].role).toBe("system");
     expect(msgs[0].content).toContain("世界状态记录器");

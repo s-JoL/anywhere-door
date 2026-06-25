@@ -345,7 +345,7 @@ export default function Home() {
     const recentlySeen = new Set(
       events.slice(-10).map((e) => e.seedId),
     );
-    // Category-level 防腻: tag prevalence across the recently-seen seeds, in [0,1].
+    // Category-level anti-staleness: tag prevalence across the recently-seen seeds, in [0,1].
     const recentSeeds = rawSeeds.filter((s) => recentlySeen.has(s.id));
     const recentTags: Record<string, number> = {};
     if (recentSeeds.length > 0) {
@@ -473,7 +473,7 @@ export default function Home() {
       className="h-[100dvh] w-full overflow-y-auto overscroll-none snap-y snap-mandatory"
     >
       <Overlay />
-      {/* 低调的入口：门廊馆 + 设置，固定右上角，不参与 snap，不拦截滚动手势 */}
+      {/* Low-key entry points: Doorway Library + settings, pinned to the top-right corner, not part of snap, do not intercept scroll gestures */}
       <Link
         href="/library"
         aria-label={t("feed.library")}

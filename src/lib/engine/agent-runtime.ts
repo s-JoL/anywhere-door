@@ -59,7 +59,7 @@ export async function runActiveAgents({
     const candidates = activeChars.filter((c) => c.id !== lastSpeakerId);
     if (candidates.length === 0) break;
 
-    // 并行意图判断（各用自身近段观察作上下文）
+    // Parallel intent judgment (each using its own recent observations as context)
     const cands: Candidate[] = await Promise.all(
       candidates.map(async (c) => {
         const recent = (await repo.listMemories(c.id)).slice(-8);
@@ -75,8 +75,8 @@ export async function runActiveAgents({
       if (budget <= 0) break;
       const speaker = activeChars.find((c) => c.id === id);
       if (!speaker) continue;
-      // 单一感知边界(§4.2):角色上下文只经 resolvePerception 产出(witness 作用域:
-      // 仅用该角色自己的观察),再交渲染器转成 prompt。记忆检索就发生在边界内。
+      // Single perception boundary (§4.2): character context is produced only via resolvePerception (witness-scoped:
+      // using only this character's own observations), then handed to the renderer to turn into a prompt. Memory retrieval happens inside the boundary.
       const own = await repo.listMemories(speaker.id);
       const projection = resolvePerception({ seed, state, ownMemories: own, query: input }, speaker);
       const msgs = renderProjection(seed, projection);
@@ -89,13 +89,13 @@ export async function runActiveAgents({
 
       const reply: Message = { id: replyId, instanceId, role: "assistant", speakerId: speaker.id, content: clean, createdAt: nextTime() };
       await repo.appendMessage(reply);
-      // 该发言作为观察写给当前在场者（含后续发言者，从而看到刚说的话）
+      // This utterance is written as an observation to the currently onstage characters (including later speakers, so they see what was just said)
       for (const obs of buildObservations(state, { speakerName: speaker.name, text: clean })) await repo.appendMemory(obs);
       if (!speakerIds.includes(speaker.id)) speakerIds.push(speaker.id);
       lastSpeakerId = speaker.id;
       budget--;
     }
-    if (sel.forced) break; // 破冰只破一次，随即交回用户
+    if (sel.forced) break; // break the lull only once, then hand back to the user
   }
 
   return { speakerIds };

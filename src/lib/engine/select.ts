@@ -16,7 +16,7 @@ export interface Selection {
 
 const byEagernessDesc = (a: Candidate, b: Candidate) => b.eagerness - a.eagerness;
 
-/** 想说的按 eagerness 取前 N；全员 pass 则破冰强选一个；无候选则空。 */
+/** Take the top N who want to speak by eagerness; if everyone passes, force-pick one to break the lull; if no candidates, empty. */
 export function selectSpeakers(cands: Candidate[], maxSpeakers: number): Selection {
   const speakers = cands.filter((c) => c.action === "speak").sort(byEagernessDesc);
   if (speakers.length > 0) {

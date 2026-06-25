@@ -22,7 +22,7 @@ type Item = {
   streaming?: boolean;
 };
 
-/** 把对白里的（动作）压暗成斜体，叙述本体保持明亮。 */
+/** Dim the (actions) inside dialogue into italics, keeping the narration body itself bright. */
 function Spoken({ text }: { text: string }) {
   const parts = text.split(/(（[^）]*）|\([^)]*\))/g).filter(Boolean);
   return (
@@ -104,7 +104,7 @@ function PlayInner() {
     return () => clearTimeout(id);
   }, [seed]);
 
-  // 贴近底部时才自动吸底，避免打断上翻；流式逐字用 auto 防抖
+  // Only auto-scroll to bottom when already near the bottom, to avoid interrupting scrolling up; use auto for per-character streaming to debounce
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -220,7 +220,7 @@ function PlayInner() {
       className="world-bg relative mx-auto flex h-[100dvh] max-w-md flex-col door-arrive"
       style={{ ["--accent" as string]: accent }}
     >
-      {/* 世界状态条 */}
+      {/* world-state bar */}
       <header
         className="glass-bar relative z-10 shrink-0 border-b border-[var(--line)] px-4 pb-2.5"
         style={{ paddingTop: "max(0.7rem, env(safe-area-inset-top))" }}
@@ -251,7 +251,7 @@ function PlayInner() {
         )}
       </header>
 
-      {/* 文字世界 */}
+      {/* text world */}
       <div ref={scrollRef} className="relative z-10 flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-6">
         {items.map((it) => {
           if (it.kind === "narration") {
@@ -302,7 +302,7 @@ function PlayInner() {
         <div ref={bottomRef} />
       </div>
 
-      {/* 沉浸输入 */}
+      {/* immersive input */}
       <div
         className="glass-bar relative z-10 shrink-0 border-t border-[var(--line)] px-4 pt-3"
         style={{ paddingBottom: "max(0.9rem, env(safe-area-inset-bottom))" }}

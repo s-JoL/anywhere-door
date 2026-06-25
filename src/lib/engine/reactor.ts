@@ -87,7 +87,7 @@ export function parseDeltas(text: string): Delta[] {
   }
 }
 
-/** 把世界不可变规则(物理 + 红线)渲染成一段铁律前言；无内容时返回空串。 */
+/** Render the world's immutable rules (physics + red lines) into an iron-law preamble; returns an empty string when there's no content. */
 function worldLawBlock(rules?: WorldRules): string {
   if (!rules) return "";
   const parts: string[] = [];

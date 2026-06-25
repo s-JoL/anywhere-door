@@ -1,7 +1,7 @@
 import type { Memory } from "../types";
 import { relevance } from "./keywords";
 
-/** 把一组数值 min-max 归一到 [0,1]；全相等时返回 0.5（与 Generative Agents 一致）。 */
+/** Min-max normalize a set of values to [0,1]; returns 0.5 when all equal (consistent with Generative Agents). */
 function normalize(values: number[]): number[] {
   const min = Math.min(...values), max = Math.max(...values);
   if (max === min) return values.map(() => 0.5);
@@ -11,12 +11,13 @@ function normalize(values: number[]): number[] {
 const W_RECENCY = 0.5, W_RELEVANCE = 3, W_IMPORTANCE = 2;
 
 /**
- * 按 recency / relevance / importance 三项加权求和（非乘积）给记忆打分取 top-k。
- * recency：按 createdAt 降序的名次 i → decay^i（越新越大）。
- * relevance：查询关键词与记忆关键词的交集大小。
- * importance：记忆自带分值。
- * 三项各 min-max 归一后加权求和；再乘以记忆的主观置信度(§4.5,缺省=1),
- * 使低置信记忆(如二手 hearsay)更弱地浮现。纯函数，不修改输入。
+ * Score memories by a weighted sum (not product) of recency / relevance / importance, then take top-k.
+ * recency: rank i in descending createdAt order → decay^i (newer is larger).
+ * relevance: size of the intersection between query keywords and memory keywords.
+ * importance: the memory's own score.
+ * Each of the three is min-max normalized, then summed with weights; finally multiplied by the memory's
+ * subjective confidence (§4.5, default=1), so low-confidence memories (e.g. secondhand hearsay) surface more
+ * weakly. Pure function, does not mutate input.
  */
 export function scoreMemories(
   memories: Memory[],

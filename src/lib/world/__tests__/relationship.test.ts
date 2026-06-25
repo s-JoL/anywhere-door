@@ -11,12 +11,12 @@ function rel(partial: Partial<Relationship>): Relationship {
   return { affinity: 0, evidence: [], sinceDay: 0, ...partial };
 }
 
-describe("effectiveAffinity (朝0线性衰减)", () => {
+describe("effectiveAffinity (linear decay toward 0)", () => {
   it("returns the stored affinity on the same day", () => {
     expect(effectiveAffinity(rel({ affinity: 40, sinceDay: 3 }), 3)).toBe(40);
   });
   it("decays toward zero as in-world days pass", () => {
-    // 40, 衰减每天 2 → 5 天后 30
+    // 40, decays 2 per day → 30 after 5 days
     expect(effectiveAffinity(rel({ affinity: 40, sinceDay: 0 }), 5)).toBe(30);
   });
   it("never crosses zero (positive)", () => {
@@ -43,7 +43,7 @@ describe("applyRelationshipUpdate", () => {
   });
   it("decays the prior value before applying the new delta, then re-anchors the day", () => {
     const prev = rel({ affinity: 40, sinceDay: 0, evidence: ["替我挡了一刀"] });
-    // day 5 → prev decays 40→30, +20 → 50
+    // day 5 → prev decays 40→30, then +20 → 50
     const r = applyRelationshipUpdate(prev, { affinityDelta: 20, reason: "又帮了我" }, 5);
     expect(r.affinity).toBe(50);
     expect(r.sinceDay).toBe(5);

@@ -92,7 +92,7 @@ describe("noveltyOf", () => {
 // ---------------------------------------------------------------------------
 describe("rankFeed", () => {
   const wuxia1 = makeSeed("wuxia-1", "武侠", ["江湖", "侠义"]);
-  const wuxia2 = makeSeed("wuxia-2", "武侠", ["江湖", "侠义"]); // near-clone of wuxia1
+  const wuxia2 = makeSeed("wuxia-2", "武侠", ["江湖", "侠义"]); // near-clone of wuxia1 (same wuxia genre/tags)
   const urban  = makeSeed("urban-1", "都市", ["现代", "悬疑"]);
   const scifi  = makeSeed("scifi-1", "科幻", ["宇宙", "冒险"]);
   const horror = makeSeed("horror-1", "恐怖", ["悬疑", "黑暗"]);
@@ -111,8 +111,8 @@ describe("rankFeed", () => {
     expect(outputIds).toEqual(inputIds);
   });
 
-  // (b) Taste ordering: profile favors 武侠; wuxia seed ranks before low-affinity seed
-  it("(b) taste ordering: 武侠 seed ranks before unrelated seed", () => {
+  // (b) Taste ordering: profile favors wuxia; wuxia seed ranks before low-affinity seed
+  it("(b) taste ordering: wuxia seed ranks before unrelated seed", () => {
     const profile: Record<string, number> = {
       "genre:武侠": 5,
       "mood:江湖": 3,
@@ -199,8 +199,8 @@ describe("rankFeed", () => {
     expect(result1.map((s) => s.id)).toEqual(result2.map((s) => s.id));
   });
 
-  // (g) Category freshness (防腻 by genre, not just exact id):
-  // wuxia2 is NOT in recentlySeen by id, but the recent feed was all 武侠.
+  // (g) Category freshness (anti-fatigue by genre, not just exact id):
+  // wuxia2 is NOT in recentlySeen by id, but the recent feed was all wuxia.
   // Its slight taste affinity wins pos0 normally, but the category-staleness
   // penalty should flip a fresh-genre seed (urban) ahead of it.
   it("(g) category freshness: a tag-stale seed ranks below a fresh-genre seed", () => {

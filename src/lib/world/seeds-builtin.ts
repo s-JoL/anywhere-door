@@ -1,7 +1,7 @@
 import type { WorldSeed } from "../types";
 import { DEMO_SEED } from "./seed-demo";
 
-/** 孤山·落雪客栈 — 武侠/江湖 */
+/** 孤山·落雪客栈 — wuxia / jianghu */
 const WUXIA_INN_SEED: WorldSeed = {
   id: "seed-builtin-inn",
   title: "孤山·落雪客栈",
@@ -104,7 +104,7 @@ const WUXIA_INN_SEED: WorldSeed = {
   },
 };
 
-/** 环轨·第七中继站 — 近未来硬科幻 */
+/** 环轨·第七中继站 — near-future hard sci-fi */
 const RELAY_STATION_SEED: WorldSeed = {
   id: "seed-builtin-relay",
   title: "环轨·第七中继站",

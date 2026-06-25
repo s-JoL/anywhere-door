@@ -101,7 +101,7 @@ export function visibleScene(state: WorldState, self: Character, charById?: Map<
     .filter((id) => id !== self.id)
     .map((id) => {
       const name = state.roster[id]?.name ?? id;
-      const gender = charById?.get(id)?.identity?.gender; // 让发言者知道别人的性别,避免代词漂移
+      const gender = charById?.get(id)?.identity?.gender; // let the speaker know others' gender, to avoid pronoun drift
       const cond = state.roster[id]?.condition;
       const tags = [gender, cond].filter(Boolean).join("，");
       return tags ? `${name}（${tags}）` : name;
@@ -153,7 +153,7 @@ export function resolvePerception(ctx: PerceptionCtx, character: Character): Cha
   const memories = ctx.memories ?? (ctx.ownMemories ? scoreMemories(ctx.ownMemories, keywordsOf(ctx.query ?? ""), { topK: 6 }) : []);
   const recent = ctx.recent ?? (ctx.ownMemories ? ctx.ownMemories.slice(-8) : []);
 
-  // 在场他人的硬事实(供正确指代:他/她)——seed 角色 ∪ 实例新建角色
+  // Hard facts of others present (for correct reference: he/she) — seed characters ∪ instance-created characters
   const charById = new Map<string, Character>();
   for (const c of seed.characters) charById.set(c.id, c);
   for (const [id, c] of Object.entries(state.characters ?? {})) charById.set(id, c);

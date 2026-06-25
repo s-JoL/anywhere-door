@@ -3,7 +3,7 @@ const STOPWORDS = new Set([
   "a","an","of","to","and","is","it","in","on","at","you","i","the",
 ]);
 
-/** 近似分词：CJK 单字（关系/语义粒度够用）+ 拉丁词（len≥2），去停用词，去重。 */
+/** Approximate tokenization: CJK single characters (a relational/semantic granularity that suffices) + Latin words (len≥2), with stopwords removed and deduplicated. */
 export function keywordsOf(text: string): string[] {
   const runs = text.match(/[一-龥]+|[a-zA-Z0-9]{2,}/g) ?? [];
   const out: string[] = [];
@@ -24,7 +24,7 @@ export function keywordsOf(text: string): string[] {
   return result;
 }
 
-/** 相关性近似 = 共享特征数。 */
+/** Relevance approximation = number of shared features. */
 export function relevance(queryKw: string[], memKw: string[]): number {
   const set = new Set(memKw);
   let n = 0;

@@ -8,7 +8,7 @@ function obs(charId: string, text: string, importance: number): Memory {
 
 const present = [{ id: "a", name: "阿岚" }, { id: "b", name: "老周" }];
 
-describe("propagateGossip (co-location 传话)", () => {
+describe("propagateGossip (co-location gossip)", () => {
   it("a salient first-hand observation spreads to a co-present character as hearsay", () => {
     const recent = { a: [obs("a", "阿岚：那个背双刀的男人住进了隔壁", 8)], b: [] };
     const out = propagateGossip(present, recent);
@@ -17,7 +17,7 @@ describe("propagateGossip (co-location 传话)", () => {
     expect(toB!.kind).toBe("hearsay");
     expect(toB!.text).toContain("听阿岚");
     expect(toB!.text).toContain("背双刀的男人");
-    expect(toB!.importance).toBeLessThan(8); // 二手→降权
+    expect(toB!.importance).toBeLessThan(8); // second-hand → down-weighted
   });
 
   it("does not spread low-importance idle chatter", () => {

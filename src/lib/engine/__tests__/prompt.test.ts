@@ -79,22 +79,22 @@ describe("prompt", () => {
   });
 
   it("surfaces present others' gender in the scene so pronouns don't drift", () => {
-    const c = DEMO_SEED.characters[0]; // c-lan(阿岚, 女)与 c-zhou(老周, 男)同在酒馆
+    const c = DEMO_SEED.characters[0]; // c-lan (阿岚, female) and c-zhou (老周, male) both in the bar
     const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {});
     const scene = msgs[msgs.length - 1].content; // tail: 【此刻所见】...
-    expect(scene).toContain("老周（男"); // 在场他人标出性别
+    expect(scene).toContain("老周（男"); // present others have their gender marked
   });
 
-  it("preset instructs woven action prose and clear referents (反碎片化 + 指代规范)", () => {
+  it("preset instructs woven action prose and clear referents (anti-fragmentation + referent discipline)", () => {
     const c = DEMO_SEED.characters[0];
     const sys = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {})[0].content;
-    expect(sys).toContain("编织");  // 动作神态编织成连贯文字,不拆成多个并列括号
-    expect(sys).toContain("指代");  // 你/名字/与性别一致的代词
+    expect(sys).toContain("编织");  // weave action/expression into coherent prose, not split into many parallel parentheticals
+    expect(sys).toContain("指代");  // you / name / pronoun consistent with gender
   });
 
   it("injects matched lore when its key appears in the current scene", () => {
     const c = DEMO_SEED.characters[0];
-    // 無燈酒馆 is the opening location name — use it as a lore key so it matches the visible scene.
+    // 無燈酒馆 (the inn) is the opening location name — use it as a lore key so it matches the visible scene.
     const stateWithLore = {
       ...DEMO_SEED.openingState,
       lore: [{ id: "l1", keys: ["無燈"], content: "無燈酒馆有条规矩：不问来路。" }],
@@ -132,7 +132,7 @@ describe("prompt", () => {
     expect(stripSpeakerPrefix("阿岚", "阿岚：（擦杯子）又是你。")).toBe("（擦杯子）又是你。");
     expect(stripSpeakerPrefix("阿岚", "阿岚:hi")).toBe("hi");
     expect(stripSpeakerPrefix("阿岚", "（没有前缀）正常说话")).toBe("（没有前缀）正常说话");
-    expect(stripSpeakerPrefix("阿岚", "老周：这跟阿岚无关")).toBe("老周：这跟阿岚无关"); // 不误删别人/正文
+    expect(stripSpeakerPrefix("阿岚", "老周：这跟阿岚无关")).toBe("老周：这跟阿岚无关"); // does not wrongly strip another speaker / body text
   });
 });
 
