@@ -50,6 +50,43 @@ who have never opened an advanced surface), a sustained drop in ten-minute
 retention or POV-asymmetry-trigger rate (§24) after advanced surfaces ship is the
 falsification signal. Design against that, measure for it.
 
+## 2.5 Two Languages, One Engine (locale model)
+
+The product is **bilingual-first — Chinese and English are both primary
+audiences** (charter §17), not a base language plus translation. Language is split
+into two axes the user controls separately:
+
+- **Story locale** — the language a world is *authored and played* in (its prose,
+  voices, lore, narration rule, cold-open card). A property of the **world**, set
+  at generation/creation and carried by the seed.
+- **Interface locale** — the language of the shell *around* the world: feed
+  chrome, controls, the Doorway Library, settings, suggested-action labels. A
+  property of the **user**, switchable any time.
+
+They are chosen **independently**. An English-interface reader can browse the feed
+in English and still open a Chinese-authored world — the shell stays English, the
+world speaks Chinese; and the reverse. The interface locale never rewrites a
+world's story locale; a world is experienced in the language it was made for.
+
+**Designed per locale, not translated.** Each language gets a **native design**,
+not a localized clone:
+
+- **Story** is authored natively per locale (idiom, cultural texture, names,
+  pacing), never machine-translated from a master language. The feed surfaces
+  worlds in story locales the user reads (a preference, defaulting from the
+  interface locale, with an explicit "show both" option), so a door is judged in a
+  language the reader actually feels.
+- **UI** is designed natively per locale — typography (CJK serif vs. Latin),
+  line-height and density, copy voice, control affordances — not one layout with
+  swapped strings. The quality bar is *"feels native in each,"* judged
+  independently, not *"correct translation."*
+
+**The engine is shared and unduplicated.** Because the kernel is language-agnostic
+(charter §15.14), the same world engine, write gate, and perception boundary serve
+every locale; separating *design* per language duplicates only surface, never the
+world. There is no second source of truth per language and no per-language fork of
+an instance.
+
 ## 3. Product Shape
 
 ### 3.1 Feed (discover)
@@ -565,6 +602,7 @@ the user owns.
 | POV-asymmetry trigger rate | was limited POV actually felt |
 | bond-beat / relationship-return rate | did a *character* give the user a reason to come back (§21) |
 | taste→key-add→first-action conversion | how steep is the keyless→reactive cliff (§4.3) |
+| per-locale ten-minute retention | does each language land natively, judged independently (§2.5) |
 
 The funnel — `card-dwell → open-door → first-action → ten-minute-retain →
 first-consequence → return → pin` — is **local-first instrumentation**; it never
@@ -628,3 +666,6 @@ pre-generation.
 8. God Mode edits the private branch, not the public seed.
 9. Recommendation learns from behavior sequences, not labels.
 10. Default experience is immersion; advanced control is available when desired.
+11. Bilingual-first (zh/en): story locale and interface locale are chosen
+    independently and designed natively per language; the engine is shared and
+    language-agnostic, never forked per language (§2.5, charter §17).
