@@ -139,6 +139,23 @@ export interface Message {
 }
 
 /** 每角色主观记忆（借 Generative Agents 的 ConceptNode）。 */
+/**
+ * 记忆的来源类别(§4.5 / 架构 §5.4 主观记录)。决定可信度与传播规则:
+ * witnessed 一手所见 · heard 转述 · inferred 推断/反思 · remembered 回忆 ·
+ * revealed 被揭示 · canonized 已固化为正典 · authored 作者注入。
+ */
+export type Provenance =
+  | "witnessed"
+  | "heard"
+  | "inferred"
+  | "remembered"
+  | "revealed"
+  | "canonized"
+  | "authored";
+
+/** 感知质量:完整 / 只见局部 / 失真模糊(§5.4 的"只看到一部分""记错了")。 */
+export type PerceptionQuality = "full" | "partial" | "garbled";
+
 export interface Memory {
   id: string;
   charId: string;
@@ -150,6 +167,21 @@ export interface Memory {
   lastAccessed: number;
   /** 反思记忆的来源记忆 id 列表（仅 kind:"reflection" 有值）。 */
   evidence?: string[];
+  // ——— §4.5 主观记录字段(均可选;缺省语义 = witnessed / 满置信 / full) ———
+  /** 来源类别;缺省视为 "witnessed"。 */
+  provenance?: Provenance;
+  /** 主观置信度 0–1;缺省视为 1。低置信在检索中更弱地浮现。 */
+  confidence?: number;
+  /** 叠加在原始事实之上的主观解读(§5.4「误解」)。 */
+  interpretation?: string;
+  /** 感知质量;缺省视为 "full"。 */
+  perceptionQuality?: PerceptionQuality;
+  /** 记录与真相的偏离方式(规则扭曲 / 记错)。 */
+  distortion?: string;
+  /** 该记忆所依据的变更日志条目 id(→ deltaLog),供信念图回溯证据。 */
+  evidenceLinks?: string[];
+  /** 产生该记忆的世界分支 id(供分支/重生成隔离)。 */
+  branchId?: string;
 }
 
 export type TasteEventKind = "enter" | "dwell" | "author" | "skip";

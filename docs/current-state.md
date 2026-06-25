@@ -78,7 +78,11 @@ applies in order, logs with attribution, and records rejections. One turn:
    (`src/lib/engine/reactor.ts`, `write-gate.ts`, `src/lib/world/delta.ts`). The
    `setRelationship`-reason→memory side effect runs as a post-commit hook.
 6. **Memory.** Each character writes what it witnessed as observations, with
-   periodic reflection (`src/lib/memory/`).
+   periodic reflection (`src/lib/memory/`). Memories carry provenance/confidence
+   (§4.5): observations are `witnessed`/full/confident, hearsay is `heard`/partial
+   and less confident, reflections are `inferred`; `scoreMemories` multiplies by
+   confidence so low-confidence records surface less forcefully. Fields are additive
+   (legacy memories default to witnessed/full).
 
 The model never writes the world directly — it proposes, the engine validates.
 Illegal changes (e.g. moving to a nonexistent room) are dropped.
@@ -185,7 +189,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
 | Thread state (structured pressure lines) | only an implicit `tension` scalar + Director heuristics |
 | Belief graph (fact × observer read view) | the data exists in witness-scoped memory, but no queryable view |
-| Observation provenance / confidence / distortion | `Memory` has kind/importance; no provenance/confidence/distortion fields |
+| Observation provenance / confidence / distortion | **done** (§4.5) — `Memory` has provenance/confidence/interpretation/perceptionQuality/distortion/evidenceLinks/branchId (additive); stamped by observe/gossip/reflect; confidence folded into retrieval. Belief graph (§5) reads this substrate |
 | Three-tier offstage precision | `evolveWhileAway` treats all offstage agents uniformly |
 | Narration as transduction + cheap guard | narration is free prose; no transduction-from-snapshot, no consistency guard |
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |

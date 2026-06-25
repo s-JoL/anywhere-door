@@ -17,7 +17,7 @@ export function defaultImportance(text: string): number {
 /** 给单个角色构造一条观察记忆（用于 evidence→记忆等引擎内部写入）。 */
 export function buildSelfMemory(charId: string, text: string, importance = 6): Memory {
   const t = nextTime();
-  return { id: newId("mem"), charId, kind: "observation", text, keywords: keywordsOf(text), importance, createdAt: t, lastAccessed: t };
+  return { id: newId("mem"), charId, kind: "observation", text, keywords: keywordsOf(text), importance, createdAt: t, lastAccessed: t, provenance: "witnessed", confidence: 1, perceptionQuality: "full" };
 }
 
 /** 为当前场景的每个在场角色生成一条该发言的观察记忆（witness 作用域）。 */
@@ -33,6 +33,7 @@ export function buildObservations(
   const importance = importanceFn(utterance.text);
   return loc.presentCharacterIds.map((charId) => {
     const t = nextTime();
-    return { id: newId("mem"), charId, kind: "observation" as const, text, keywords, importance, createdAt: t, lastAccessed: t };
+    // 一手见证:满置信、完整感知(§4.5 缺省也是此语义,这里显式标注)
+    return { id: newId("mem"), charId, kind: "observation" as const, text, keywords, importance, createdAt: t, lastAccessed: t, provenance: "witnessed" as const, confidence: 1, perceptionQuality: "full" as const };
   });
 }
