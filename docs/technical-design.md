@@ -363,7 +363,9 @@ the hook for lawful distortion (§5.8). *Depends on:* §4.5.
 `near (high) | related (medium) | far (frozen)` derived from scene proximity +
 thread links, bounding what `evolveWhileAway` may propose. All output still through
 the gate. *Depends on:* §4.6, §5.2. *Discharges:* "the world moved plausibly while I
-was gone" (return).
+was gone" (return). **This reconciler is the single reconcile core** (append-only,
+supersede-not-overwrite, witness-scoped); the Phase 2 god-edit reconcile reuses it
+rather than introducing a parallel path (§10 decision).
 
 ### 5.6 Exit settlement + echo + Doorway Library completion
 
@@ -491,7 +493,7 @@ fastest demonstration that "the world remembers me and moved while I was gone" i
 WriteGate + canon hardness + exit settlement/echo, riding the Library page that
 already exists.
 
-## 10. Risks & open questions
+## 10. Risks & decisions
 
 - **Extraction churn vs. value** — Phase 0 ships no visible feature; mitigated by
   behavior-preserving slices + tests-first, each independently mergeable.
@@ -499,8 +501,12 @@ already exists.
   a *cache* only if needed, never as a second truth (`architecture.md` §7.3).
 - **Reactor over/under-commit** — bias toward running (the Director's structural-
   change flag), evidence-first + critic on high-consequence (`first-principles.md` §4.3).
-- **Open:** does the offstage reconciler share machinery with the god-edit reconcile
-  now (§5.8 architecture §10) or after god edits land in Phase 2? (Recommend: build
-  the shared reconcile core in §5.6, reuse for god edits in Phase 2.)
-- **Open:** depth tiers (fast/standard/deep) — ship single-tier first (recommended),
-  tiers as the later cost valve.
+- **Decided (reconcile core is shared):** the offstage reconciler (§5.5/§5.6) is
+  built as the *single* reconcile core — append-only, supersede-not-overwrite,
+  witness-scoped. The god-edit reconcile (architecture §10) does **not** get its own
+  path; when god edits land in Phase 2 they reuse this core. One semantics, no second
+  reconcile to drift against.
+- **Decided (single depth tier first):** ship one `standard` turn path; get the turn
+  loop, the gate, and the perception boundary correct on it before branching. Depth
+  tiers (fast/standard/deep) are deferred as the later cost valve, not built into the
+  early core.
