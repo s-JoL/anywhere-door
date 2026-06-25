@@ -21,6 +21,9 @@ const VALID_KINDS = new Set([
   "advanceThread",
   "resolveThread",
   "setFact",
+  "fleshObject",
+  "fleshCharacter",
+  "retireEntity",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -68,6 +71,12 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "resolveThread" && typeof item.id === "string") {
         result.push(item as Delta);
       } else if (item.kind === "setFact" && typeof item.id === "string" && typeof item.field === "string" && typeof item.value === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "fleshObject" && typeof item.objectId === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "fleshCharacter" && typeof item.characterId === "string" && typeof item.description === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "retireEntity" && typeof item.entityId === "string" && (item.entityType === "character" || item.entityType === "object")) {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;

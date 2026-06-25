@@ -200,7 +200,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Doorway Library UI + exit settlement + echoes | Library page exists (`src/app/library/page.tsx`, `listInstances` + pin/unpin, last-seen); exit settlement + echo logic still missing |
 | Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
-| Object/character on-demand fleshing | only location fleshing is wired |
+| Object/character on-demand fleshing | **done** (§5.7) — `fleshObject`/`fleshCharacter` deltas promote a stub to fleshed; `retireEntity` archives (presence flag, never deletes). Reactor parser wired; LLM flesh-producers for objects/characters still to author |
 | Timeline forks (beyond regenerate-last-turn) | only `regenerateLastTurn` exists |
 | Bilingual (zh/en) as two single-language deployments | foundation built — `NEXT_PUBLIC_LOCALE` build constant, typed UI catalog + `t()`, en UI authored, `<html lang>` from build, locale-aware fonts, accent-themed chrome; both builds pass. Remaining: en world/seed content pool + language-facing prompt extraction (zh first) |
 

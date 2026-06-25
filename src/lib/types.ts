@@ -21,6 +21,8 @@ export interface Character {
   goal?: string;         // 当前目标（被 God 注入主观 prompt）
   systemPrompt?: string;             // 角色覆盖系统前缀（支持 {{original}}）
   postHistoryInstructions?: string;  // 角色覆盖末尾后置强化（支持 {{original}}）
+  /** 退场归档(§5.7):置真则从在场名单移除,但记录绝不删除。 */
+  archived?: boolean;
 }
 
 /** 不可变：世界的"物理法则"，创建后只读。 */
@@ -48,6 +50,8 @@ export interface WorldObject {
   props: { portable?: boolean; locked?: boolean; owner?: string; gates?: string; [k: string]: unknown };
   locationId: string;
   state?: string;
+  /** 退场归档(§5.7):置真则从在场/可见中移除,但记录绝不删除。 */
+  archived?: boolean;
 }
 
 /** 角色的客观事实投影（秘密/内心不在此）。 */
