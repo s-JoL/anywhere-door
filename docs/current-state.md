@@ -194,7 +194,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Belief graph (fact × observer read view) | **done** (§5.3) — `belief.ts` `beliefOf`/`assembleBeliefGraph`: pure read view over witness-scoped memory yielding knows/believes/suspects/unaware/wrong + evidence links; zero writes. Not yet wired into Director/Inspector/Atlas UI |
 | Observation provenance / confidence / distortion | **done** (§4.5/§5.4) — `Memory` carries the subjective-record fields (additive), stamped by observe/gossip/reflect; confidence folded into retrieval; renderer hedges low-confidence memories and surfaces interpretation so characters act on what they *believe*. Belief graph (§5.3) reads this substrate |
 | Three-tier offstage precision | **done** (§5.5) — `offstage.ts` `classifyPrecision` (near/related/far from scene proximity + thread links); `boundOffstageDeltas` freezes far entities; `evolveWhileAway` is bounded to near/related and lists the evolvable scope in its prompt. This is the shared reconcile core for the Phase 2 god-edit reconcile |
-| Narration as transduction + cheap guard | narration is free prose; no transduction-from-snapshot, no consistency guard |
+| Narration as transduction + cheap guard | **partial** (§5.8) — `guard.ts` `consistencyGuard` screens ambient narration for cheap high-value slips (names an offstage entity) and the turn drops a slipping beat (trace-noted). Full prose-from-snapshot transduction + lawful-distortion seed rule still pending |
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |
 | God-edit witness-scoped reconcile | no God/Studio edit path |
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
