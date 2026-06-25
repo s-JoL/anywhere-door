@@ -18,6 +18,10 @@ import { introduceCharacter, introductionBeat } from "./introduce";
 import { react } from "./reactor";
 import { evolveWhileAway } from "../world/offscreen";
 import { fleshStubLocation } from "../world/flesh";
+import { deriveSettlement, composeReturnEcho } from "../world/settlement";
+
+/** 触发回归 echo 的最短离场时长(§5.6):与离场演化同档,1 小时。 */
+const RETURN_ECHO_MS = 3_600_000;
 
 export type LlmFn = (messages: ChatMessage[], onContent?: (delta: string) => void) => Promise<{ content: string }>;
 
@@ -160,6 +164,17 @@ async function runTurnBody(
   const awayDeltas = await evolveWhileAway({ seed, state, rules: seed.rules, msAway, llm });
   await gateCommit(awayDeltas, "offscreen");
 
+  // 回归 echo(§5.6):离开够久且有上次的结算记录时,插一条玩家可见的"回归开场"节拍
+  // (消费一个候选钩子 + bond beat)。在快照前追加——它反映的离场变化已落库,不应被回滚。
+  if (msAway >= RETURN_ECHO_MS && inst.settlement) {
+    const echo = composeReturnEcho(inst.settlement, Math.round(msAway / 3_600_000));
+    if (echo) {
+      const echoBeat: Message = { id: newId("n"), instanceId, role: "system", speakerId: null, content: echo, narration: true, createdAt: nextTime() };
+      await repo.appendMessage(echoBeat);
+      onEvent?.({ type: "narration", id: echoBeat.id, content: echo });
+    }
+  }
+
   const snapshot = await captureTurnSnapshot(repo, instanceId, input, state);
 
   try {
@@ -261,7 +276,8 @@ async function runTurnBody(
       return;
     }
 
-    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now() });
+    // §5.6 退场结算:每回合末派生并存储,确保玩家随时离开都有最新的结算记录可供回归 echo。
+    await repo.upsertInstance({ ...inst, state, turn, lastTurnSnapshot: snapshot, updatedAt: nextTime(), lastSeenAt: Date.now(), settlement: deriveSettlement(state) });
 
     // 反思：为本回合发言的角色触发记忆提炼（有足够新观察时才生成）
     await maybeReflect({

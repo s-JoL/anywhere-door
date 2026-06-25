@@ -198,7 +198,7 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 | Agentic Director / rule-skills | none; Director is prompt-only, no deterministic computation |
 | God-edit witness-scoped reconcile | no God/Studio edit path |
 | Out-of-world control channels (Director Notes, Scene Contract, God) | not implemented |
-| Doorway Library UI + exit settlement + echoes | Library page exists (`src/app/library/page.tsx`, `listInstances` + pin/unpin, last-seen); exit settlement + echo logic still missing |
+| Doorway Library UI + exit settlement + echoes | **engine done** (§5.6) — `settlement.ts` `deriveSettlement` (trace from anchored+ facts, unresolved threads, candidate hooks, bond beat) stored on the instance each turn; `composeReturnEcho` emits a return-open beat on re-entry after time away. Library page exists (`listInstances` + pin); surfacing the settlement in the Library card UI is the remaining piece |
 | Funnel metrics (return-rate) | `TasteEvent` is `enter/dwell/author/skip` for ranking only; no funnel |
 | Built-in cold-start pool with a keyless pre-baked taste | none; play requires a key, and there is no baked cold-open/sample beat for keyless browsing |
 | Object/character on-demand fleshing | **done** (§5.7) — `fleshObject`/`fleshCharacter` deltas promote a stub to fleshed; `retireEntity` archives (presence flag, never deletes). Reactor parser wired; LLM flesh-producers for objects/characters still to author |
