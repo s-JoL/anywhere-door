@@ -8,7 +8,7 @@ import { parseDeltas } from "@/lib/engine/reactor";
  *
  * 与「交互驱动演化:离开即冻结」一致——世界不在你离开时实时推进,而是在你**回来**时,
  * 按离开时长**懒补**这段时间里合理会发生的平静变化。提议 Delta[](与 World Reactor 同币),
- * 调用方([`turn.ts`])再走 validateDelta/applyDelta/事件日志落库。
+ * 调用方([`turn.ts`])以 source="offscreen" 经唯一写入口 WriteGate(§4.1)校验→应用→落日志。
  */
 export interface OffscreenContext {
   seed: WorldSeed;

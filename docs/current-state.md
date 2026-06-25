@@ -43,7 +43,12 @@ A mobile-first, pure-web app:
 
 ## 3. The turn loop (`src/lib/engine/turn.ts`)
 
-`runTurn` is a single, fairly monolithic orchestrator. One turn:
+`runTurn` is the orchestrator. It runs under a per-instance operation lock
+(`src/lib/engine/lock.ts`, §4.0) so one turn commits at a time; regenerate
+supersedes any in-flight turn (its writes are dropped as stale). All durable world
+mutation routes through the single **WriteGate** (`src/lib/engine/write-gate.ts`,
+§4.1) — the sole caller of `applyDelta` + `appendDeltaLog` — which validates,
+applies in order, logs with attribution, and records rejections. One turn:
 
 1. **Offstage evolution.** On return, `evolveWhileAway`
    (`src/lib/world/offscreen.ts`) triggers only after an absence (`Date.now() -
@@ -61,9 +66,10 @@ A mobile-first, pure-web app:
    `introduce.ts`).
 5. **World Reactor.** The LLM reads what happened this turn (prompt carries
    physics + red lines as soft constraints; evidence-first) and proposes
-   `Delta[]`; each is `validateDelta`'d (structural/spatial + red-line keyword
-   screen + no-op discard) → `applyDelta` (immutable) → logged
-   (`src/lib/engine/reactor.ts`, `src/lib/world/delta.ts`).
+   `Delta[]`; the WriteGate `validateDelta`'s each (structural/spatial + red-line
+   keyword screen + no-op discard) → `applyDelta` (immutable) → logs it
+   (`src/lib/engine/reactor.ts`, `write-gate.ts`, `src/lib/world/delta.ts`). The
+   `setRelationship`-reason→memory side effect runs as a post-commit hook.
 6. **Memory.** Each character writes what it witnessed as observations, with
    periodic reflection (`src/lib/memory/`).
 
@@ -165,7 +171,8 @@ sequencing live in `roadmap.md`; this table is only the current truth.
 
 | Design requirement | Today |
 |---|---|
-| Single write gate as a module | logic exists but is inline in `turn.ts` / `delta.ts`, not an extracted `WriteGate` |
+| Single write gate as a module | **done** (§4.1) — extracted `WriteGate` (`write-gate.ts`); sole caller of `applyDelta`/`appendDeltaLog`, records rejections |
+| Per-instance operation lock | **done** (§4.0) — `lock.ts`; serializes turns, supersede drops stale writes |
 | Single perception boundary as a module | de-facto in `prompt.ts`; not isolated; no standing isolation assertions |
 | Director casting (active-agent cap, ambient cast) | intent runs for all present characters; surfacing is a hardcoded `tension ≥ 6` grab, not Director casting |
 | Canon hardness (3 tiers) | none; `validateDelta` does structural/spatial/red-line only |
