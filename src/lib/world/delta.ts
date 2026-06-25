@@ -21,7 +21,11 @@ export type Delta =
   | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved" }
   | { kind: "resolveThread"; id: string }
   // ——— §5.1 分级事实(canon 硬度;只经写入口) ———
-  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness };
+  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness }
+  // ——— §5.7 实体生命周期(stub→fleshed 全类型;归档不删除) ———
+  | { kind: "fleshObject"; objectId: string; state?: string; name?: string }
+  | { kind: "fleshCharacter"; characterId: string; description: string; goal?: string }
+  | { kind: "retireEntity"; entityId: string; entityType: "character" | "object" };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -67,6 +71,8 @@ function freeTextFields(d: Delta): string[] {
     case "openThread": return [d.summary];
     case "advanceThread": return [d.summary ?? ""];
     case "setFact": return [d.value];
+    case "fleshObject": return [d.state ?? "", d.name ?? ""];
+    case "fleshCharacter": return [d.description, d.goal ?? ""];
     default: return [];
   }
 }
@@ -256,6 +262,32 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (existing && existing.value !== d.value && HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
         return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
       }
+      return { ok: true };
+    }
+    case "fleshObject": {
+      const o = state.objects[d.objectId];
+      if (!o) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
+      if (o.detail !== "stub") return { ok: false, reason: `对象 ${d.objectId} 已是 fleshed(无需充实)` };
+      return { ok: true };
+    }
+    case "fleshCharacter": {
+      const c = state.characters?.[d.characterId];
+      if (!c) return { ok: false, reason: `实例角色 ${d.characterId} 不存在` };
+      if (c.detail !== "stub") return { ok: false, reason: `角色 ${d.characterId} 已是 fleshed(无需充实)` };
+      if (!d.description?.trim()) return { ok: false, reason: "角色充实描述不能为空" };
+      return { ok: true };
+    }
+    case "retireEntity": {
+      if (d.entityType === "character") {
+        const c = state.characters?.[d.entityId];
+        const inRoster = !!state.roster[d.entityId];
+        if (!c && !inRoster) return { ok: false, reason: `角色 ${d.entityId} 不存在` };
+        if (c?.archived) return { ok: false, reason: `角色 ${d.entityId} 已归档(空操作)` };
+        return { ok: true };
+      }
+      const o = state.objects[d.entityId];
+      if (!o) return { ok: false, reason: `对象 ${d.entityId} 不存在` };
+      if (o.archived) return { ok: false, reason: `对象 ${d.entityId} 已归档(空操作)` };
       return { ok: true };
     }
   }
@@ -456,6 +488,45 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
       // 按 (entityId, field) upsert:该维度的"此刻真相"是单值的。
       const rest = (state.facts ?? []).filter((f) => !(f.entityId === d.entityId && f.field === d.field));
       return { ...state, facts: [...rest, fact] };
+    }
+    case "fleshObject": {
+      const o = state.objects[d.objectId];
+      return {
+        ...state,
+        objects: { ...state.objects, [d.objectId]: { ...o, detail: "fleshed", ...(d.name ? { name: d.name } : {}), ...(d.state !== undefined ? { state: d.state } : {}) } },
+      };
+    }
+    case "fleshCharacter": {
+      const c = state.characters![d.characterId];
+      return {
+        ...state,
+        characters: { ...state.characters, [d.characterId]: { ...c, detail: "fleshed", description: d.description, ...(d.goal ? { goal: d.goal } : {}) } },
+      };
+    }
+    case "retireEntity": {
+      if (d.entityType === "character") {
+        const c = state.characters?.[d.entityId];
+        // 从所有场景在场名单移除,但保留角色记录(archived 置真),绝不删除。
+        const locations: WorldState["locations"] = {};
+        for (const [id, loc] of Object.entries(state.locations)) {
+          locations[id] = { ...loc, presentCharacterIds: loc.presentCharacterIds.filter((x) => x !== d.entityId) };
+        }
+        return {
+          ...state,
+          locations,
+          ...(c ? { characters: { ...state.characters, [d.entityId]: { ...c, archived: true } } } : {}),
+        };
+      }
+      const o = state.objects[d.entityId];
+      const locations: WorldState["locations"] = {};
+      for (const [id, loc] of Object.entries(state.locations)) {
+        locations[id] = { ...loc, objectIds: loc.objectIds.filter((x) => x !== d.entityId) };
+      }
+      return {
+        ...state,
+        locations,
+        objects: { ...state.objects, [d.entityId]: { ...o, archived: true } },
+      };
     }
   }
 }
