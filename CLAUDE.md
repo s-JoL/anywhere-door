@@ -22,7 +22,8 @@ Docs 5–6 are where the current codebase and the migration path live.
 
 Non-authoritative working docs (for review/planning, not design authority; may
 name code like doc 5): `docs/ui-redesign-proposal.md` — the bilingual-surface +
-UI optimization plan.
+UI optimization plan; `docs/technical-design.md` — the Phase 0→1 engineering plan
+(runtime spine extraction + living-world mechanics) mapping product to code.
 
 Older `.superpowers/` reports are historical evidence, never authority.
 
