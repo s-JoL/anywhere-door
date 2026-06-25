@@ -15,7 +15,11 @@ export type Delta =
   | { kind: "establishCharacter"; id: string; name: string; role?: string; goal?: string; locationId: string }
   | { kind: "moveObject"; objectId: string; toLocationId: string }
   | { kind: "setObjectLocked"; objectId: string; locked: boolean }
-  | { kind: "fleshLocation"; locationId: string; description: string; gist?: string };
+  | { kind: "fleshLocation"; locationId: string; description: string; gist?: string }
+  // ——— §4.6 压力线 / 悬念线(只经写入口推进) ———
+  | { kind: "openThread"; id: string; summary: string; intensity?: number; relatedCharacterIds?: string[]; relatedLocationIds?: string[] }
+  | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved" }
+  | { kind: "resolveThread"; id: string };
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -58,6 +62,8 @@ function freeTextFields(d: Delta): string[] {
     case "setRelationship": return [d.disposition ?? "", d.reason ?? ""];
     case "establishLore": return [d.content, ...d.keys];
     case "setFlag": return typeof d.value === "string" ? [d.value] : [];
+    case "openThread": return [d.summary];
+    case "advanceThread": return [d.summary ?? ""];
     default: return [];
   }
 }
@@ -199,6 +205,22 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta): V
       if (!state.locations[d.locationId]) return { ok: false, reason: `地点 ${d.locationId} 不存在` };
       if (!d.description?.trim()) return { ok: false, reason: "充实描述不能为空" };
       return { ok: true };
+    case "openThread": {
+      if (!d.id?.trim()) return { ok: false, reason: "压力线 id 不能为空" };
+      if ((state.pressureLines ?? []).some((p) => p.id === d.id)) return { ok: false, reason: `压力线 ${d.id} 已存在` };
+      if (!d.summary?.trim()) return { ok: false, reason: "压力线摘要不能为空" };
+      return { ok: true };
+    }
+    case "advanceThread": {
+      if (!(state.pressureLines ?? []).some((p) => p.id === d.id)) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      return { ok: true };
+    }
+    case "resolveThread": {
+      const p = (state.pressureLines ?? []).find((x) => x.id === d.id);
+      if (!p) return { ok: false, reason: `压力线 ${d.id} 不存在` };
+      if (p.status === "resolved") return { ok: false, reason: `压力线 ${d.id} 已了结(空操作)` };
+      return { ok: true };
+    }
   }
 }
 
@@ -359,6 +381,37 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
           [d.locationId]: { ...loc, description: d.description, gist: d.gist ?? loc.gist, detail: "fleshed" },
         },
       };
+    }
+    case "openThread": {
+      const line = {
+        id: d.id,
+        summary: d.summary,
+        status: "active" as const,
+        intensity: Math.max(0, Math.min(10, d.intensity ?? 3)),
+        ...(d.relatedCharacterIds ? { relatedCharacterIds: d.relatedCharacterIds } : {}),
+        ...(d.relatedLocationIds ? { relatedLocationIds: d.relatedLocationIds } : {}),
+        updatedDay: state.time.day,
+      };
+      return { ...state, pressureLines: [...(state.pressureLines ?? []), line] };
+    }
+    case "advanceThread": {
+      const lines = (state.pressureLines ?? []).map((p) => {
+        if (p.id !== d.id) return p;
+        return {
+          ...p,
+          intensity: Math.max(0, Math.min(10, p.intensity + (d.intensityDelta ?? 0))),
+          summary: d.summary ?? p.summary,
+          status: d.status ?? p.status,
+          updatedDay: state.time.day,
+        };
+      });
+      return { ...state, pressureLines: lines };
+    }
+    case "resolveThread": {
+      const lines = (state.pressureLines ?? []).map((p) =>
+        p.id === d.id ? { ...p, status: "resolved" as const, updatedDay: state.time.day } : p,
+      );
+      return { ...state, pressureLines: lines };
     }
   }
 }

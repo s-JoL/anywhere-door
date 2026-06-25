@@ -17,6 +17,9 @@ const VALID_KINDS = new Set([
   "establishCharacter",
   "moveObject",
   "setObjectLocked",
+  "openThread",
+  "advanceThread",
+  "resolveThread",
 ]);
 
 export function parseDeltas(text: string): Delta[] {
@@ -56,6 +59,12 @@ export function parseDeltas(text: string): Delta[] {
       } else if (item.kind === "moveObject" && typeof item.objectId === "string" && typeof item.toLocationId === "string") {
         result.push(item as Delta);
       } else if (item.kind === "setObjectLocked" && typeof item.objectId === "string" && typeof item.locked === "boolean") {
+        result.push(item as Delta);
+      } else if (item.kind === "openThread" && typeof item.id === "string" && typeof item.summary === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "advanceThread" && typeof item.id === "string") {
+        result.push(item as Delta);
+      } else if (item.kind === "resolveThread" && typeof item.id === "string") {
         result.push(item as Delta);
       }
       if (result.length >= 12) break;

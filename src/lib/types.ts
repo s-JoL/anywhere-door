@@ -82,6 +82,26 @@ export interface WorldState {
   relationships?: Record<string, Record<string, Relationship>>;
   /** 世界书 / canon：关键词触发的永久世界设定，可经 establishLore 按需生长。 */
   lore?: LoreEntry[];
+  /** 结构化压力线 / 悬念线(§4.6)。导演读取;只经 thread delta(过写入口)推进。 */
+  pressureLines?: PressureLine[];
+}
+
+/** 压力线状态:潜伏 / 活跃 / 已了结。 */
+export type ThreadStatus = "latent" | "active" | "resolved";
+
+/**
+ * 一条结构化压力线(§4.6 / 架构 §5 压力线)。把"张力"从单一标量升级为可命名、可推进、
+ * 可了结的悬念线。`summary` 为玩家可见的安全措辞;强度供导演排序。Phase 0 仅脚手架:
+ * 字段与 thread delta 就位,三档精度的离场推进在 Phase 1。
+ */
+export interface PressureLine {
+  id: string;
+  summary: string;
+  status: ThreadStatus;
+  intensity: number;             // 0–10
+  relatedCharacterIds?: string[];
+  relatedLocationIds?: string[];
+  updatedDay?: number;           // 最近一次推进的世界日
 }
 
 export interface WorldPresentation {
