@@ -254,5 +254,14 @@ export interface Memory {
   branchId?: string;
 }
 
-export type TasteEventKind = "enter" | "dwell" | "author" | "skip";
+/**
+ * 本地口味/漏斗事件类别。前四个用于推荐排序;后续 7 个是获取漏斗的各级(§5.9):
+ * card-dwell → open-door → first-action → ten-minute-retain → first-consequence
+ * → return → pin。first-consequence 在玩家造成第一条 anchored 事实时触发。
+ * 全程本地优先,绝不上服务器,绝不抵达角色。
+ */
+export type TasteEventKind =
+  | "enter" | "dwell" | "author" | "skip"
+  | "card-dwell" | "open-door" | "first-action" | "ten-minute-retain"
+  | "first-consequence" | "return" | "pin";
 export interface TasteEvent { id: string; kind: TasteEventKind; seedId: string; tags: string[]; at: number; }
