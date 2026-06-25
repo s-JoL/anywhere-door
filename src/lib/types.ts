@@ -179,6 +179,23 @@ export interface WorldInstance {
   turn?: number; // 已进行的回合数(事件日志归因)
   lastSeenAt?: number; // 玩家上次交互的真实时间戳(Date.now),供离场演化算"离开多久"
   pinned?: boolean; // 玩家把这扇门收进"我的门廊"(Doorway Library)
+  /** 离场结算记录(§5.6):退场时派生,供门廊展示与回归 echo。 */
+  settlement?: SettlementRecord;
+}
+
+/**
+ * 离场结算(§5.6):玩家离开时对世界状态的一次有界提炼。
+ * - `trace`:已发生且站得住的事(anchored+ 事实 / 玩家造成的改变),玩家安全措辞。
+ * - `unresolved`:仍悬而未决的(活跃压力线摘要)。
+ * - `candidates`:**可能**的开场(回归时的钩子)——注意是候选,**不是**已落库的事实。
+ * - `bond`:某人对玩家态度的变化(回归 echo 不只讲世界,也讲关系)。
+ */
+export interface SettlementRecord {
+  trace: string[];
+  unresolved: string[];
+  candidates: string[];
+  bond?: { who: string; stance: string };
+  atDay: number;
 }
 
 export interface Message {
