@@ -34,8 +34,14 @@ export function renderProjection(seed: WorldSeed, p: CharacterProjection): ChatM
     ? `【硬事实(绝不矛盾)】${[p.identity.gender, p.identity.age, p.identity.body, p.identity.hardFacts].filter(Boolean).join("；")}`
     : "";
 
+  // §5.4 把主观记录字段渲进叙述:低置信加"不确定"对冲,主观解读随行——角色据其**所信**行动。
+  const memLine = (m: CharacterProjection["memories"][number]): string => {
+    const hedge = (m.confidence ?? 1) < 0.5 ? "（不确定）" : "";
+    const interp = m.interpretation?.trim() ? `（我的理解：${m.interpretation.trim()}）` : "";
+    return `· ${hedge}${m.text}${interp}`;
+  };
   const memoryBlock = p.memories.length
-    ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${p.memories.map((m) => `· ${m.text}`).join("\n")}`
+    ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${p.memories.map(memLine).join("\n")}`
     : "";
 
   const dispositionBlock = p.stance.length
