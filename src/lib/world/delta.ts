@@ -19,8 +19,18 @@ export type Delta =
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
-/** delta 的来源类别(用于事件日志归因)。 */
-export type DeltaSource = "user" | "reactor" | "flesh" | "offscreen";
+/**
+ * delta 的来源类别(用于事件日志归因)。与 WriteGate 的 ProposalSource 同义:
+ * 每条提议都带来源,落库日志原样记录,供 Context Inspector / 离场对账归因。
+ */
+export type DeltaSource =
+  | "user"
+  | "reactor"
+  | "director"
+  | "offscreen"
+  | "flesh"
+  | "materializer"
+  | "god";
 
 /**
  * 事件日志一条:每个**经校验落库的 delta** 追加一条,记录 turn / 世界时间 / 逻辑时戳 /
