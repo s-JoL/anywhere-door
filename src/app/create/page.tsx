@@ -41,6 +41,7 @@ export default function CreatePage() {
   const [moodText, setMoodText] = useState("");
   const [intensity, setIntensity] = useState<"calm" | "charged" | "explicit" | "">("");
   const [hook, setHook] = useState("");
+  const [entryAction, setEntryAction] = useState("");
 
   function updateChar(i: number, patch: Partial<CharCard>) {
     setChars((cs) => cs.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
@@ -84,6 +85,7 @@ export default function CreatePage() {
       mood: moodArr.length > 0 ? moodArr : undefined,
       intensity: intensity || undefined,
       hook: hook.trim() || undefined,
+      entryAction: entryAction.trim() || undefined,
     };
     const seed = buildSeedFromDraft(draft, DEMO_SEED.modelConfig, Date.now());
     if (!seed) {
@@ -233,6 +235,18 @@ export default function CreatePage() {
           />
           <span className="text-[10px] text-[var(--smoke)]">
             {t("create.hookHint")}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] text-[var(--smoke)]">{t("create.entryAction")}</label>
+          <input
+            className="field w-full"
+            placeholder={t("create.entryActionPlaceholder")}
+            value={entryAction}
+            onChange={(e) => setEntryAction(e.target.value)}
+          />
+          <span className="text-[10px] text-[var(--smoke)]">
+            {t("create.entryActionHint")}
           </span>
         </div>
       </section>

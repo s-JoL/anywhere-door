@@ -17,6 +17,13 @@ const MODEL: ModelConfig = {
   reasoningEnabled: false,
 };
 
+const USER_KEY_MODEL: ModelConfig = {
+  provider: "openrouter",
+  apiKey: "sk-user-secret",
+  model: "deepseek/deepseek-v4-pro",
+  reasoningEnabled: true,
+};
+
 // A valid generated-world JSON fixture matching the WorldDraft contract.
 const VALID_WORLD = {
   title: "霜河剑歌",
@@ -25,6 +32,7 @@ const VALID_WORLD = {
     physics: "现实武侠物理，轻功与内力存在，但无神鬼。",
     setting: "古代北境江湖。",
     redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "凛冽、克制，像雪夜里压低声音讲出的江湖传闻；只转述已提交事实。",
   },
   time: { clock: "黄昏", lighting: "雪后冷光" },
   locations: [
@@ -55,6 +63,7 @@ const VALID_WORLD = {
     mood: ["凛冽", "悬疑"],
     intensity: "charged",
     hook: "你推门进店，雪粒落在肩头。掌柜抬眼看你，手已经按在了柜下那柄断剑上。",
+    entryAction: "按住柜下那柄断剑",
     cast: [
       { name: "苏霜", line: "掌柜，冷面，左手藏旧伤" },
       { name: "白无衣", line: "笑里藏刀的剑客" },
@@ -109,6 +118,10 @@ describe("buildGeneratorPrompt", () => {
     expect(all).toContain("JSON");
     // second-person hook requirement
     expect(all).toContain("你");
+    expect(all).toContain("entryAction");
+    expect(all).toContain("narrationRule");
+    expect(all).toMatch(/叙述规则|事实快照|已提交事实/);
+    expect(all).toMatch(/第一步行动|开场发言|按钮/);
     // avoid titles
     expect(all).toContain("旧世界A");
   });
@@ -151,6 +164,14 @@ describe("buildGeneratorPrompt", () => {
     // still carries the spread instruction
     expect(all).toMatch(/不要默认走暗黑|不要默认.*暗黑/);
     expect(all).toMatch(/母题|第七层/);
+  });
+});
+
+describe("parseGeneratedSeed narration rule", () => {
+  it("preserves the generated narration rule on WorldRules", () => {
+    const seed = parseGeneratedSeed(JSON.stringify(VALID_WORLD), MODEL, "nr")!;
+    expect(seed.rules.narrationRule).toContain("凛冽");
+    expect(seed.rules.narrationRule).toContain("已提交事实");
   });
 });
 
@@ -212,6 +233,7 @@ describe("parseGeneratedSeed", () => {
     // presentation
     expect(seed.presentation?.hook).toBeTruthy();
     expect(seed.presentation?.hook.length).toBeGreaterThan(0);
+    expect(seed.presentation?.entryAction).toBe("按住柜下那柄断剑");
     expect(seed.presentation?.genre).toBe("武侠");
 
     // characters
@@ -225,6 +247,16 @@ describe("parseGeneratedSeed", () => {
     for (const c of seed.characters) {
       expect(seed.openingState.roster[c.id]).toBeDefined();
     }
+  });
+
+  it("does not persist the user's generation key into generated seeds", () => {
+    const seed = parseGeneratedSeed(JSON.stringify(VALID_WORLD), USER_KEY_MODEL, "secret")!;
+    expect(seed.modelConfig).toEqual({
+      provider: "openrouter",
+      apiKey: "",
+      model: "deepseek/deepseek-v4-pro",
+      reasoningEnabled: true,
+    });
   });
 
   it("maps generated lore into openingState.lore with assigned ids", () => {
@@ -295,6 +327,12 @@ describe("parseGeneratedSeed", () => {
       presentation: { ...VALID_WORLD.presentation, hook: "" },
     };
     expect(parseGeneratedSeed(JSON.stringify(noHook), MODEL, "x")).toBeNull();
+
+    const noEntryAction = {
+      ...VALID_WORLD,
+      presentation: { ...VALID_WORLD.presentation, entryAction: "" },
+    };
+    expect(parseGeneratedSeed(JSON.stringify(noEntryAction), MODEL, "x")).toBeNull();
   });
 
   it("produces a seed that instantiate() does not throw on", () => {

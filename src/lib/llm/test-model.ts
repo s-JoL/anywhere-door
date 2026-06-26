@@ -1,6 +1,10 @@
 import type { ModelConfig } from "../types";
 import { streamChat } from "./stream";
 
+export function canTestModelConfig(cfg: ModelConfig): boolean {
+  return cfg.apiKey.trim().length > 0;
+}
+
 /** Connectivity test: send a minimal request; if any content streams back, consider it usable. */
 export async function testModel(cfg: ModelConfig): Promise<{ ok: boolean; error?: string }> {
   try {

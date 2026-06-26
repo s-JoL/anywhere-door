@@ -64,6 +64,21 @@ describe("buildSeedFromDraft", () => {
     expect(seed.rules.redLines).toEqual(["禁止暴力", "禁止赌博"]);
   });
 
+  it("uses a default narration rule and preserves a custom one", () => {
+    const defaultSeed = buildSeedFromDraft(baseDraft, modelConfig, 1000)!;
+    expect(defaultSeed.rules.narrationRule?.length).toBeGreaterThan(0);
+
+    const seed = buildSeedFromDraft(
+      {
+        ...baseDraft,
+        narrationRule: "雾气、低声、留白；只写快照允许的可见变化。",
+      },
+      modelConfig,
+      1000,
+    )!;
+    expect(seed.rules.narrationRule).toBe("雾气、低声、留白；只写快照允许的可见变化。");
+  });
+
   it("treats present:undefined as present (true by default)", () => {
     const draft: WorldDraft = {
       ...baseDraft,
@@ -115,6 +130,7 @@ describe("buildSeedFromDraft", () => {
     const seed = buildSeedFromDraft(baseDraft, modelConfig, 1000)!;
     expect(seed.presentation).toBeDefined();
     expect(seed.presentation!.hook.length).toBeGreaterThan(0);
+    expect(seed.presentation!.entryAction.length).toBeGreaterThan(0);
     expect(seed.presentation!.genre.length).toBeGreaterThan(0);
   });
 
@@ -125,9 +141,11 @@ describe("buildSeedFromDraft", () => {
       genre: "悬疑",
       mood: ["压抑", "诡异"],
       intensity: "charged",
+      entryAction: "伸手挡住正在打开的铁门",
     };
     const seed = buildSeedFromDraft(draft, modelConfig, 1000)!;
     expect(seed.presentation!.hook).toBe("你站在庄园铁门外，雾让五步外的一切都消失了——而那扇门正在慢慢开。");
+    expect(seed.presentation!.entryAction).toBe("伸手挡住正在打开的铁门");
     expect(seed.presentation!.genre).toBe("悬疑");
     expect(seed.presentation!.mood).toEqual(["压抑", "诡异"]);
   });

@@ -8,12 +8,14 @@ import { DEMO_SEED } from "@/lib/world/seed-demo";
 import { derivePresentation } from "@/lib/world/presentation";
 import { useDoorEnter } from "@/app/DoorTransition";
 import { recordEnter, recordAuthor, recordSkip } from "@/lib/taste/record";
+import { recordCardDwell } from "@/lib/taste/funnel";
 import { computeTasteProfile } from "@/lib/taste/profile";
 import { rankFeed } from "@/lib/taste/rank";
 import { tagsOfSeed } from "@/lib/taste/tags";
 import { ensureGeneratedPool } from "@/lib/world/pregenerate";
 import { streamChat } from "@/lib/llm/stream";
 import { getUserConfig, resolveModelConfig } from "@/lib/settings/user-config";
+import { hasUserSuppliedModelKey } from "@/lib/world/prebaked-taste";
 import { t } from "@/lib/i18n";
 import type { WorldSeed } from "@/lib/types";
 
@@ -216,16 +218,24 @@ function WorldPanel({
         {/* CTA — door transition */}
         <button
           onClick={() => onEnter(seed.id)}
-          className="mt-8 inline-flex w-fit items-center gap-2 rounded-2xl border px-6 py-3 text-[15px] text-[var(--mist)] transition active:scale-[0.97]"
+          className="mt-8 flex min-h-[3.35rem] w-full max-w-[21rem] items-center justify-between gap-3 rounded-[1.1rem] border px-5 py-3.5 text-left text-[15px] text-[var(--mist)] transition active:scale-[0.97]"
           style={{
             fontFamily: "var(--serif)",
             borderColor: accent,
-            boxShadow: `0 0 24px -8px ${accent}`,
-            background: "rgba(11, 14, 20, 0.55)",
+            boxShadow: `0 0 32px -10px ${accent}, inset 0 0 18px rgba(255,255,255,0.035)`,
+            background: accentIsVar
+              ? "linear-gradient(135deg, rgba(240, 195, 107, 0.16), rgba(11, 14, 20, 0.72))"
+              : `linear-gradient(135deg, ${hexToRgba(accent, 0.2)}, rgba(11, 14, 20, 0.74))`,
             backdropFilter: "blur(12px)",
           }}
         >
-          {t("feed.cta")} <span className="text-[17px]">➤</span>
+          <span className="min-w-0 leading-snug">{pres.entryAction || t("feed.cta")}</span>
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[16px]"
+            style={{ background: accentIsVar ? "rgba(240, 195, 107, 0.16)" : hexToRgba(accent, 0.18), color: accent }}
+          >
+            ➤
+          </span>
         </button>
       </div>
 
@@ -377,10 +387,12 @@ export default function Home() {
           const repo = getRepository();
           const events = await repo.listTasteEvents();
           const profile = computeTasteProfile(events, Date.now());
+          const userConfig = getUserConfig();
+          if (!hasUserSuppliedModelKey(userConfig)) return;
           // Effective model config: global user config if present, else DEMO_SEED's
           // (apiKey:"" → server env in dev). DEMO_SEED is builtin, so resolveModelConfig
           // returns the user's config when set, otherwise DEMO_SEED.modelConfig exactly.
-          const modelConfig = resolveModelConfig(DEMO_SEED, getUserConfig());
+          const modelConfig = resolveModelConfig(DEMO_SEED, userConfig);
           await ensureGeneratedPool({
             repo,
             modelConfig,
@@ -415,10 +427,11 @@ export default function Home() {
             setFocusedIndex(i);
 
             // Phase 3: start dwell timer for this seed
-            if (!dwellTimers.current.has(seed.id)) {
+            if (!dwellTimers.current.has(seed.id) && !dwellFiredRef.current.has(seed.id)) {
               const t = setTimeout(() => {
                 dwellFiredRef.current.add(seed.id);
                 dwellTimers.current.delete(seed.id);
+                recordCardDwell(getRepository(), seed);
               }, 1200);
               dwellTimers.current.set(seed.id, t);
             }

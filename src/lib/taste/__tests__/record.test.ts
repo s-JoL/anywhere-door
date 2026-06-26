@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { recordEnter, recordDwell, recordAuthor } from "../record";
+import { recordCardDwell } from "../funnel";
 import type { Repository } from "@/lib/storage";
 import type { TasteEvent } from "@/lib/types";
 import { DEMO_SEED } from "@/lib/world/seed-demo";
@@ -47,6 +48,15 @@ describe("record helpers", () => {
     recordDwell(repo, SEED);
     await Promise.resolve();
     expect(repo.captured[0].kind).toBe("dwell");
+  });
+
+  it("recordCardDwell creates funnel event with kind=card-dwell", async () => {
+    const repo = mockRepo();
+    recordCardDwell(repo, SEED);
+    await Promise.resolve();
+    expect(repo.captured[0].kind).toBe("card-dwell");
+    expect(repo.captured[0].seedId).toBe(SEED.id);
+    expect(repo.captured[0].tags).toEqual(EXPECTED_TAGS);
   });
 
   it("recordAuthor creates event with kind=author", async () => {

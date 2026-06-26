@@ -4,7 +4,7 @@ import { DEMO_SEED } from "../../world/seed-demo";
 import type { Memory } from "../../types";
 
 const mem = (over: Partial<Memory>): Memory => ({
-  id: "m", charId: "c-lan", kind: "observation", text: "你：我来过这里",
+  id: "m", instanceId: "w-test", charId: "c-lan", kind: "observation", text: "你：我来过这里",
   keywords: [], importance: 5, createdAt: 1, lastAccessed: 1, ...over,
 });
 
@@ -32,5 +32,13 @@ describe("§5.4 subjective records wired into narration", () => {
       memories: [mem({ text: "他付账时手在抖", interpretation: "他在怕什么" })],
     });
     expect(msgs[0].content).toContain("他付账时手在抖（我的理解：他在怕什么）");
+  });
+
+  it("surfaces a distorted memory as what the character misremembers", () => {
+    const c = DEMO_SEED.characters[0];
+    const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {
+      memories: [mem({ text: "老周说阿岚是逃犯", perceptionQuality: "garbled", distortion: "把王女身份记成了逃犯" })],
+    });
+    expect(msgs[0].content).toContain("老周说阿岚是逃犯（你记成：把王女身份记成了逃犯）");
   });
 });

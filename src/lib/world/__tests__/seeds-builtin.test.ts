@@ -19,14 +19,43 @@ describe("relay-station seed: SEREN-7's locked airlock", () => {
   });
 });
 
+describe("cold-start pool product coverage", () => {
+  it("includes the required rule-configuration spread", () => {
+    const searchable = BUILTIN_SEEDS.map((seed) =>
+      [seed.title, seed.presentation?.genre, ...(seed.presentation?.mood ?? []), seed.rules.physics, seed.rules.setting].join(" "),
+    );
+
+    expect(searchable.some((text) => /恐怖|惊悚|失真|扭曲/.test(text))).toBe(true);
+    expect(searchable.some((text) => /地城|迷宫|地下城|dungeon/i.test(text))).toBe(true);
+  });
+
+  it("includes a game-y dungeon door with a real locked traversal gate", () => {
+    const dungeon = BUILTIN_SEEDS.find((seed) => /地城|迷宫|地下城|dungeon/i.test(
+      [seed.title, seed.presentation?.genre, seed.rules.physics, seed.rules.setting].join(" "),
+    ));
+
+    expect(dungeon).toBeDefined();
+    const gate = Object.values(dungeon!.openingState.objects).find((object) => object.props.locked === true && typeof object.props.gates === "string");
+    expect(gate).toBeDefined();
+
+    const result = validateDelta(dungeon!.openingState, dungeon!.rules, { kind: "moveScene", toLocationId: gate!.props.gates as string });
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe("BUILTIN_SEEDS", () => {
-  it("has at least 3 seeds", () => {
-    expect(BUILTIN_SEEDS.length).toBeGreaterThanOrEqual(3);
+  it("has at least 8 quality-gated cold-start doors", () => {
+    expect(BUILTIN_SEEDS.length).toBeGreaterThanOrEqual(8);
   });
 
   it("has unique ids", () => {
     const ids = BUILTIN_SEEDS.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("has non-repeating entry actions across the keyless feed pool", () => {
+    const actions = BUILTIN_SEEDS.map((s) => s.presentation?.entryAction).filter(Boolean);
+    expect(new Set(actions).size).toBe(actions.length);
   });
 
   it("first seed is DEMO_SEED (seed-demo-tavern)", () => {
@@ -78,11 +107,25 @@ describe("BUILTIN_SEEDS", () => {
         expect(seed.rules.setting.length).toBeGreaterThan(0);
       });
 
-      it("has a presentation with non-empty hook, genre, and at least 1 cast member", () => {
+      it("has a narration rule for snapshot-grounded Director prose", () => {
+        expect(seed.rules.narrationRule?.length).toBeGreaterThan(0);
+        expect(seed.rules.narrationRule).toMatch(/事实|快照|已提交|可见|转述/);
+      });
+
+      it("has a presentation with non-empty hook, entry action, genre, and at least 1 cast member", () => {
         expect(seed.presentation).toBeDefined();
         expect(seed.presentation!.hook.length).toBeGreaterThan(0);
+        expect(seed.presentation!.entryAction.length).toBeGreaterThan(0);
+        expect(seed.presentation!.entryAction).not.toMatch(/推门进入|Open the door/);
         expect(seed.presentation!.genre.length).toBeGreaterThan(0);
         expect(seed.presentation!.cast.length).toBeGreaterThanOrEqual(1);
+      });
+
+      it("has a keyless pre-baked taste with a user action and scripted beat", () => {
+        expect(seed.prebakedTaste).toBeDefined();
+        expect(seed.prebakedTaste!.userAction.length).toBeGreaterThan(0);
+        expect(seed.prebakedTaste!.beats.length).toBeGreaterThanOrEqual(1);
+        expect(seed.prebakedTaste!.beats.every((beat) => beat.content.trim().length > 0)).toBe(true);
       });
     }
   );

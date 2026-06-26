@@ -6,7 +6,7 @@ import { DEMO_SEED } from "@/lib/world/seed-demo";
 // A seed WITH authored presentation
 const AUTHORED_SEED: WorldSeed = {
   ...DEMO_SEED,
-  presentation: { genre: "都市悬疑", mood: ["暧昧", "危险"], intensity: "charged", hook: "...", cast: [] },
+  presentation: { genre: "都市悬疑", mood: ["暧昧", "危险"], intensity: "charged", hook: "...", entryAction: "开始行动", cast: [] },
 };
 
 // A seed WITHOUT presentation (will derive fallback)

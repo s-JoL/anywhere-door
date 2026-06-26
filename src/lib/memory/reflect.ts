@@ -75,11 +75,13 @@ export function buildReflectionPrompt(characterName: string, recent: Memory[]): 
 // ─── reflect ─────────────────────────────────────────────────────────────────
 
 export interface ReflectArgs {
+  instanceId: string;
   characterName: string;
   charId: string;
   memories: Memory[];
   llm: LlmFn;
   now: number;
+  branchId?: string;
 }
 
 /**
@@ -88,7 +90,7 @@ export interface ReflectArgs {
  * Returns new Memory[] with kind:"reflection"; caller persists them.
  * Returns [] on llm error or empty insights.
  */
-export async function reflect({ characterName, charId, memories, llm, now }: ReflectArgs): Promise<Memory[]> {
+export async function reflect({ instanceId, characterName, charId, memories, llm, now, branchId }: ReflectArgs): Promise<Memory[]> {
   // Use the last ~15 observation memories
   const observations = memories.filter((m) => m.kind === "observation");
   const recent = observations.slice(-15);
@@ -110,8 +112,9 @@ export async function reflect({ characterName, charId, memories, llm, now }: Ref
 
   return insights.map((insight, i) => {
     const t = now + i;
-    return {
+    const memory: Memory = {
       id: newId("refl"),
+      instanceId,
       charId,
       kind: "reflection" as const,
       text: insight,
@@ -124,5 +127,7 @@ export async function reflect({ characterName, charId, memories, llm, now }: Ref
       provenance: "inferred" as const,
       confidence: 0.8,
     };
+    if (branchId) memory.branchId = branchId;
+    return memory;
   });
 }

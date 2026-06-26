@@ -28,14 +28,18 @@ export interface Gossiper { id: string; name: string }
 export function propagateGossip(
   present: Gossiper[],
   recentByChar: Record<string, Memory[]>,
-  opts?: { minImportance?: number },
+  opts: { instanceId: string; minImportance?: number; branchId?: string },
 ): Memory[] {
   if (present.length < 2) return [];
   const minImportance = opts?.minImportance ?? 6;
   const out: Memory[] = [];
   for (const teller of present) {
     // Retell only the most salient single **firsthand observation** (hearsay/reflection is not retold further, to avoid infinite nesting)
-    const firsthand = (recentByChar[teller.id] ?? []).filter((m) => m.kind === "observation");
+    const firsthand = (recentByChar[teller.id] ?? []).filter((m) => (
+      m.kind === "observation" &&
+      (m.provenance ?? "witnessed") === "witnessed" &&
+      (m.perceptionQuality ?? "full") === "full"
+    ));
     if (!firsthand.length) continue;
     const top = firsthand.reduce((a, b) => (b.importance > a.importance ? b : a));
     if (top.importance < minImportance) continue;
@@ -48,8 +52,9 @@ export function propagateGossip(
       const t = nextTime();
       // Secondhand retelling: provenance=heard, confidence discounted further from the teller's own confidence (< firsthand), perception quality partial
       const tellerConfidence = top.confidence ?? 1;
-      out.push({
+      const memory: Memory = {
         id: newId("mem"),
+        instanceId: opts.instanceId,
         charId: listener.id,
         kind: "hearsay",
         text,
@@ -60,7 +65,9 @@ export function propagateGossip(
         provenance: "heard",
         confidence: Math.round(tellerConfidence * 0.6 * 100) / 100,
         perceptionQuality: "partial",
-      });
+      };
+      if (opts?.branchId) memory.branchId = opts.branchId;
+      out.push(memory);
     }
   }
   return out;

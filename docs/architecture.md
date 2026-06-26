@@ -424,6 +424,17 @@ The Director may be a tool-using agent that runs the world's rules over the trut
 - **Gate invariant holds:** computed results are proposals committed by the
   WriteGate; the agent never bypasses validation.
 
+**Internal team shape.** If context pressure or precise adjudication becomes too
+large for one Director pass, the Director may become a coordinator over
+specialist agents: a rules adjudicator, continuity critic, casting assistant,
+memory/retrieval scout, or tone director. This is an execution decomposition, not
+a topology change. Specialists receive bounded role context, return analyses or
+proposals, keep no independent durable truth, never feed characters directly, and
+never commit state. The Director synthesizes their output; the write gate remains
+the only committer and the perception boundary remains the only character-facing
+context path. Start with one Director and split only when measured context,
+latency, or rule complexity proves the need.
+
 **Authoring, validation, and routing.** A rule-skill is part of the seed contract,
 authored at creation time (by the seed generator or a creator in Seed Studio), not
 improvised per turn. Two properties keep an unsound skill bounded: (1) its outputs
@@ -511,7 +522,8 @@ and the Director (proactive surfacing).
 
 The seed's characters are frozen and shared across all players, so a world-spawned
 character cannot live in the seed. Instance-private characters live in WorldState
-and grow on demand; present-character lookup is seed ∪ instance. This makes
+and grow on demand when player attention, recurrence, causal pressure, or first
+active casting earns persistence; present-character lookup is seed ∪ instance. This makes
 identity stability free: instance state persists, so a spawned character's
 definition and per-character memories survive. **Spawned characters and their
 memories are never deleted** — archival flips a presence flag only; reload is the

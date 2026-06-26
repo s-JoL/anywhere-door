@@ -46,4 +46,10 @@ describe("buildOffscreenPrompt", () => {
     expect(all).toContain("雨夜霓虹城");
     expect(all).toContain("7");
   });
+
+  it("instructs unknown pressure-line advancement to include a player-facing sign", () => {
+    const all = buildOffscreenPrompt(seed, state, 7).map((m) => m.content).join("\n");
+    expect(all).toContain("nextSign");
+    expect(all).toContain("玩家可见");
+  });
 });

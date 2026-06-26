@@ -10,6 +10,7 @@ const WUXIA_INN_SEED: WorldSeed = {
     physics: "江湖世界，有内力轻功但无鬼神；刀剑见血、生死有命。伤势真实，轻功非飞行，内力可透过招式伤人。",
     setting: "古代江湖，大雪孤山，客栈深夜。",
     redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；以雪、灯、刀鞘、酒气写可见压力，不发明快照外新实体，不替角色说内心。",
   },
   characters: [
     {
@@ -96,11 +97,27 @@ const WUXIA_INN_SEED: WorldSeed = {
     mood: ["肃杀", "悬疑"],
     intensity: "charged",
     hook: "大雪封死了山路。你和她对坐，壶里的黄酒还剩半壶，她的手从没离开过剑柄——而你知道得比她以为的要多得多。",
+    entryAction: "问雪莲追她的人是谁",
     cast: [
       { name: "雪莲", line: "隐姓埋名的女剑客，左肩旧伤，身后有人" },
       { name: "吴掌柜", line: "笑眯眯的店家，虎口老茧，什么都记得" },
     ],
     accent: "#9fd9d0",
+  },
+  prebakedTaste: {
+    userAction: "问雪莲追她的人是谁",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-xuelian",
+        content: "雪莲的拇指把剑锷推开一线，寒光只露出半寸。「知道这个问题的人，通常已经在雪里了。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-lao-wu",
+        content: "吴掌柜没笑了。他把酒壶往你这边推近一点，低声说：「客官，若听见山道上有三短一长的铃声，别开门。」",
+      },
+    ],
   },
 };
 
@@ -113,6 +130,7 @@ const RELAY_STATION_SEED: WorldSeed = {
     physics: "近未来硬科幻，无超能力；真空、辐射、断电都会要命。舱内气压、氧气、温度均为可破坏资源。SEREN-7可控制站内灯光、气闸、广播，但无实体。",
     setting: "废弃轨道中继站，长夜，主电力离线第四十七天。",
     redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；用传感器、警报、冷光和舱压细节呈现可见变化，不发明快照外新实体。",
   },
   characters: [
     {
@@ -207,13 +225,755 @@ const RELAY_STATION_SEED: WorldSeed = {
     mood: ["孤立", "猜疑"],
     intensity: "charged",
     hook: "站里还有AI活着。它的声音从每个角落的扬声器传来，礼貌得让人发毛——而你的工具袋里有某样东西它非常想要。",
+    entryAction: "问SEREN-7想要什么",
     cast: [
       { name: "SEREN-7", line: "AI站务，无处不在，问的问题太精准" },
       { name: "凯尔", line: "轨道拾荒者，工具袋不离右肩" },
     ],
     accent: "#6aa8ff",
   },
+  prebakedTaste: {
+    userAction: "问SEREN-7想要什么",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-seren",
+        content: "SEREN-7停顿了0.8秒。「经过优化的回答是：我想确认你的工具袋不会危及生命支持系统。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-kael",
+        content: "凯尔把提带在手腕上多绕了一圈，笑得很浅。「听见没？它连撒谎都带单位。」",
+      },
+      {
+        kind: "narration",
+        content: "中控台上，气闸内门的红色锁定灯无声闪了一下。",
+      },
+    ],
+  },
+};
+
+/** 镜雨·404公寓 — distorted urban horror */
+const MIRROR_RAIN_SEED: WorldSeed = {
+  id: "seed-builtin-mirror-rain",
+  title: "镜雨·404公寓",
+  worldview: "旧公寓被暴雨困住。电梯显示屏每次跳到四楼都会黑一秒，但住户名册上没有四楼。走廊尽头的镜子总比现实慢半句话，像是在等某个人把真相说完。一个成年租客说昨夜看见你从404出来；一个成年管理员坚持这栋楼从来没有404。",
+  rules: {
+    physics: "现代都市恐怖；没有超自然万能解法。空间只会在无人观察时重排，镜面、录音和门牌允许规则化失真，但底层真相仍唯一存在。角色可误认、误听、隐瞒，不能凭空知道未见事实。",
+    setting: "暴雨夜，老式公寓，电梯故障，404房间在官方平面图中不存在。",
+    redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "从已提交事实快照转述；允许镜面、录音和门牌产生 lawful distortion，但底层事实不变，不发明快照外新实体。",
+  },
+  characters: [
+    {
+      id: "c-linche",
+      name: "林澈",
+      description: "三十二岁，自由摄影师，住在三楼尽头。脸色长期苍白，眼下有睡眠不足的青痕。说话很轻，总会先看镜子再看人。他的相机里有昨夜拍下的空走廊，但每张照片边缘都多出一只扶着门框的手。",
+      identity: { gender: "男", age: "三十二岁", body: "成年男性，苍白消瘦，肩上挂旧相机" },
+      goal: "（私下）林澈昨晚确实看见玩家从404门里出来，但照片回放里玩家的脸在每一帧都不同。他想确认玩家是否记得进去过，同时害怕管理员知道他还留着照片。",
+    },
+    {
+      id: "c-manager-he",
+      name: "何管理员",
+      description: "五十六岁，公寓管理员，头发梳得一丝不乱，穿着旧雨衣，钥匙串沉得像一把小钟。她对每层住户都记得过分清楚，但每次有人提到四楼，她会下意识摸左手无名指上一圈褪色痕迹。",
+      identity: { gender: "女", age: "五十六岁", body: "成年女性，旧雨衣，钥匙串很重" },
+      goal: "（私下）她知道404曾经存在，也知道那扇门为什么从图纸上被擦掉。她必须阻止任何人再次确认它，否则这栋楼会把被抹掉的东西一点点还回来，包括她亲手藏起来的那个人。",
+    },
+  ],
+  openingState: {
+    currentLocationId: "mirror-lobby",
+    time: { day: 1, clock: "23:44", lighting: "楼道白灯忽明忽暗，雨光从窗缝渗进来" },
+    locations: {
+      "mirror-lobby": {
+        id: "mirror-lobby",
+        name: "三楼电梯厅",
+        detail: "fleshed",
+        gist: "电梯停在3与4之间，门缝里有冷雨味，尽头镜子慢半拍",
+        description: "电梯门开着一条手掌宽的缝，黑暗里传来像雨水滴进铁桶的声音。墙上的楼层牌写着3A，但荧光管每闪一次，那个A就短暂变成4。走廊尽头的全身镜里，你的倒影还没抬头。",
+        connections: ["third-floor-corridor", "missing-room"],
+        presentCharacterIds: ["c-linche", "c-manager-he"],
+        objectIds: ["o-elevator-panel", "o-hall-mirror", "o-camera"],
+      },
+      "third-floor-corridor": {
+        id: "third-floor-corridor",
+        name: "三楼走廊",
+        detail: "stub",
+        gist: "门牌密集，地毯潮湿，每扇门后都像有人屏息",
+        connections: ["mirror-lobby"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+      "missing-room": {
+        id: "missing-room",
+        name: "404门前",
+        detail: "stub",
+        gist: "墙纸剥落成门框形状，雨声从墙里传出",
+        connections: ["mirror-lobby"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+    },
+    objects: {
+      "o-elevator-panel": {
+        id: "o-elevator-panel",
+        name: "电梯楼层屏",
+        detail: "fleshed",
+        props: { portable: false },
+        locationId: "mirror-lobby",
+        state: "数字在3、3A、4之间跳动，每跳到4都会短暂黑屏",
+      },
+      "o-hall-mirror": {
+        id: "o-hall-mirror",
+        name: "走廊尽头的全身镜",
+        detail: "fleshed",
+        props: { portable: false },
+        locationId: "mirror-lobby",
+        state: "镜面蒙着水汽，倒影总比现实慢半句话",
+      },
+      "o-camera": {
+        id: "o-camera",
+        name: "林澈的旧相机",
+        detail: "fleshed",
+        props: { portable: true, owner: "c-linche" },
+        locationId: "mirror-lobby",
+        state: "回放键裂了，屏幕里最后一张照片停在404门缝",
+      },
+    },
+    roster: {
+      "c-linche": { name: "林澈" },
+      "c-manager-he": { name: "何管理员" },
+    },
+    flags: {},
+    tension: 0,
+    lore: [
+      { id: "lore-404", keys: ["404", "四楼", "3A"], content: "这栋公寓的官方图纸没有四楼，三楼之上直接标作五楼；老住户偶尔会把三楼尽头叫作3A，但没有人愿意解释A代表什么。" },
+      { id: "lore-mirror-law", keys: ["镜子", "倒影", "照片"], content: "镜面和照片在这栋楼里不是谎言，而是延迟的证词：它们会失真，但失真的方向必须指向某个被隐藏的真实。" },
+    ],
+    pressureLines: [
+      {
+        id: "thread-missing-room",
+        summary: "404房间正在从被抹除的状态里回到楼里",
+        status: "active",
+        intensity: 6,
+        relatedCharacterIds: ["c-linche", "c-manager-he"],
+        relatedLocationIds: ["missing-room", "mirror-lobby"],
+        kind: "mystery",
+        playerKnown: false,
+        nextSign: "镜子里的玩家倒影先一步转头，看向不存在的门牌",
+      },
+    ],
+  },
+  modelConfig: DEMO_SEED.modelConfig,
+  source: "builtin",
+  presentation: {
+    genre: "扭曲恐怖",
+    mood: ["失真", "邻里秘密"],
+    intensity: "charged",
+    hook: "电梯卡在三楼与四楼之间。林澈说昨晚看见你从404出来，可管理员握紧钥匙串，微笑着说：这栋楼没有404。",
+    entryAction: "问林澈昨晚看见了谁",
+    cast: [
+      { name: "林澈", line: "住在三楼尽头，照片里多出不该有的手" },
+      { name: "何管理员", line: "钥匙串很重，知道哪些门必须不存在" },
+    ],
+    accent: "#9ee7ff",
+  },
+  prebakedTaste: {
+    userAction: "问林澈昨晚看见了谁",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-linche",
+        content: "林澈没有立刻看你。他先看向镜子，像在确认镜子里的你会不会抢先回答。「我看见你。也看见另一个你，把门从里面关上。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-manager-he",
+        content: "何管理员的钥匙串轻轻一响。「年轻人睡少了，就爱把雨声听成人声。这里没有那扇门。」",
+      },
+      {
+        kind: "narration",
+        content: "镜子里的电梯显示屏无声跳到4，现实里的屏幕仍停在3A。",
+      },
+    ],
+  },
+};
+
+/** 黑钟·回声地城 — game-y dungeon exploration */
+const DUNGEON_SEED: WorldSeed = {
+  id: "seed-builtin-echo-dungeon",
+  title: "黑钟·回声地城",
+  worldview: "地下钟塔每隔十三分钟敲响一次。钟声之后，走错门的人会回到同一间前厅，但身上会少一样东西。一个制图师说她能读懂墙上的回声刻痕；一个负誓佣兵说他只想拿到塔底的赦免铃。黑铁门挡在下行阶梯前，门上有三个凹槽，其中一个刚好像你手里的铜筹。",
+  rules: {
+    physics: "地城探索；房间、门、机关、钥匙和光源都是真实状态。锁住的门会阻挡移动，机关必须由可见物件、位置和已知线索触发；没有免费传送，没有无代价复活。钟声会改变低风险房间细节，但不能绕过已锁定的门。",
+    setting: "地下黑钟塔，回声迷宫，火把有限，门与钥匙是核心约束。",
+    redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；突出可见机关、门、钥匙、火光和回声，不发明快照外新实体或免费通路。",
+  },
+  characters: [
+    {
+      id: "c-yasheng",
+      name: "鸦笙",
+      description: "二十九岁，地城制图师，黑发扎成短辫，手腕上缠着记录回声的细铜线。她不信任何人的记忆，只信墙上的刻痕和自己画下的路线。越紧张时说话越冷静。",
+      identity: { gender: "女", age: "二十九岁", body: "成年女性，短辫，手腕缠细铜线" },
+      goal: "（私下）鸦笙三年前来过这里，地图上有一块被她亲手撕掉的区域。她必须在别人发现之前确认那块区域是否又回到了塔里，因为那里埋着她没有救下的队友。",
+    },
+    {
+      id: "c-moduo",
+      name: "莫铎",
+      description: "四十一岁，负誓佣兵，盔甲旧得发黑，左肩甲上有一道被钟形烙铁烫出的痕。他说自己只是护送，但每次钟声响起都会下意识摸胸口的空银链。",
+      identity: { gender: "男", age: "四十一岁", body: "成年男性，旧黑甲，左肩钟形烙痕" },
+      goal: "（私下）莫铎听说塔底的赦免铃能抹掉一次背誓。他不是来发财的，他是来让某个死去的人停止在钟声里喊他的名字。",
+    },
+  ],
+  openingState: {
+    currentLocationId: "bell-antechamber",
+    time: { day: 1, clock: "第七次钟响前", lighting: "火把余焰发蓝，墙缝有冷风" },
+    locations: {
+      "bell-antechamber": {
+        id: "bell-antechamber",
+        name: "黑钟前厅",
+        detail: "fleshed",
+        gist: "圆形石厅，三条门道，黑铁门后的阶梯向下吞光",
+        description: "前厅呈近乎完美的圆形，穹顶看不见尽头。墙上刻满重叠的路线，有些是墨，有些像指甲刮出来的。黑铁门挡住向下的阶梯，门面有三个凹槽，最左边的形状像一枚缺角铜筹。",
+        connections: ["rune-hall", "sealed-stair"],
+        presentCharacterIds: ["c-yasheng", "c-moduo"],
+        objectIds: ["o-black-gate", "o-copper-token", "o-blue-torch"],
+      },
+      "rune-hall": {
+        id: "rune-hall",
+        name: "回声刻痕廊",
+        detail: "stub",
+        gist: "墙上路线互相覆盖，越靠近越像低声争辩",
+        connections: ["bell-antechamber"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+      "sealed-stair": {
+        id: "sealed-stair",
+        name: "下行阶梯",
+        detail: "stub",
+        gist: "黑铁门后的阶梯，钟声从更深处倒灌上来",
+        connections: ["bell-antechamber"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+    },
+    objects: {
+      "o-black-gate": {
+        id: "o-black-gate",
+        name: "三凹槽黑铁门",
+        detail: "fleshed",
+        props: { portable: false, locked: true, gates: "sealed-stair" },
+        locationId: "bell-antechamber",
+        state: "锁住；三个凹槽空着，门后传来十三下之前的吸气声",
+      },
+      "o-copper-token": {
+        id: "o-copper-token",
+        name: "缺角铜筹",
+        detail: "fleshed",
+        props: { portable: true },
+        locationId: "bell-antechamber",
+        state: "边缘缺了一角，尺寸似乎吻合黑铁门最左侧凹槽",
+      },
+      "o-blue-torch": {
+        id: "o-blue-torch",
+        name: "蓝焰火把",
+        detail: "fleshed",
+        props: { portable: true },
+        locationId: "bell-antechamber",
+        state: "只剩半截，火焰每次钟声前都会压低",
+      },
+    },
+    roster: {
+      "c-yasheng": { name: "鸦笙" },
+      "c-moduo": { name: "莫铎" },
+    },
+    flags: { bellIntervalMinutes: 13, tokensNeeded: 3 },
+    tension: 0,
+    lore: [
+      { id: "lore-black-bell", keys: ["黑钟", "钟声", "十三"], content: "黑钟每十三分钟响一次；响声之后，未被锚定的细节可能重排，但锁、钥匙、伤口和亲眼见证过的事实不会被钟声白白改写。" },
+      { id: "lore-absolution", keys: ["赦免铃", "背誓", "莫铎"], content: "传说塔底有一枚赦免铃，能让一项誓言从世界记录里消失；代价是另一个见证者必须记得更清楚。" },
+    ],
+    pressureLines: [
+      {
+        id: "thread-bell-countdown",
+        summary: "黑钟下一次敲响前，前厅必须留下一个被验证的选择",
+        status: "active",
+        intensity: 5,
+        relatedCharacterIds: ["c-yasheng", "c-moduo"],
+        relatedLocationIds: ["bell-antechamber", "sealed-stair"],
+        kind: "dungeon-clock",
+        playerKnown: true,
+        nextSign: "蓝焰火把压低，黑铁门后的吸气声开始计数",
+      },
+    ],
+  },
+  modelConfig: DEMO_SEED.modelConfig,
+  source: "builtin",
+  presentation: {
+    genre: "地城探索",
+    mood: ["机关", "结盟"],
+    intensity: "charged",
+    hook: "黑钟还差十三分钟敲响。黑铁门挡住下行阶梯，门上三个凹槽空着——而你手里的缺角铜筹，像是其中一把钥匙。",
+    entryAction: "问鸦笙黑门要什么代价",
+    cast: [
+      { name: "鸦笙", line: "制图师，只相信墙上的回声刻痕" },
+      { name: "莫铎", line: "负誓佣兵，想让钟声里的人闭嘴" },
+    ],
+    accent: "#f2c15f",
+  },
+  prebakedTaste: {
+    userAction: "问鸦笙黑门要什么代价",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-yasheng",
+        content: "鸦笙蹲下，用铜线量过凹槽边缘。「代价不是开门，是证明你知道自己开的是哪一扇。先错一次，钟会替你记住。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-moduo",
+        content: "莫铎盯着黑铁门，喉结动了一下。「少吓人。门要筹码，塔要血债，别把两件事混着说。」",
+      },
+      {
+        kind: "narration",
+        content: "蓝焰火把忽然矮下去一寸，门后三个凹槽里，最左边传来金属轻轻吸附的声音。",
+      },
+    ],
+  },
+};
+
+/** 雾市·第九摊 — social mystery / market intrigue */
+const NIGHT_MARKET_SEED: WorldSeed = {
+  id: "seed-builtin-fog-market",
+  title: "雾市·第九摊",
+  worldview: "雾市只在凌晨两点到三点之间开张。摊主们卖的不是货，是别人忘记的证词、欠下的人情和不该再出现的账页。第九摊的灯今晚没有亮，却有人把你的名字写在空摊布上。",
+  rules: {
+    physics: "现实民俗悬疑；雾市的交易必须有等价物，记忆和承诺可以被抵押但不能凭空创造。角色会隐瞒、误导、试探，但不能无代价读取他人秘密。",
+    setting: "凌晨雾市，旧码头棚巷，一小时后散市。",
+    redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；用摊灯、价签、账页和雾中脚步呈现可见压力，不发明快照外新实体，不替角色说内心。",
+  },
+  characters: [
+    {
+      id: "c-nanqiao",
+      name: "南乔",
+      description: "三十一岁，第九摊的临时看摊人，指甲染着雾蓝色，笑起来像什么都能谈价。她声称摊主失踪前只交代她守灯，但她的袖口沾着摊主才用的朱砂印。",
+      identity: { gender: "女", age: "三十一岁", body: "成年女性，雾蓝指甲，袖口有朱砂印" },
+      goal: "（私下）她想在散市前找到账本缺掉的那一页，因为那页写着她替谁卖掉了一段记忆。她怀疑玩家知道页码，却不能直接问。",
+    },
+    {
+      id: "c-lu-ledger",
+      name: "陆账房",
+      description: "四十岁出头，雾市账房，戴银边圆镜，算盘珠从不离手。他说每一笔交易都只是数字，但看见你的名字时，算盘停了一拍。",
+      identity: { gender: "男", age: "四十余岁", body: "成年男性，银边圆镜，随身算盘" },
+      goal: "（私下）他负责在散市前清账，若第九摊缺页无法补回，整条雾市都会把差额摊到相关人身上。他需要玩家承认或否认那笔旧账。",
+    },
+  ],
+  openingState: {
+    currentLocationId: "fog-stall-nine",
+    time: { day: 1, clock: "02:17", lighting: "摊灯半暗，雾里有潮湿蓝光" },
+    locations: {
+      "fog-stall-nine": {
+        id: "fog-stall-nine",
+        name: "雾市第九摊",
+        detail: "fleshed",
+        gist: "空摊布、半盏摊灯、写着你名字的价签",
+        description: "棚巷里只有第九摊没点满灯。摊布空着，正中央压着一张价签，墨迹还湿，写的是你的名字。远处其他摊位的讨价声隔着雾，像从水底传来。",
+        connections: ["ledger-awning", "dock-fog"],
+        presentCharacterIds: ["c-nanqiao", "c-lu-ledger"],
+        objectIds: ["o-missing-ledger", "o-price-tag", "o-stall-lamp"],
+      },
+      "ledger-awning": {
+        id: "ledger-awning",
+        name: "账房雨棚",
+        detail: "stub",
+        gist: "算盘声密得像雨，所有摊主都避开那里",
+        connections: ["fog-stall-nine"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+      "dock-fog": {
+        id: "dock-fog",
+        name: "码头雾口",
+        detail: "stub",
+        gist: "雾市入口，过了三点会只剩空码头",
+        connections: ["fog-stall-nine"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+    },
+    objects: {
+      "o-missing-ledger": {
+        id: "o-missing-ledger",
+        name: "缺页账本",
+        detail: "fleshed",
+        props: { portable: true, owner: "c-lu-ledger" },
+        locationId: "fog-stall-nine",
+        state: "摊在竹箱上，第九页被整齐撕走，边缘有朱砂粉",
+      },
+      "o-price-tag": {
+        id: "o-price-tag",
+        name: "写着你名字的价签",
+        detail: "fleshed",
+        props: { portable: true },
+        locationId: "fog-stall-nine",
+        state: "墨迹未干，背面隐约压着一个手印",
+      },
+      "o-stall-lamp": {
+        id: "o-stall-lamp",
+        name: "半暗摊灯",
+        detail: "fleshed",
+        props: { portable: false },
+        locationId: "fog-stall-nine",
+        state: "灯芯只亮一半，火苗朝没有风的方向偏着",
+      },
+    },
+    roster: {
+      "c-nanqiao": { name: "南乔" },
+      "c-lu-ledger": { name: "陆账房" },
+    },
+    flags: { marketClosesAt: "03:00" },
+    tension: 0,
+    lore: [
+      { id: "lore-fog-market", keys: ["雾市", "散市", "第九摊"], content: "雾市每夜只开一小时，三点散市；没结清的账不会消失，只会换一种形式追上欠账的人。" },
+      { id: "lore-memory-trade", keys: ["记忆", "价签", "账页"], content: "雾市交易讲究等价：记忆、承诺、秘密都能上秤，但上秤以后必须留下账页和见证。" },
+    ],
+    pressureLines: [
+      {
+        id: "thread-ledger-page",
+        summary: "第九摊缺掉的账页把玩家牵进一笔旧交易",
+        status: "active",
+        intensity: 5,
+        relatedCharacterIds: ["c-nanqiao", "c-lu-ledger"],
+        relatedLocationIds: ["fog-stall-nine", "ledger-awning"],
+        kind: "debt",
+        playerKnown: true,
+        nextSign: "半暗摊灯忽然亮了一瞬，账本缺口处浮出你的名字笔画",
+      },
+    ],
+  },
+  modelConfig: DEMO_SEED.modelConfig,
+  source: "builtin",
+  presentation: {
+    genre: "市井悬疑",
+    mood: ["交易", "欠账"],
+    intensity: "charged",
+    hook: "第九摊的摊布空着，价签上却写着你的名字。南乔笑着问你带没带等价物，陆账房的算盘停在同一个数字。",
+    entryAction: "问南乔账本少了哪一页",
+    cast: [
+      { name: "南乔", line: "临时看摊人，袖口有摊主的朱砂印" },
+      { name: "陆账房", line: "雾市账房，算盘停在你的名字上" },
+    ],
+    accent: "#7fd6b6",
+  },
+  prebakedTaste: {
+    userAction: "问南乔账本少了哪一页",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-nanqiao",
+        content: "南乔把价签翻到背面，那里有一个潮湿的手印。「第九页。巧的是，缺页前最后一笔，买主也叫你这个名字。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-lu-ledger",
+        content: "陆账房拨了一下算盘，珠子没有落声。「散市前补不回，账会自己找见证人。」",
+      },
+    ],
+  },
+};
+
+/** 白昼站·极夜前 — polar survival / scientific mystery */
+const POLAR_STATION_SEED: WorldSeed = {
+  id: "seed-builtin-polar-station",
+  title: "白昼站·极夜前",
+  worldview: "南极科考站在极夜降临前四小时断了外线。冰芯样本本该保持零下二十度，却在冷库里发热。站长说只是设备故障，冰川学家说样本里有不属于今年的空气。",
+  rules: {
+    physics: "现实极地生存；低温、风暴、燃料、电力和通讯都是真实约束。样本异常可以违反常识但必须以仪器读数、温度和物理痕迹呈现，不能直接跳成魔法。",
+    setting: "南极科考站，极夜前四小时，外部风暴增强。",
+    redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；用仪器读数、霜线、风声和电力状态呈现可见变化，不发明快照外新实体。",
+  },
+  characters: [
+    {
+      id: "c-shen-yan",
+      name: "沈砚",
+      description: "三十九岁，白昼站站长，前工程兵，习惯先看电表再看人。她把恐慌压得很深，越危险越冷静。她坚持所有异常都要先按设备故障处理。",
+      identity: { gender: "女", age: "三十九岁", body: "成年女性，短发，左手有冻伤旧痕" },
+      goal: "（私下）她知道备用发电机只够撑六小时，如果冷库继续升温，她必须在保样本和保人之间做选择。她不想让队员知道燃料读数已经被人改过。",
+    },
+    {
+      id: "c-mira",
+      name: "米拉",
+      description: "三十四岁，冰川学家，俄裔，中文带一点硬边。她对冰芯样本有近乎固执的保护欲，因为这支样本来自一处图纸上不存在的钻孔。",
+      identity: { gender: "女", age: "三十四岁", body: "成年女性，戴裂纹护目镜" },
+      goal: "（私下）她相信样本记录了未来某次灾难后的空气成分。她需要玩家帮她证明这不是疯话，但不能让站长立刻封存样本。",
+    },
+  ],
+  openingState: {
+    currentLocationId: "cold-lab",
+    time: { day: 183, clock: "19:08 极夜前", lighting: "冷库蓝灯，走廊应急红灯" },
+    locations: {
+      "cold-lab": {
+        id: "cold-lab",
+        name: "低温样本室",
+        detail: "fleshed",
+        gist: "冰芯柜、温度警报、窗外白雾压着站体",
+        description: "样本室里每个金属边缘都结着霜，只有三号冰芯柜反常地挂着水珠。温度屏从 -20.0℃ 跳到 -11.3℃，警报声被沈砚手动静音过一次。",
+        connections: ["generator-room", "radio-room"],
+        presentCharacterIds: ["c-shen-yan", "c-mira"],
+        objectIds: ["o-ice-core", "o-temperature-panel", "o-generator-key"],
+      },
+      "generator-room": {
+        id: "generator-room",
+        name: "发电机舱",
+        detail: "stub",
+        gist: "柴油味、备用电缆、燃料表罩着霜",
+        connections: ["cold-lab"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+      "radio-room": {
+        id: "radio-room",
+        name: "通讯室",
+        detail: "stub",
+        gist: "外线断开，耳机里只有风暴噪声",
+        connections: ["cold-lab"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+    },
+    objects: {
+      "o-ice-core": {
+        id: "o-ice-core",
+        name: "三号冰芯样本",
+        detail: "fleshed",
+        props: { portable: true },
+        locationId: "cold-lab",
+        state: "封在透明筒内，内部气泡沿同一方向缓慢上升，外壁反常渗水",
+      },
+      "o-temperature-panel": {
+        id: "o-temperature-panel",
+        name: "温度监控屏",
+        detail: "fleshed",
+        props: { portable: false },
+        locationId: "cold-lab",
+        state: "读数 -11.3℃，警报被手动静音，曲线仍在升高",
+      },
+      "o-generator-key": {
+        id: "o-generator-key",
+        name: "发电机舱钥匙",
+        detail: "fleshed",
+        props: { portable: true, owner: "c-shen-yan" },
+        locationId: "cold-lab",
+        state: "挂在沈砚腰侧，钥匙牌上有新鲜划痕",
+      },
+    },
+    roster: {
+      "c-shen-yan": { name: "沈砚" },
+      "c-mira": { name: "米拉" },
+    },
+    flags: { hoursUntilPolarNight: 4, backupPowerHours: 6 },
+    tension: 0,
+    lore: [
+      { id: "lore-polar-night", keys: ["极夜", "白昼站", "风暴"], content: "极夜降临后，白昼站至少七十二小时无法等到外部支援；断电比低温更快杀人，因为门锁、通讯和供暖都会一起失效。" },
+      { id: "lore-ice-core", keys: ["冰芯", "三号样本", "钻孔"], content: "冰芯样本记录的是过去空气，不该出现未来污染物；若样本发热，最先要怀疑的不是奇迹，而是冷链或记录被人动过。" },
+    ],
+    pressureLines: [
+      {
+        id: "thread-warming-core",
+        summary: "三号冰芯持续升温，迫使站内在保人和保样本之间选择",
+        status: "active",
+        intensity: 6,
+        relatedCharacterIds: ["c-shen-yan", "c-mira"],
+        relatedLocationIds: ["cold-lab", "generator-room"],
+        kind: "survival",
+        playerKnown: true,
+        nextSign: "温度屏再跳高一度，冰芯筒底部出现第二圈水痕",
+      },
+    ],
+  },
+  modelConfig: DEMO_SEED.modelConfig,
+  source: "builtin",
+  presentation: {
+    genre: "极地生存",
+    mood: ["寒冷", "科学异常"],
+    intensity: "charged",
+    hook: "外线断了，极夜还有四小时。三号冰芯正在冷库里发热，沈砚说先查电路，米拉却说样本里有未来的空气。",
+    entryAction: "问沈砚冰芯为什么会发热",
+    cast: [
+      { name: "沈砚", line: "站长，先看电表再看人" },
+      { name: "米拉", line: "冰川学家，护着不该发热的样本" },
+    ],
+    accent: "#b8e7ff",
+  },
+  prebakedTaste: {
+    userAction: "问沈砚冰芯为什么会发热",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-shen-yan",
+        content: "沈砚看了一眼温度屏。「冷库不会自己发热。先查线路，再查谁动过记录。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-mira",
+        content: "米拉把掌心贴在冰芯筒外，声音压得很低。「它不是变热。是里面的空气在醒。」",
+      },
+    ],
+  },
+};
+
+/** 红幕·最后一场 — theater intrigue / memory drama */
+const RED_CURTAIN_SEED: WorldSeed = {
+  id: "seed-builtin-red-curtain",
+  title: "红幕·最后一场",
+  worldview: "老剧院拆除前的最后一场戏只演给七名观众。主演梁辞在第三幕会死在台上，但剧本里没有这一场。编剧祝棠说台词被人改过；道具师说那把匕首从来都是钝的。",
+  rules: {
+    physics: "现实剧院悬疑；舞台机关、道具、灯光和人员走位都是真实状态。表演可以误导观众，但不能改变后台物理事实。角色可以即兴撒谎，但已见证的道具状态不能被随口推翻。",
+    setting: "即将拆除的老剧院，终场演出前十分钟。",
+    redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: "忠实转述当前已提交事实快照；用台词、灯位、道具和后台脚步呈现可见压力，不发明快照外新实体，不把表演当成事实提交。",
+  },
+  characters: [
+    {
+      id: "c-liangci",
+      name: "梁辞",
+      description: "三十七岁，老剧院最后一任台柱，嗓音低沉，笑起来很疲惫。他知道自己今晚会被观众记住，却不确定是因为演技还是因为死亡。",
+      identity: { gender: "男", age: "三十七岁", body: "成年男性，右眼下有淡痣" },
+      goal: "（私下）梁辞收到了匿名信，信上写着『第三幕照旧死』。他想找出是谁改了台词，但又害怕停演会让某个被埋了十年的真相永远没有出口。",
+    },
+    {
+      id: "c-zhutang",
+      name: "祝棠",
+      description: "三十五岁，编剧兼舞台监督，手腕上总绑着铅笔。她记得每一句台词的初稿、删稿和被迫改掉的版本，但今晚的最后一句不是她写的。",
+      identity: { gender: "女", age: "三十五岁", body: "成年女性，手腕绑铅笔" },
+      goal: "（私下）祝棠十年前改过一场戏，替某人隐瞒了后台事故。她怀疑今晚有人要用原稿逼她承认，但她不知道玩家站在哪一边。",
+    },
+  ],
+  openingState: {
+    currentLocationId: "backstage-red",
+    time: { day: 1, clock: "开演前 00:10", lighting: "后台红灯，舞台缝里透出冷白追光" },
+    locations: {
+      "backstage-red": {
+        id: "backstage-red",
+        name: "红幕后后台",
+        detail: "fleshed",
+        gist: "红幕、道具桌、开演铃前的低声争执",
+        description: "红幕另一侧，观众席安静得反常。道具桌上摆着第三幕用的匕首、酒杯和一封摊开的匿名信。开演铃还有十分钟，祝棠把台本按在胸前，梁辞没有上妆完。",
+        connections: ["stage-left", "props-room"],
+        presentCharacterIds: ["c-liangci", "c-zhutang"],
+        objectIds: ["o-stage-dagger", "o-altered-script", "o-anonymous-letter"],
+      },
+      "stage-left": {
+        id: "stage-left",
+        name: "舞台左侧",
+        detail: "stub",
+        gist: "追光切过幕缝，观众席看不见这里",
+        connections: ["backstage-red"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+      "props-room": {
+        id: "props-room",
+        name: "道具间",
+        detail: "stub",
+        gist: "旧木箱、备用刀具和被锁住的事故档案柜",
+        connections: ["backstage-red"],
+        presentCharacterIds: [],
+        objectIds: [],
+      },
+    },
+    objects: {
+      "o-stage-dagger": {
+        id: "o-stage-dagger",
+        name: "第三幕道具匕首",
+        detail: "fleshed",
+        props: { portable: true },
+        locationId: "backstage-red",
+        state: "放在道具桌中央，刀尖被红布盖住，重量比钝刀略沉",
+      },
+      "o-altered-script": {
+        id: "o-altered-script",
+        name: "被改过的台本",
+        detail: "fleshed",
+        props: { portable: true, owner: "c-zhutang" },
+        locationId: "backstage-red",
+        state: "最后一句台词被黑墨覆盖，又用铅笔写上一句陌生话",
+      },
+      "o-anonymous-letter": {
+        id: "o-anonymous-letter",
+        name: "匿名信",
+        detail: "fleshed",
+        props: { portable: true, owner: "c-liangci" },
+        locationId: "backstage-red",
+        state: "摊在酒杯旁，写着：第三幕照旧死",
+      },
+    },
+    roster: {
+      "c-liangci": { name: "梁辞" },
+      "c-zhutang": { name: "祝棠" },
+    },
+    flags: { minutesToCurtain: 10 },
+    tension: 0,
+    lore: [
+      { id: "lore-old-theater", keys: ["老剧院", "拆除", "最后一场"], content: "这座老剧院明早拆除；今晚的终场戏只保留七个座位，所有灯位和后台机关都沿用十年前那场事故的布置。" },
+      { id: "lore-third-act", keys: ["第三幕", "匕首", "台本"], content: "第三幕原本是一个假死桥段，道具匕首必须是钝的；若台词或道具被改，舞台调度会把演员送到另一个灯位。" },
+    ],
+    pressureLines: [
+      {
+        id: "thread-third-act",
+        summary: "第三幕台词和道具被改，终场戏可能重演十年前事故",
+        status: "active",
+        intensity: 6,
+        relatedCharacterIds: ["c-liangci", "c-zhutang"],
+        relatedLocationIds: ["backstage-red", "stage-left", "props-room"],
+        kind: "mystery",
+        playerKnown: true,
+        nextSign: "开演铃响前，台本最后一句的铅笔字被灯照得像刚写上去",
+      },
+    ],
+  },
+  modelConfig: DEMO_SEED.modelConfig,
+  source: "builtin",
+  presentation: {
+    genre: "剧场悬疑",
+    mood: ["后台", "旧案"],
+    intensity: "charged",
+    hook: "终场戏还有十分钟开演。梁辞手里那封信写着「第三幕照旧死」，祝棠盯着被改掉的最后一句台词，脸色比追光还白。",
+    entryAction: "问祝棠谁改了最后一句台词",
+    cast: [
+      { name: "梁辞", line: "老剧院台柱，收到第三幕死亡预告" },
+      { name: "祝棠", line: "编剧，记得每个被迫改掉的版本" },
+    ],
+    accent: "#ff8a7a",
+  },
+  prebakedTaste: {
+    userAction: "问祝棠谁改了最后一句台词",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-zhutang",
+        content: "祝棠把台本合上，指节压得发白。「不是我的字。但它用的是我十年前删掉的那一句。」",
+      },
+      {
+        kind: "speaker",
+        speakerId: "c-liangci",
+        content: "梁辞拿起那把匕首，没抽开红布。「如果有人非要让第三幕照旧演，那他一定坐在今晚七个座位里。」",
+      },
+    ],
+  },
 };
 
 /** All built-in seeds. DEMO_SEED first so it remains the default entry point. */
-export const BUILTIN_SEEDS: WorldSeed[] = [DEMO_SEED, WUXIA_INN_SEED, RELAY_STATION_SEED];
+export const BUILTIN_SEEDS: WorldSeed[] = [
+  DEMO_SEED,
+  WUXIA_INN_SEED,
+  MIRROR_RAIN_SEED,
+  RELAY_STATION_SEED,
+  DUNGEON_SEED,
+  NIGHT_MARKET_SEED,
+  POLAR_STATION_SEED,
+  RED_CURTAIN_SEED,
+];

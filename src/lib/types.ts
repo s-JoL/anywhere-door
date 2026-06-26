@@ -1,3 +1,5 @@
+import type { DeltaLogEntry } from "./world/delta";
+
 export type ProviderId = "openrouter" | "deepseek";
 
 export interface ModelConfig {
@@ -30,6 +32,7 @@ export interface WorldRules {
   physics: string;       // what is possible / impossible
   setting: string;       // era / place / genre constants
   redLines: string[];    // red lines (platform baseline + creator additions)
+  narrationRule?: string; // how committed truth is rendered as prose; rules-level lawful distortion lives here
 }
 
 export interface Location {
@@ -111,6 +114,8 @@ export interface Fact {
   value: string;       // the asserted value
   hardness: Hardness;
   sinceDay?: number;   // world day the fact was established / last rewritten
+  /** Whether this truth is safe to surface to the player in narration/settlement. */
+  playerKnown?: boolean;
 }
 
 /** Pressure-line status: latent / active / resolved. */
@@ -143,8 +148,20 @@ export interface WorldPresentation {
   mood: string[];                               // 2–3 tone chips
   intensity: "calm" | "charged" | "explicit";  // intensity
   hook: string;                                 // cold open: 1–3 sentences, second person, ends on a cliffhanger
+  entryAction: string;                          // feed CTA: a short first in-world move / recommended opening line
   cast: { name: string; line: string }[];       // one line per character: name + a hint of suspense
   accent?: string;                              // accent color (hex/rgb/var), themed card
+}
+
+export interface PrebakedTasteBeat {
+  kind: "narration" | "speaker";
+  speakerId?: string | null;
+  content: string;
+}
+
+export interface PrebakedTaste {
+  userAction: string;
+  beats: PrebakedTasteBeat[];
 }
 
 /** A frozen, shared starting point identical for everyone. */
@@ -159,13 +176,37 @@ export interface WorldSeed {
   createdAt?: number;
   source?: "builtin" | "imported" | "created" | "generated";
   presentation?: WorldPresentation;
+  /** Keyless on-ramp: a short scripted taste, never a fake reactive loop. */
+  prebakedTaste?: PrebakedTaste;
+}
+
+export type InputChannel = "speak" | "act" | "observe" | "director-note" | "scene-contract" | "god-edit";
+
+export interface DirectorNote {
+  id: string;
+  text: string;
+  createdAt: number;
+}
+
+export interface SceneContract {
+  id: string;
+  text: string;
+  createdAt: number;
 }
 
 export interface TurnSnapshot {
   input: string;
+  inputChannel?: InputChannel;
   state: WorldState;
+  activeBranchId?: string;
   messageIds: string[];
   memoryIds: string[];
+  deltaLogIds: string[];
+  previousSnapshot?: TurnSnapshot;
+  turn?: number;
+  lastSeenAt?: number;
+  returnEchoedForLastSeenAt?: number;
+  settlement?: SettlementRecord;
   createdAt: number;
 }
 
@@ -176,12 +217,20 @@ export interface WorldInstance {
   state: WorldState;
   createdAt: number;
   updatedAt: number;
+  /** Current private timeline branch. Durable writes inherit this id for audit/fork isolation. */
+  activeBranchId?: string;
   lastTurnSnapshot?: TurnSnapshot;
   turn?: number; // number of turns taken (event-log attribution)
   lastSeenAt?: number; // real-time timestamp of the player's last interaction (Date.now), used by offstage evolution to compute "how long they've been away"
+  /** The last `lastSeenAt` value that already produced a return-open beat, preventing duplicate echoes on page open + first action. */
+  returnEchoedForLastSeenAt?: number;
   pinned?: boolean; // the player tucked this door into "my doorway" (Doorway Library)
   /** Exit-settlement record (§5.6): derived on exit, for doorway display and the return echo. */
   settlement?: SettlementRecord;
+  /** Out-of-world steering notes. Never part of WorldState and never fed through character perception. */
+  directorNotes?: DirectorNote[];
+  /** Current scene-level out-of-world contract. Never part of WorldState or character perception. */
+  sceneContract?: SceneContract;
 }
 
 /**
@@ -207,6 +256,8 @@ export interface Message {
   content: string;
   createdAt: number;
   narration?: boolean;
+  /** Soft-hidden from the active timeline view; retained for append-only audit/history. */
+  archived?: boolean;
 }
 
 /** Per-character subjective memory (borrowing Generative Agents' ConceptNode). */
@@ -229,6 +280,7 @@ export type PerceptionQuality = "full" | "partial" | "garbled";
 
 export interface Memory {
   id: string;
+  instanceId: string;
   charId: string;
   kind: "observation" | "reflection" | "hearsay";
   text: string;
@@ -253,16 +305,46 @@ export interface Memory {
   evidenceLinks?: string[];
   /** The world-branch id that produced this memory (for branch/regeneration isolation). */
   branchId?: string;
+  /** Soft-hidden from the active timeline view; retained for append-only audit/history. */
+  archived?: boolean;
+}
+
+export interface TimelineBranchSnapshot {
+  state: WorldState;
+  activeBranchId?: string;
+  messages: Message[];
+  memories: Memory[];
+  deltaLog: DeltaLogEntry[];
+  lastTurnSnapshot?: TurnSnapshot;
+  turn?: number;
+  lastSeenAt?: number;
+  returnEchoedForLastSeenAt?: number;
+  settlement?: SettlementRecord;
+  directorNotes?: DirectorNote[];
+  sceneContract?: SceneContract;
+}
+
+export interface TimelineBranch {
+  id: string;
+  instanceId: string;
+  seedId: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  forkedFromTurn?: number;
+  snapshot: TimelineBranchSnapshot;
 }
 
 /**
- * Local taste/funnel event categories. The first four feed recommendation ranking; the next 7 are the stages of the acquisition funnel (§5.9):
+ * Local taste/funnel event categories. The first four feed recommendation ranking; the rest are local funnel stages/signals (§5.9):
  * card-dwell → open-door → first-action → ten-minute-retain → first-consequence
- * → return → pin. first-consequence fires when the player causes their first anchored fact.
+ * → return → pin, plus the keyless cliff signal prebaked-taste → key-add → first-action.
+ * first-consequence fires when the player causes their first anchored fact.
  * Local-first throughout, never sent to a server, never reaches characters.
  */
 export type TasteEventKind =
   | "enter" | "dwell" | "author" | "skip"
   | "card-dwell" | "open-door" | "first-action" | "ten-minute-retain"
-  | "first-consequence" | "return" | "pin";
+  | "first-consequence" | "return" | "pin"
+  | "prebaked-taste" | "key-add";
 export interface TasteEvent { id: string; kind: TasteEventKind; seedId: string; tags: string[]; at: number; }

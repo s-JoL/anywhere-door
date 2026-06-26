@@ -20,6 +20,7 @@ function makeSeed(
       mood,
       intensity,
       hook: "...",
+      entryAction: "开始行动",
       cast: [],
       accent: "var(--lamp)",
     },

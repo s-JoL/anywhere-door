@@ -22,12 +22,20 @@ export interface TraceRejection {
   reason: string;
 }
 
+export interface TraceGuardRejection {
+  surface: "director" | "character";
+  slips: string[];
+  reason: string;
+  speakerId?: string;
+}
+
 export interface TurnTrace {
   instanceId: string;
   turn: number;
   casting: { active: string[]; ambient: string[] } | null;
   committed: TraceCommit[];
   rejected: TraceRejection[];
+  guardRejections: TraceGuardRejection[];
   /** ids of pressure lines opened/advanced/resolved this turn. */
   threadsFired: string[];
   notes: string[];
@@ -41,14 +49,18 @@ export interface GateTrace {
   recordRejection(source: DeltaSource, delta: Delta, reason: string): void;
 }
 
+export interface GuardTrace {
+  recordGuardRejection(rejection: TraceGuardRejection): void;
+}
+
 const THREAD_KINDS = new Set(["openThread", "advanceThread", "resolveThread"]);
 
-/** A mutable per-turn collector. Implements GateTrace so it can be passed to the gate. */
-export class TraceCollector implements GateTrace {
+/** A mutable per-turn collector. Implements trace sinks for gate + guard reporting. */
+export class TraceCollector implements GateTrace, GuardTrace {
   private readonly trace: TurnTrace;
 
   constructor(instanceId: string, turn: number) {
-    this.trace = { instanceId, turn, casting: null, committed: [], rejected: [], threadsFired: [], notes: [] };
+    this.trace = { instanceId, turn, casting: null, committed: [], rejected: [], guardRejections: [], threadsFired: [], notes: [] };
   }
 
   setCasting(casting: { active: string[]; ambient: string[] }): void {
@@ -62,6 +74,10 @@ export class TraceCollector implements GateTrace {
 
   recordRejection(source: DeltaSource, delta: Delta, reason: string): void {
     this.trace.rejected.push({ source, kind: delta.kind, reason });
+  }
+
+  recordGuardRejection(rejection: TraceGuardRejection): void {
+    this.trace.guardRejections.push(rejection);
   }
 
   note(msg: string): void {

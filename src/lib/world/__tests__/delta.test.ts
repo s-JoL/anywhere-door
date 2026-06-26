@@ -19,6 +19,11 @@ function baseState(): WorldState {
 }
 
 describe("validateDelta", () => {
+  it("rejects an unknown delta kind instead of falling through", () => {
+    const r = validateDelta(baseState(), rules, { kind: "unknownDelta", id: "x" } as never);
+    expect(r).toEqual({ ok: false, reason: "未知 delta kind: unknownDelta" });
+  });
+
   it("rejects moving an absent character", () => {
     const r = validateDelta(baseState(), rules, { kind: "moveCharacter", characterId: "ghost", toLocationId: "street" });
     expect(r.ok).toBe(false);
@@ -33,9 +38,33 @@ describe("validateDelta", () => {
     const r = validateDelta(baseState(), rules, { kind: "moveCharacter", characterId: "c1", toLocationId: "street" });
     expect(r.ok).toBe(true);
   });
+  it("accepts moving a rostered offstage character into the current scene through the gate", () => {
+    const s = baseState();
+    s.roster["c-off"] = { name: "迟到的人" };
+    const r = validateDelta(s, rules, { kind: "moveCharacter", characterId: "c-off", toLocationId: "bar" });
+    expect(r.ok).toBe(true);
+    const next = applyDelta(s, { kind: "moveCharacter", characterId: "c-off", toLocationId: "bar" });
+    expect(next.locations.bar.presentCharacterIds).toContain("c-off");
+  });
+  it("validates tension as a real durable world-state delta", () => {
+    const s = baseState();
+    expect(validateDelta(s, rules, { kind: "setTension", value: 3 }).ok).toBe(true);
+    expect(applyDelta(s, { kind: "setTension", value: 3 }).tension).toBe(3);
+    expect(validateDelta({ ...s, tension: 3 }, rules, { kind: "setTension", value: 3 }).ok).toBe(false);
+    expect(validateDelta(s, rules, { kind: "setTension", value: -1 }).ok).toBe(false);
+  });
   it("rejects setting state of a nonexistent object", () => {
     const r = validateDelta(baseState(), rules, { kind: "setObjectState", objectId: "nope", state: "碎了" });
     expect(r.ok).toBe(false);
+  });
+  it("rejects object state changes that contradict an anchored state fact until the fact is revised", () => {
+    const s = baseState();
+    s.facts = [{ id: "f-glass-empty", entityId: "glass", field: "state", value: "空的", hardness: "anchored" }];
+
+    expect(validateDelta(s, rules, { kind: "setObjectState", objectId: "glass", state: "盛满了酒" }, "reactor").ok).toBe(false);
+
+    const revised = applyDelta(s, { kind: "setFact", id: "f-glass-full", entityId: "glass", field: "state", value: "盛满", hardness: "anchored" });
+    expect(validateDelta(revised, rules, { kind: "setObjectState", objectId: "glass", state: "盛满了酒" }, "god").ok).toBe(true);
   });
   it("rejects no-op deltas that change nothing (phantom changes)", () => {
     const s = baseState(); // glass.state="空" (empty), c1 has no condition
@@ -46,6 +75,16 @@ describe("validateDelta", () => {
     s.objects.glass.props = { locked: true };
     expect(validateDelta(s, rules, { kind: "setObjectLocked", objectId: "glass", locked: true }).ok).toBe(false);
     expect(validateDelta(s, rules, { kind: "setObjectLocked", objectId: "glass", locked: false }).ok).toBe(true);
+  });
+
+  it("rejects setCondition changes that contradict an anchored condition fact until the fact is revised", () => {
+    const s = baseState();
+    s.facts = [{ id: "f-c1-injured", entityId: "c1", field: "condition", value: "受伤", hardness: "anchored" }];
+
+    expect(validateDelta(s, rules, { kind: "setCondition", entityId: "c1", condition: "毫发无伤" }, "reactor").ok).toBe(false);
+
+    const revised = applyDelta(s, { kind: "setFact", id: "f-c1-healed", entityId: "c1", field: "condition", value: "毫发无伤", hardness: "anchored" });
+    expect(validateDelta(revised, rules, { kind: "setCondition", entityId: "c1", condition: "毫发无伤" }, "god").ok).toBe(true);
   });
 
   it("accepts a fresh establishLore", () => {
@@ -423,6 +462,16 @@ describe("moveObject delta (physical causality: objects movable + portable enfor
   it("validateDelta accepts relocating a movable object to an existing location", () => {
     const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" });
     expect(r.ok).toBe(true);
+  });
+  it("rejects moving an object against an anchored location fact until the fact is revised", () => {
+    const s = baseState();
+    s.facts = [{ id: "f-glass-location", entityId: "glass", field: "location", value: "酒馆", hardness: "anchored" }];
+
+    expect(validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" }, "reactor").ok).toBe(false);
+    expect(validateDelta(s, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" }, "god").ok).toBe(false);
+
+    const revised = applyDelta(s, { kind: "setFact", id: "f-glass-location-2", entityId: "glass", field: "location", value: "街道", hardness: "anchored" });
+    expect(validateDelta(revised, rules, { kind: "moveObject", objectId: "glass", toLocationId: "street" }, "god").ok).toBe(true);
   });
   it("validateDelta rejects a nonexistent object", () => {
     const r = validateDelta(baseState(), rules, { kind: "moveObject", objectId: "ghost", toLocationId: "street" });

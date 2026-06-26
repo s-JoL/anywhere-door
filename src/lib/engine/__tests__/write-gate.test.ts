@@ -45,6 +45,7 @@ describe("WriteGate.commit (§4.1) — golden accept/reject parity with validate
     { kind: "moveCharacter", valid: { kind: "moveCharacter", characterId: "c1", toLocationId: "street" }, invalid: { kind: "moveCharacter", characterId: "ghost", toLocationId: "street" } },
     { kind: "setObjectState", valid: { kind: "setObjectState", objectId: "glass", state: "碎了" }, invalid: { kind: "setObjectState", objectId: "nope", state: "碎了" } },
     { kind: "setFlag", valid: { kind: "setFlag", key: "k", value: "v" }, invalid: { kind: "setFlag", key: "", value: "v" } },
+    { kind: "setTension", valid: { kind: "setTension", value: 4 }, invalid: { kind: "setTension", value: 11 } },
     { kind: "advanceTime", valid: { kind: "advanceTime", clock: "夜" } },
     { kind: "setCondition", valid: { kind: "setCondition", entityId: "c1", condition: "受伤" }, invalid: { kind: "setCondition", entityId: "ghost", condition: "受伤" } },
     { kind: "establishObject", valid: { kind: "establishObject", id: "new-obj", name: "匕首", locationId: "bar" }, invalid: { kind: "establishObject", id: "glass", name: "酒杯", locationId: "bar" } },

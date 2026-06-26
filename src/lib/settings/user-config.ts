@@ -1,4 +1,4 @@
-import type { ModelConfig, WorldSeed } from "@/lib/types";
+import type { ModelConfig, ProviderId, WorldSeed } from "@/lib/types";
 import { isValidProvider } from "@/lib/llm/providers";
 
 /** The user's own global model config (same shape as a single world's modelConfig). */
@@ -6,6 +6,55 @@ export type UserConfig = ModelConfig;
 
 const KEY = "anywhere-door.userConfig";
 const LEGACY_KEY = "anymen.userConfig";
+
+export const MODEL_SUGGESTIONS: Record<ProviderId, string[]> = {
+  openrouter: ["deepseek/deepseek-v4-pro", "deepseek/deepseek-chat", "google/gemini-2.5-flash"],
+  deepseek: ["deepseek-chat", "deepseek-reasoner"],
+};
+
+export const DEFAULT_USER_CONFIG: UserConfig = {
+  provider: "openrouter",
+  apiKey: "",
+  model: MODEL_SUGGESTIONS.openrouter[0],
+  reasoningEnabled: false,
+};
+
+export function defaultModelForProvider(provider: ProviderId): string {
+  return MODEL_SUGGESTIONS[provider][0];
+}
+
+function isLikelyProviderModel(provider: ProviderId, model: string): boolean {
+  const trimmed = model.trim();
+  if (!trimmed) return false;
+  if (MODEL_SUGGESTIONS[provider].includes(trimmed)) return true;
+  if (provider === "openrouter") return trimmed.includes("/");
+  return !trimmed.includes("/") && trimmed.startsWith("deepseek-");
+}
+
+export function applyProviderDefaults(current: UserConfig, provider: ProviderId): UserConfig {
+  return {
+    ...current,
+    provider,
+    model: defaultModelForProvider(provider),
+    reasoningEnabled: provider === "openrouter" ? current.reasoningEnabled : false,
+  };
+}
+
+export function normalizeUserConfig(config: UserConfig): UserConfig {
+  const provider = config.provider;
+  return {
+    provider,
+    apiKey: config.apiKey.trim(),
+    model: isLikelyProviderModel(provider, config.model)
+      ? config.model.trim()
+      : defaultModelForProvider(provider),
+    reasoningEnabled: provider === "openrouter" ? config.reasoningEnabled : false,
+  };
+}
+
+function hasRealUserKey(config: UserConfig): boolean {
+  return config.apiKey.trim().length > 0;
+}
 
 function isUserConfig(v: unknown): v is UserConfig {
   if (typeof v !== "object" || v === null) return false;
@@ -24,16 +73,27 @@ export function getUserConfig(): UserConfig | null {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
-      return isUserConfig(parsed) ? parsed : null;
+      if (!isUserConfig(parsed)) return null;
+      const normalized = normalizeUserConfig(parsed);
+      if (!hasRealUserKey(normalized)) {
+        localStorage.removeItem(KEY);
+        return null;
+      }
+      return normalized;
     }
 
     const legacyRaw = localStorage.getItem(LEGACY_KEY);
     if (!legacyRaw) return null;
     const legacyParsed: unknown = JSON.parse(legacyRaw);
     if (!isUserConfig(legacyParsed)) return null;
-    localStorage.setItem(KEY, JSON.stringify(legacyParsed));
+    const migrated = normalizeUserConfig(legacyParsed);
+    if (!hasRealUserKey(migrated)) {
+      localStorage.removeItem(LEGACY_KEY);
+      return null;
+    }
+    localStorage.setItem(KEY, JSON.stringify(migrated));
     localStorage.removeItem(LEGACY_KEY);
-    return legacyParsed;
+    return migrated;
   } catch {
     return null;
   }
@@ -41,7 +101,12 @@ export function getUserConfig(): UserConfig | null {
 
 /** Write the local config. Touches only localStorage. */
 export function setUserConfig(c: UserConfig): void {
-  localStorage.setItem(KEY, JSON.stringify(c));
+  const normalized = normalizeUserConfig(c);
+  if (!hasRealUserKey(normalized)) {
+    clearUserConfig();
+    return;
+  }
+  localStorage.setItem(KEY, JSON.stringify(normalized));
   localStorage.removeItem(LEGACY_KEY);
 }
 
@@ -53,22 +118,21 @@ export function clearUserConfig(): void {
 
 /**
  * Pure function: decide which model config a given world actually uses.
- * - A creator-authored world that carries a real key (source is not builtin/generated and apiKey is non-empty) → use the world's own config (the creator pays).
- * - Otherwise, if a user config exists → use the user's key/model (drives default and generated worlds).
- * - Otherwise → fall back to the world's own modelConfig (in dev, apiKey may be "" and the server env provides the fallback).
+ * - If a user config exists → use the user's key/model (drives every reactive world).
+ * - Otherwise → fall back to the world's provider/model with an empty key (dev env may provide a server fallback, but the seed never does).
+ *
+ * Seeds are content records, not secret stores. Historical/imported seeds may
+ * carry an apiKey field, but runtime must strip it at the read boundary.
  */
 export function resolveModelConfig(seed: WorldSeed, user: UserConfig | null): ModelConfig {
-  const creatorAuthored = seed.source !== "builtin" && seed.source !== "generated";
-  if (creatorAuthored && seed.modelConfig.apiKey.trim() !== "") {
-    return seed.modelConfig;
-  }
-  if (user) {
+  if (user && hasRealUserKey(user)) {
+    const normalized = normalizeUserConfig(user);
     return {
-      provider: user.provider,
-      apiKey: user.apiKey,
-      model: user.model,
-      reasoningEnabled: user.reasoningEnabled,
+      provider: normalized.provider,
+      apiKey: normalized.apiKey,
+      model: normalized.model,
+      reasoningEnabled: normalized.reasoningEnabled,
     };
   }
-  return seed.modelConfig;
+  return { ...seed.modelConfig, apiKey: "" };
 }

@@ -7,7 +7,6 @@ const nextConfig = {
         ignored: [
           "**/.git/**",
           "**/.next/**",
-          "**/.superpowers/**",
           "**/node_modules/**",
         ],
       };

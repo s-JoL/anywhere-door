@@ -17,6 +17,11 @@ import type { Delta } from "./delta";
 
 export type PrecisionTier = "near" | "related" | "far";
 
+const OFFSTAGE_ENTITY_BUDGET: Record<Exclude<PrecisionTier, "far">, number> = {
+  near: 3,
+  related: 1,
+};
+
 /** The location an entity currently sits in (by character presence or object home). */
 function entityLocationId(state: WorldState, entityId: string): string | undefined {
   const charLoc = Object.values(state.locations).find((l) => l.presentCharacterIds.includes(entityId));
@@ -65,13 +70,36 @@ export function offstageDeltaTarget(d: Delta): string | null {
   }
 }
 
+function hasPlayerFacingSign(d: Extract<Delta, { kind: "openThread" | "advanceThread" }>): boolean {
+  return (d.nextSign?.trim()?.length ?? 0) > 0;
+}
+
+function mayAdvanceThreadOffstage(state: WorldState, d: Extract<Delta, { kind: "openThread" | "advanceThread" }>): boolean {
+  if (d.kind === "openThread") {
+    return d.playerKnown === true || hasPlayerFacingSign(d);
+  }
+
+  const line = (state.pressureLines ?? []).find((thread) => thread.id === d.id);
+  if (!line) return true; // write gate will reject unknown ids; don't hide the reason here.
+  if (line.playerKnown === true) return true;
+  return hasPlayerFacingSign(d);
+}
+
 /**
  * Bound offstage proposals to the precision tiers: drop any delta whose target entity
- * is `far` (frozen). World-global deltas pass through untouched.
+ * is `far` (frozen), and cap near/related entity-bearing changes to the tier budget.
+ * World-global deltas pass through untouched.
  */
 export function boundOffstageDeltas(state: WorldState, deltas: Delta[]): Delta[] {
+  const used: Record<Exclude<PrecisionTier, "far">, number> = { near: 0, related: 0 };
   return deltas.filter((d) => {
+    if (d.kind === "openThread" || d.kind === "advanceThread") return mayAdvanceThreadOffstage(state, d);
     const target = offstageDeltaTarget(d);
-    return target === null || mayEvolve(state, target);
+    if (target === null) return true;
+    const tier = classifyPrecision(state, target);
+    if (tier === "far") return false;
+    if (used[tier] >= OFFSTAGE_ENTITY_BUDGET[tier]) return false;
+    used[tier] += 1;
+    return true;
   });
 }

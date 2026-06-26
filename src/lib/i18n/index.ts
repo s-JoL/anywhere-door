@@ -1,10 +1,10 @@
 /**
  * Tiny build-time i18n. The deployment's language is fixed (LOCALE), so this is
  * a plain dictionary lookup — no provider, no router, no runtime switch. See
- * docs/ui-redesign-proposal.md §2.2.
+ * AGENTS.md §17 and docs/product-design.md §2.5.
  *
  *   import { t } from "@/lib/i18n";
- *   t("feed.cta")                       // → "推门进入" / "Open the door"
+ *   t("feed.cta")                       // → "开始行动" / "Take action"
  *   t("library.minutesAgo", { n: 3 })   // → "3 分钟前" / "3 min ago"
  */
 import { LOCALE } from "./locale";

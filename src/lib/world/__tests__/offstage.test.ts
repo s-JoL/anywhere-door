@@ -71,4 +71,55 @@ describe("§5.5 boundOffstageDeltas", () => {
     const out = boundOffstageDeltas(s, [{ kind: "setCondition", entityId: "c-far", condition: "被催债" }]);
     expect(out).toHaveLength(1);
   });
+
+  it("caps entity-bearing offstage changes by near/related precision budgets", () => {
+    const s = baseState();
+    s.roster["c-adj2"] = { name: "邻二" };
+    s.roster["c-rel"] = { name: "牵连者" };
+    s.locations.street.presentCharacterIds.push("c-adj2");
+    s.locations.alley.presentCharacterIds.push("c-rel");
+    s.pressureLines![0].relatedCharacterIds = ["c-far", "c-rel"];
+
+    const out = boundOffstageDeltas(s, [
+      { kind: "setCondition", entityId: "c-here", condition: "打盹" },
+      { kind: "setCondition", entityId: "c-adj", condition: "收伞" },
+      { kind: "setCondition", entityId: "c-adj2", condition: "低声争执" },
+      { kind: "setObjectState", objectId: "o-here", state: "杯底多了一圈水" },
+      { kind: "setCondition", entityId: "c-far", condition: "被催债" },
+      { kind: "setCondition", entityId: "c-rel", condition: "躲在巷口" },
+      { kind: "advanceTime", clock: "晨" },
+    ]);
+
+    expect(out).toEqual([
+      { kind: "setCondition", entityId: "c-here", condition: "打盹" },
+      { kind: "setCondition", entityId: "c-adj", condition: "收伞" },
+      { kind: "setCondition", entityId: "c-adj2", condition: "低声争执" },
+      { kind: "setCondition", entityId: "c-far", condition: "被催债" },
+      { kind: "advanceTime", clock: "晨" },
+    ]);
+  });
+
+  it("drops offstage advancement of an unknown pressure line unless it carries a player-facing sign", () => {
+    const s = baseState();
+    const out = boundOffstageDeltas(s, [
+      { kind: "advanceThread", id: "t1", intensityDelta: 1 },
+      { kind: "advanceThread", id: "t1", playerKnown: true },
+      { kind: "advanceThread", id: "t1", intensityDelta: 1, nextSign: "巷口多了一张催债纸" },
+      { kind: "advanceThread", id: "t1", playerKnown: true, nextSign: "巷口多了一张催债纸" },
+    ]);
+
+    expect(out).toEqual([
+      { kind: "advanceThread", id: "t1", intensityDelta: 1, nextSign: "巷口多了一张催债纸" },
+      { kind: "advanceThread", id: "t1", playerKnown: true, nextSign: "巷口多了一张催债纸" },
+    ]);
+  });
+
+  it("keeps offstage advancement for an already-known pressure line without requiring a fresh sign", () => {
+    const s = baseState();
+    s.pressureLines![0].playerKnown = true;
+
+    expect(boundOffstageDeltas(s, [{ kind: "advanceThread", id: "t1", intensityDelta: 1 }])).toEqual([
+      { kind: "advanceThread", id: "t1", intensityDelta: 1 },
+    ]);
+  });
 });

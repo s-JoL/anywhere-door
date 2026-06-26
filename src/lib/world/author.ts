@@ -1,6 +1,7 @@
 import { newId } from "@/lib/id";
 import type { WorldSeed, ModelConfig, Character, WorldState } from "@/lib/types";
 import { derivePresentation } from "@/lib/world/presentation";
+import { DEFAULT_NARRATION_RULE } from "@/lib/world/narration";
 
 export interface CharDraft {
   name: string;
@@ -29,6 +30,8 @@ export interface WorldDraft {
   mood?: string[];
   intensity?: "calm" | "charged" | "explicit";
   hook?: string;
+  entryAction?: string;
+  narrationRule?: string;
 }
 
 export function buildSeedFromDraft(
@@ -105,6 +108,7 @@ export function buildSeedFromDraft(
       draft.redLines && draft.redLines.length > 0
         ? draft.redLines
         : ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: draft.narrationRule?.trim() || DEFAULT_NARRATION_RULE,
   };
 
   const partialSeed: WorldSeed = {
@@ -128,6 +132,7 @@ export function buildSeedFromDraft(
       ...(draft.mood ? { mood: draft.mood } : {}),
       ...(draft.intensity ? { intensity: draft.intensity } : {}),
       ...(draft.hook ? { hook: draft.hook } : {}),
+      ...(draft.entryAction ? { entryAction: draft.entryAction } : {}),
     },
   };
 }

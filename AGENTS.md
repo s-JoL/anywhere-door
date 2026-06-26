@@ -20,8 +20,8 @@
 > 6. `docs/roadmap.md` — the migration path from (5) to (3)/(4).
 >
 > Docs 1–4 contain **no code symbols, no file paths, no "already implemented."**
-> Coupling to the current codebase lives only in 5–6. Historical `.superpowers/`
-> reports are evidence, never authority.
+> Coupling to the current codebase lives only in 5–6. Historical reports are
+> evidence, never authority.
 
 ## 0. Name
 

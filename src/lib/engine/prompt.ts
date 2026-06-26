@@ -38,7 +38,8 @@ export function renderProjection(seed: WorldSeed, p: CharacterProjection): ChatM
   const memLine = (m: CharacterProjection["memories"][number]): string => {
     const hedge = (m.confidence ?? 1) < 0.5 ? "（不确定）" : "";
     const interp = m.interpretation?.trim() ? `（我的理解：${m.interpretation.trim()}）` : "";
-    return `· ${hedge}${m.text}${interp}`;
+    const distorted = m.distortion?.trim() ? `（你记成：${m.distortion.trim()}）` : "";
+    return `· ${hedge}${m.text}${interp}${distorted}`;
   };
   const memoryBlock = p.memories.length
     ? `【你记得】（只属于你的主观记忆，别人未必知道）\n${p.memories.map(memLine).join("\n")}`

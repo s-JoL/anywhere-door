@@ -48,6 +48,7 @@ export interface GateCtx {
   state: WorldState;
   rules: WorldRules;
   instanceId: string;
+  branchId?: string;
   turn: number;
   /** Only the append-log capability is needed; keeps the gate testable. */
   repo: Pick<Repo, "appendDeltaLog">;
@@ -60,6 +61,12 @@ export interface GateCtx {
 }
 
 type Repo = { appendDeltaLog: (e: DeltaLogEntry) => Promise<void> };
+
+function normalizeDeltaForSource(delta: Delta, source: ProposalSource): Delta {
+  if (delta.kind !== "setFact" || delta.playerKnown !== undefined) return delta;
+  if (source === "user" || source === "reactor") return { ...delta, playerKnown: true };
+  return delta;
+}
 
 /**
  * Validate → apply (in order) → log each committed delta; collect rejections.
@@ -74,18 +81,19 @@ export async function commit(ctx: GateCtx, proposals: Proposal[]): Promise<Commi
   const rejected: RejectionRecord[] = [];
 
   for (const p of proposals) {
-    const v = validateDelta(state, ctx.rules, p.delta, p.source);
+    const delta = normalizeDeltaForSource(p.delta, p.source);
+    const v = validateDelta(state, ctx.rules, delta, p.source);
     if (!v.ok) {
-      rejected.push({ delta: p.delta, reason: v.reason, source: p.source });
+      rejected.push({ delta, reason: v.reason, source: p.source });
       warn(`[${p.source}] 丢弃非法 delta: ${v.reason}`);
-      ctx.trace?.recordRejection(p.source, p.delta, v.reason);
+      ctx.trace?.recordRejection(p.source, delta, v.reason);
       continue;
     }
-    state = applyDelta(state, p.delta);
-    ctx.trace?.recordCommit(p.source, p.delta);
+    state = applyDelta(state, delta);
+    ctx.trace?.recordCommit(p.source, delta);
     // Log reads game time from the post-apply state (an advanceTime delta is logged
     // at the time it produced) — matching the prior inline behavior.
-    await ctx.repo.appendDeltaLog({
+    const entry: DeltaLogEntry = {
       id: newId("dl"),
       instanceId: ctx.instanceId,
       turn: ctx.turn,
@@ -94,9 +102,11 @@ export async function commit(ctx: GateCtx, proposals: Proposal[]): Promise<Commi
       gameDay: state.time.day,
       gameClock: state.time.clock,
       at: now(),
-      delta: p.delta,
-    });
-    committed.push(p.delta);
+      delta,
+    };
+    if (ctx.branchId) entry.branchId = ctx.branchId;
+    await ctx.repo.appendDeltaLog(entry);
+    committed.push(delta);
   }
 
   return { state, committed, rejected };

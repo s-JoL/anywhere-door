@@ -5,7 +5,7 @@ import type { Fact, Memory } from "../../types";
 const fact: Fact = { id: "f1", entityId: "杀手", field: "location", value: "后巷", hardness: "anchored" };
 
 const mem = (over: Partial<Memory>): Memory => ({
-  id: "m", charId: "c1", kind: "observation", text: "杀手 在 后巷", keywords: ["杀手", "后巷"],
+  id: "m", instanceId: "w-test", charId: "c1", kind: "observation", text: "杀手 在 后巷", keywords: ["杀手", "后巷"],
   importance: 6, createdAt: 1, lastAccessed: 1, ...over,
 });
 

@@ -78,12 +78,11 @@ const OUT_OF_WORLD_KEYS = [
 ] as const;
 
 /**
- * Standing assertion (dev-mode): throw if any out-of-world key appears on a
- * projection. The charter (§9) requires this because the perception-boundary leak is
+ * Standing assertion: throw if any out-of-world key appears on a projection.
+ * The charter (§9) requires this because the perception-boundary leak is
  * otherwise silent.
  */
 export function assertNoOutOfWorldLeak(projection: CharacterProjection): void {
-  if (process.env.NODE_ENV === "production") return;
   const obj = projection as unknown as Record<string, unknown>;
   for (const key of OUT_OF_WORLD_KEYS) {
     if (key in obj) {
@@ -135,7 +134,9 @@ function resolveStance(state: WorldState, character: Character): { name: string;
   for (const [toId, rel] of Object.entries(myRelations)) {
     if (!presentIds.has(toId)) continue;
     const name = toId === "you" ? "你（玩家）" : (state.roster[toId]?.name ?? toId);
-    const phrase = rel.disposition ?? affinityBand(effectiveAffinity(rel, state.time.day));
+    const base = rel.disposition ?? affinityBand(effectiveAffinity(rel, state.time.day));
+    const latestEvidence = rel.evidence.at(-1)?.trim();
+    const phrase = latestEvidence ? `${base}（近因：${latestEvidence}）` : base;
     out.push({ name, phrase });
   }
   return out;

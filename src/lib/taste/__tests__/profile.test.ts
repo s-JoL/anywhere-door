@@ -43,7 +43,7 @@ describe("scoreSeed", () => {
   });
 
   it("returns mean of matching tag scores", () => {
-    const seed = { ...DEMO_SEED, presentation: { genre: "A", mood: ["B"], intensity: "calm" as const, hook: "h", cast: [] } };
+    const seed = { ...DEMO_SEED, presentation: { genre: "A", mood: ["B"], intensity: "calm" as const, hook: "h", entryAction: "开始行动", cast: [] } };
     const profile = { "genre:A": 4, "mood:B": 2, "intensity:calm": 6 };
     const score = scoreSeed(seed, profile);
     // mean of [4, 2, 6] = 4
@@ -51,7 +51,7 @@ describe("scoreSeed", () => {
   });
 
   it("positive profile gives positive score", () => {
-    const seed = { ...DEMO_SEED, presentation: { genre: "X", mood: [], intensity: "charged" as const, hook: "", cast: [] } };
+    const seed = { ...DEMO_SEED, presentation: { genre: "X", mood: [], intensity: "charged" as const, hook: "", entryAction: "开始行动", cast: [] } };
     const profile = { "genre:X": 3, "intensity:charged": 1 };
     expect(scoreSeed(seed, profile)).toBeGreaterThan(0);
   });

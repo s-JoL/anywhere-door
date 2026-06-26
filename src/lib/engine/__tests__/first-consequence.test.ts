@@ -22,6 +22,19 @@ function factLlm(): (m: ChatMessage[]) => Promise<{ content: string }> {
   };
 }
 
+function objectStateOnlyLlm(): (m: ChatMessage[]) => Promise<{ content: string }> {
+  return async (messages: ChatMessage[]) => {
+    const sys = messages[0]?.content ?? "";
+    const last = messages[messages.length - 1]?.content ?? "";
+    if (sys.includes("世界状态记录器")) {
+      return { content: '[{"kind":"setObjectState","objectId":"o-glass","state":"被你推倒在吧台边缘，杯脚裂开"}]' };
+    }
+    if (sys.includes("世界环境作家")) return { content: "x" };
+    if (last.includes("暂停扮演")) return { content: '{"action":"pass","eagerness":0.1}' };
+    return { content: "……" };
+  };
+}
+
 describe("§5.9 first-consequence funnel hook", () => {
   beforeEach(() => { resetRepository(); indexedDB.deleteDatabase("anywhere-door"); });
 
@@ -39,6 +52,29 @@ describe("§5.9 first-consequence funnel hook", () => {
     // a second turn (reactor now quiet) must NOT fire first-consequence again
     await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-fc", input: "我环顾四周。", llm });
     events = await repo.listTasteEvents();
+    expect(events.filter((e) => e.kind === "first-consequence")).toHaveLength(1);
+  });
+
+  it("floors the first clear player-caused object change into an anchored fact", async () => {
+    const repo = getRepository();
+    await repo.upsertInstance(instantiate(DEMO_SEED, 1, "w-fc-floor"));
+
+    await runTurn({ seed: DEMO_SEED, repo, instanceId: "w-fc-floor", input: "我把威士忌杯推倒，让它裂在吧台边缘。", llm: objectStateOnlyLlm() });
+
+    const inst = await repo.getInstance("w-fc-floor");
+    expect(inst?.state.objects["o-glass"].state).toContain("杯脚裂开");
+    expect(inst?.state.facts?.some((fact) =>
+      fact.entityId === "o-glass" &&
+      fact.field === "state" &&
+      fact.value.includes("杯脚裂开") &&
+      fact.hardness === "anchored" &&
+      fact.playerKnown === true,
+    )).toBe(true);
+
+    const log = await repo.listDeltaLog("w-fc-floor");
+    expect(log.some((entry) => entry.source === "director" && entry.delta.kind === "setFact" && entry.delta.entityId === "o-glass")).toBe(true);
+
+    const events = await repo.listTasteEvents();
     expect(events.filter((e) => e.kind === "first-consequence")).toHaveLength(1);
   });
 });

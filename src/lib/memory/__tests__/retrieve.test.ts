@@ -4,7 +4,7 @@ import { keywordsOf } from "../keywords";
 import type { Memory } from "../../types";
 
 function m(id: string, text: string, importance: number, createdAt: number): Memory {
-  return { id, charId: "c1", kind: "observation", text, keywords: keywordsOf(text), importance, createdAt, lastAccessed: createdAt };
+  return { id, instanceId: "w-test", charId: "c1", kind: "observation", text, keywords: keywordsOf(text), importance, createdAt, lastAccessed: createdAt };
 }
 
 describe("scoreMemories", () => {

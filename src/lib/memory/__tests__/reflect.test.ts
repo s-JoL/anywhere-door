@@ -5,9 +5,12 @@ import type { LlmFn } from "../../engine/turn";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+const INSTANCE_ID = "w-test";
+
 function makeObs(overrides: Partial<Memory> = {}): Memory {
   return {
     id: `mem-${Math.random().toString(36).slice(2)}`,
+    instanceId: INSTANCE_ID,
     charId: "c1",
     kind: "observation",
     text: "老周说了句话。",
@@ -22,6 +25,7 @@ function makeObs(overrides: Partial<Memory> = {}): Memory {
 function makeRefl(createdAt: number, overrides: Partial<Memory> = {}): Memory {
   return {
     id: `mem-${Math.random().toString(36).slice(2)}`,
+    instanceId: INSTANCE_ID,
     charId: "c1",
     kind: "reflection",
     text: "我觉得老周靠不住。",
@@ -163,6 +167,7 @@ describe("reflect", () => {
       makeObs({ charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,
@@ -173,6 +178,7 @@ describe("reflect", () => {
     expect(result).toHaveLength(2);
     for (const r of result) {
       expect(r.kind).toBe("reflection");
+      expect(r.instanceId).toBe(INSTANCE_ID);
       expect(r.charId).toBe("c1");
       expect(r.importance).toBe(7);
       expect(r.evidence).toBeDefined();
@@ -185,6 +191,7 @@ describe("reflect", () => {
       makeObs({ charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,
@@ -203,6 +210,7 @@ describe("reflect", () => {
       makeObs({ charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,
@@ -218,6 +226,7 @@ describe("reflect", () => {
       makeObs({ charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,
@@ -232,6 +241,7 @@ describe("reflect", () => {
       makeObs({ id: `mem-${i}`, charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,
@@ -253,6 +263,7 @@ describe("reflect", () => {
       makeObs({ charId: "c1", createdAt: 100 + i })
     );
     const result = await reflect({
+      instanceId: INSTANCE_ID,
       characterName: "阿岚",
       charId: "c1",
       memories,

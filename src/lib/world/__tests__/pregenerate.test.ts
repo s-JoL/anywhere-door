@@ -33,6 +33,7 @@ function makeWorld(title: string) {
       mood: ["暧昧"],
       intensity: "charged",
       hook: "你推门进去，雨声涌进来，吧台后的人头也没抬。",
+      entryAction: "问掌柜发生了什么",
       cast: [{ name: "甲", line: "掌柜" }],
       accent: "#f0c36b",
     },

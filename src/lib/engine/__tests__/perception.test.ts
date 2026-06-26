@@ -5,6 +5,7 @@ import type { Memory, WorldState } from "../../types";
 
 const mem = (charId: string, text: string, over: Partial<Memory> = {}): Memory => ({
   id: `m-${Math.round(text.length)}-${charId}`,
+  instanceId: "w-test",
   charId,
   kind: "observation",
   text,
@@ -57,6 +58,27 @@ describe("resolvePerception (§4.2 single perception boundary)", () => {
     expect(p.stance).toContainEqual({ name: "你（玩家）", phrase: "记恨在心" });
   });
 
+  it("surfaces the latest relationship evidence as an in-character stance reason", () => {
+    const c = DEMO_SEED.characters[0];
+    const state: WorldState = {
+      ...DEMO_SEED.openingState,
+      relationships: {
+        "c-lan": {
+          "you": {
+            affinity: -40,
+            disposition: "对你更戒备",
+            evidence: ["你掰弯了银戒指"],
+            sinceDay: 1,
+          },
+        },
+      },
+    };
+
+    const p = resolvePerception({ seed: DEMO_SEED, state, query: "" }, c);
+
+    expect(p.stance).toContainEqual({ name: "你（玩家）", phrase: "对你更戒备（近因：你掰弯了银戒指）" });
+  });
+
   it("triggers lore whose key is on-stage, and not lore whose key is absent", () => {
     const c = DEMO_SEED.characters[0];
     const state: WorldState = {
@@ -100,4 +122,17 @@ describe("assertNoOutOfWorldLeak (charter §9 standing assertion)", () => {
       expect(() => assertNoOutOfWorldLeak(leaked as unknown as CharacterProjection)).toThrow(/越界|out-of-world/);
     });
   }
+
+  it("also fires in production because projection leaks are silent failures", () => {
+    const before = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", configurable: true, enumerable: true, writable: true });
+    try {
+      const leaked = clean() as unknown as Record<string, unknown>;
+      leaked.sceneContract = "should never reach a character";
+      expect(() => assertNoOutOfWorldLeak(leaked as unknown as CharacterProjection)).toThrow(/越界|out-of-world/);
+    } finally {
+      if (before) Object.defineProperty(process.env, "NODE_ENV", before);
+      else Reflect.deleteProperty(process.env, "NODE_ENV");
+    }
+  });
 });

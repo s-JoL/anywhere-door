@@ -44,19 +44,45 @@ describe("§5.1 canon hardness — contradiction rule", () => {
   const withAnchored = (): WorldState =>
     applyDelta(baseState(), { kind: "setFact", id: "f1", entityId: "key", field: "hidden", value: "在地板下", hardness: "anchored" });
 
-  it("a softer/equal source cannot overturn a harder fact (I hid the key, it stays hidden)", () => {
+  it("non-god proposals cannot overturn an anchored fact, even at equal hardness", () => {
     const s = withAnchored();
     // ambient contradiction of an anchored fact → rejected
     const r = validateDelta(s, rules, { kind: "setFact", id: "f2", entityId: "key", field: "hidden", value: "被人拿走了", hardness: "ambient" });
     expect(r.ok).toBe(false);
-    // equal hardness, different value → also rejected (not strictly harder, but anchored>ambient default... test equal too)
-    const rEq = validateDelta(s, rules, { kind: "setFact", id: "f3", entityId: "key", field: "hidden", value: "被人拿走了", hardness: "anchored" });
-    expect(rEq.ok).toBe(true); // equal hardness may revise (not strictly harder)
+    // equal hardness still cannot silently revise anchored canon unless authored through God.
+    const rEq = validateDelta(s, rules, { kind: "setFact", id: "f3", entityId: "key", field: "hidden", value: "被人拿走了", hardness: "anchored" }, "reactor");
+    expect(rEq.ok).toBe(false);
+  });
+
+  it("god may revise an anchored fact with authored provenance", () => {
+    const s = withAnchored();
+    const r = validateDelta(s, rules, { kind: "setFact", id: "f-god", entityId: "key", field: "hidden", value: "被老周拿走了", hardness: "anchored" }, "god");
+    expect(r.ok).toBe(true);
   });
 
   it("re-asserting the same value never conflicts", () => {
     const s = withAnchored();
     expect(validateDelta(s, rules, { kind: "setFact", id: "f2", entityId: "key", field: "hidden", value: "在地板下", hardness: "ambient" }).ok).toBe(true);
+  });
+
+  it("re-asserting the same value cannot downgrade applied hardness", () => {
+    const s = withAnchored();
+    const next = applyDelta(s, {
+      kind: "setFact",
+      id: "f2",
+      entityId: "key",
+      field: "hidden",
+      value: "在地板下",
+      hardness: "ambient",
+    });
+
+    expect(next.facts).toHaveLength(1);
+    expect(next.facts![0]).toMatchObject({
+      entityId: "key",
+      field: "hidden",
+      value: "在地板下",
+      hardness: "anchored",
+    });
   });
 
   it("a harder claim can overwrite a softer fact (facts harden when earned)", () => {

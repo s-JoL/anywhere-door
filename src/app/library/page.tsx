@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getRepository } from "@/lib/storage";
 import { derivePresentation } from "@/lib/world/presentation";
+import { settlementLibraryHook } from "@/lib/world/settlement";
 import { recordFunnel } from "@/lib/taste/funnel";
 import { useDoorEnter } from "@/app/DoorTransition";
 import { t } from "@/lib/i18n";
@@ -16,13 +17,6 @@ type Row = {
   location: string;
   hook: string;
 };
-
-/** A one-line "what's pulling you back" from the exit settlement (§5.6). */
-function settlementHook(instance: WorldInstance): string {
-  const s = instance.settlement;
-  if (!s) return "";
-  return s.candidates[0] || s.unresolved[0] || (s.bond ? `${s.bond.who}：${s.bond.stance}` : "");
-}
 
 function relTime(ts: number | undefined): string {
   if (!ts) return "";
@@ -96,7 +90,7 @@ export default function LibraryPage() {
         title: seed?.title ?? t("library.locationUnknown"),
         accent: pres?.accent ?? "var(--lamp)",
         location,
-        hook: settlementHook(instance),
+        hook: settlementLibraryHook(instance.settlement),
       };
     });
     setRows(built);

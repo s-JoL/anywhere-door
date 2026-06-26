@@ -90,8 +90,8 @@ npm install
 npm run dev          # → http://localhost:3000
 ```
 
-1. 打开 **`/settings`**,填入**你自己的模型 key**(OpenRouter 或 DeepSeek),点「测试可用」确认。
-2. 回到 feed,竖滑挑一扇门,**推门进入**。
+1. 先打开 feed,竖滑挑一扇门,点下卡片上的**第一步行动**；没有 key 时会看到内置世界的预烘焙 taste。
+2. 想让世界回应你的具体行动,打开 **`/settings`**,填入**你自己的模型 key**(OpenRouter 或 DeepSeek),点「测试可用」确认。
 
 > 本地 `dev` 下可在 `.env.local` 放 `OPENROUTER_API_KEY` 作便利回退(见 [`.env.example`](.env.example))。
 > **生产部署严格 BYO-key** —— 部署版只用访客自己填的 key,主机绝不借出自己的 key。
@@ -164,14 +164,14 @@ npm run typecheck
 ```
 
 代码导览:`src/lib/engine/`(回合循环 · 导演 · 反应器 · 提示词)· `src/lib/world/`(delta · 生成器 · lore · 充实 · 离场 · 种子)· `src/lib/taste/`(口味模型 · 排序)· `src/lib/memory/`(观察 · 检索 · 反思 · 传话)· `src/lib/storage/`(IndexedDB · 事件日志)· `src/app/`(feed · play · settings)。
-设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章 · 公理与不变量)· [`docs/first-principles.md`](docs/first-principles.md)(第一性推导)· [`docs/product-design.md`](docs/product-design.md)(产品真值)· [`docs/architecture.md`](docs/architecture.md)(理想世界 runtime + 活世界机制)· [`docs/current-state.md`](docs/current-state.md)(当前代码事实)· [`docs/roadmap.md`](docs/roadmap.md)(迁移路线)· [`CLAUDE.md`](CLAUDE.md)(agent 工作准则)。
+设计与架构权威顺序:[`AGENTS.md`](AGENTS.md)(项目宪章 · 公理与不变量)· [`docs/first-principles.md`](docs/first-principles.md)(第一性推导)· [`docs/product-design.md`](docs/product-design.md)(产品真值)· [`docs/architecture.md`](docs/architecture.md)(理想世界 runtime + 活世界机制)· [`docs/current-state.md`](docs/current-state.md)(当前代码事实)· [`docs/roadmap.md`](docs/roadmap.md)(迁移路线)。
 
 ---
 
 ## ✦ 隐私 / 安全
 
 - **数据全在你的浏览器**(本地优先,无服务器数据库)。
-- **你的 key 只存在你这台浏览器,绝不上传**,只在内存中转发给你指定的模型服务。
+- **你的 key 只保存在这台浏览器**；live turn 时会经本应用的 `/api/llm/chat` 薄代理转发给你选择的模型服务,服务端不落库。
 - **部署版严格 BYO-key** —— 主机不会把自己的 key 借给匿名访客(`OPENROUTER_API_KEY` 的 env 回退被限定为开发环境,见 [`src/lib/llm/resolve-key.ts`](src/lib/llm/resolve-key.ts))。
 
 ## ✦ 路线图(节选)

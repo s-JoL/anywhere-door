@@ -5,6 +5,7 @@ export type Delta =
   | { kind: "moveCharacter"; characterId: string; toLocationId: string }
   | { kind: "setObjectState"; objectId: string; state: string }
   | { kind: "setFlag"; key: string; value: string | number | boolean }
+  | { kind: "setTension"; value: number }
   | { kind: "advanceTime"; clock?: string; lighting?: string; dayDelta?: number }
   | { kind: "setCondition"; entityId: string; condition: string }
   | { kind: "establishObject"; id: string; name: string; locationId: string; state?: string; locked?: boolean; gates?: string }
@@ -21,11 +22,42 @@ export type Delta =
   | { kind: "advanceThread"; id: string; intensityDelta?: number; summary?: string; status?: "latent" | "active" | "resolved"; playerKnown?: boolean; nextSign?: string }
   | { kind: "resolveThread"; id: string }
   // ——— §5.1 graded facts (canon hardness; only through the write gate) ———
-  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness }
+  | { kind: "setFact"; id: string; field: string; value: string; entityId?: string; hardness?: Hardness; playerKnown?: boolean }
   // ——— §5.7 entity lifecycle (stub→fleshed across all types; archive, never delete) ———
   | { kind: "fleshObject"; objectId: string; state?: string; name?: string }
   | { kind: "fleshCharacter"; characterId: string; description: string; goal?: string }
   | { kind: "retireEntity"; entityId: string; entityType: "character" | "object" };
+
+export const DELTA_KINDS = [
+  "moveCharacter",
+  "setObjectState",
+  "setFlag",
+  "setTension",
+  "advanceTime",
+  "setCondition",
+  "establishObject",
+  "establishLocation",
+  "moveScene",
+  "setRelationship",
+  "establishLore",
+  "establishCharacter",
+  "moveObject",
+  "setObjectLocked",
+  "fleshLocation",
+  "openThread",
+  "advanceThread",
+  "resolveThread",
+  "setFact",
+  "fleshObject",
+  "fleshCharacter",
+  "retireEntity",
+] as const;
+
+const DELTA_KIND_SET = new Set<string>(DELTA_KINDS);
+
+export function isDeltaKind(kind: string): kind is Delta["kind"] {
+  return DELTA_KIND_SET.has(kind);
+}
 
 export type Validation = { ok: true } | { ok: false; reason: string };
 
@@ -52,6 +84,7 @@ export type DeltaSource =
 export interface DeltaLogEntry {
   id: string;
   instanceId: string;
+  branchId?: string;
   turn: number;
   source: DeltaSource;
   cause: string;        // player input/action that triggered this turn's change
@@ -59,6 +92,8 @@ export interface DeltaLogEntry {
   gameClock: string;
   at: number;           // monotonic logical timestamp (nextTime)
   delta: Delta;
+  /** Soft-hidden from the active timeline view; retained for append-only audit/history. */
+  archived?: boolean;
 }
 
 /** Free-text fields in a delta that land in the world (used for red-line screening). */
@@ -112,6 +147,79 @@ function lockedDoorBlocking(state: WorldState, from: WorldState["locations"][str
 
 /** Hardness tier ordering (for comparison). */
 const HARDNESS_RANK: Record<Hardness, number> = { ambient: 0, anchored: 1, core: 2 };
+const HARDNESS_BY_RANK: Hardness[] = ["ambient", "anchored", "core"];
+
+function maxHardness(a: Hardness, b: Hardness): Hardness {
+  return HARDNESS_BY_RANK[Math.max(HARDNESS_RANK[a], HARDNESS_RANK[b])];
+}
+
+const OBJECT_LOCATION_FACT_FIELDS = new Set(["location", "where", "place", "hidden", "位置", "所在", "隐藏"]);
+const OBJECT_STATE_FACT_FIELDS = new Set(["state", "condition", "light", "locked", "open", "状态", "灯", "锁"]);
+
+const STATE_CONTRADICTION_PAIRS: Array<{ state: RegExp; contradiction: RegExp }> = [
+  { state: /空|empty/, contradiction: /满|盛满|装满|倒满|斟满|full/ },
+  { state: /满|盛满|装满|倒满|斟满|full/, contradiction: /空|empty/ },
+  { state: /破|碎|裂|坏|损毁|broken/, contradiction: /完好|完整|无损|崭新|intact/ },
+  { state: /完好|完整|无损|崭新|intact/, contradiction: /破|碎|裂|坏|损毁|broken/ },
+  { state: /湿|潮|淋湿|wet/, contradiction: /干|干燥|dry/ },
+  { state: /干|干燥|dry/, contradiction: /湿|潮|淋湿|wet/ },
+  { state: /关着|关闭|合上|锁着|locked|closed/, contradiction: /打开|敞开|解锁|unlocked|open/ },
+  { state: /开着|打开|敞开|解锁|unlocked|open/, contradiction: /关着|关闭|合上|锁着|locked|closed/ },
+  { state: /熄灭|不亮|暗着|unlit|off/, contradiction: /亮起|点亮|明亮|lit|on/ },
+  { state: /亮起|点亮|明亮|lit|on/, contradiction: /熄灭|不亮|暗着|unlit|off/ },
+  { state: /受伤|负伤|流血|injured|wounded/, contradiction: /无伤|毫发无伤|完好|健康|healthy|unharmed/ },
+  { state: /无伤|毫发无伤|完好|健康|healthy|unharmed/, contradiction: /受伤|负伤|流血|injured|wounded/ },
+];
+
+function mentionsLocation(value: string, loc: WorldState["locations"][string]): boolean {
+  const lower = value.toLowerCase();
+  return [loc.id, loc.name, loc.gist].filter(Boolean).some((token) => lower.includes(token.toLowerCase()));
+}
+
+function protectedObjectLocationConflict(state: WorldState, objectId: string, toLocationId: string) {
+  const obj = state.objects[objectId];
+  const target = state.locations[toLocationId];
+  if (!obj || !target) return null;
+
+  const protectedFacts = (state.facts ?? []).filter(
+    (fact) =>
+      fact.entityId === objectId &&
+      HARDNESS_RANK[fact.hardness] >= HARDNESS_RANK.anchored &&
+      OBJECT_LOCATION_FACT_FIELDS.has(fact.field),
+  );
+
+  for (const fact of protectedFacts) {
+    if (mentionsLocation(fact.value, target)) continue;
+    if (fact.field === "hidden" && obj.locationId === toLocationId) continue;
+    return fact;
+  }
+  return null;
+}
+
+function stateTextConsistent(factValue: string, proposedState: string): boolean {
+  const fact = factValue.toLowerCase();
+  const proposed = proposedState.toLowerCase();
+  return fact.includes(proposed) || proposed.includes(fact);
+}
+
+function stateTextContradicts(factValue: string, proposedState: string): boolean {
+  const fact = factValue.toLowerCase();
+  const proposed = proposedState.toLowerCase();
+  return STATE_CONTRADICTION_PAIRS.some((pair) => pair.state.test(fact) && pair.contradiction.test(proposed));
+}
+
+function protectedEntityStateConflict(state: WorldState, entityId: string, proposedState: string) {
+  const protectedFacts = (state.facts ?? []).filter((fact) => {
+    const field = fact.field.toLowerCase();
+    return fact.entityId === entityId && HARDNESS_RANK[fact.hardness] >= HARDNESS_RANK.anchored && OBJECT_STATE_FACT_FIELDS.has(field);
+  });
+
+  for (const fact of protectedFacts) {
+    if (stateTextConsistent(fact.value, proposedState)) continue;
+    if (stateTextContradicts(fact.value, proposedState)) return fact;
+  }
+  return null;
+}
 
 /** Pressure-line "strong consequence" intensity threshold (§5.2 fairness rule). */
 const STRONG_THREAD_INTENSITY = 8;
@@ -141,8 +249,8 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
     case "moveCharacter": {
       if (!state.roster[d.characterId]) return { ok: false, reason: `角色 ${d.characterId} 不存在` };
       const here = Object.values(state.locations).find((l) => l.presentCharacterIds.includes(d.characterId));
-      if (!here) return { ok: false, reason: `角色 ${d.characterId} 不在任何场景中` };
       if (!state.locations[d.toLocationId]) return { ok: false, reason: `目标场景 ${d.toLocationId} 不存在` };
+      if (!here) return { ok: true };
       if (!here.connections.includes(d.toLocationId) && here.id !== d.toLocationId)
         return { ok: false, reason: `${here.id} 与 ${d.toLocationId} 不相连` };
       {
@@ -155,16 +263,29 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       const o = state.objects[d.objectId];
       if (!o) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
       if (o.state === d.state) return { ok: false, reason: `对象 ${d.objectId} 状态未变(空操作)` };
+      {
+        const conflict = protectedEntityStateConflict(state, d.objectId, d.state);
+        if (conflict) return { ok: false, reason: `状态会与受保护事实「${conflict.field}=${conflict.value}」(${conflict.hardness})冲突,需先修订事实` };
+      }
       return { ok: true };
     }
     case "setFlag":
       return d.key ? { ok: true } : { ok: false, reason: "flag key 为空" };
+    case "setTension":
+      if (!Number.isFinite(d.value)) return { ok: false, reason: "tension 必须是有限数字" };
+      if (d.value < 0 || d.value > 10) return { ok: false, reason: "tension 必须在 0..10" };
+      if ((state.tension ?? 0) === d.value) return { ok: false, reason: "tension 未变(空操作)" };
+      return { ok: true };
     case "advanceTime":
       return { ok: true };
     case "setCondition": {
       const ent = state.roster[d.entityId];
       if (!ent) return { ok: false, reason: `实体 ${d.entityId} 不在名册中` };
       if (ent.condition === d.condition) return { ok: false, reason: `实体 ${d.entityId} 体态未变(空操作)` };
+      {
+        const conflict = protectedEntityStateConflict(state, d.entityId, d.condition);
+        if (conflict) return { ok: false, reason: `体态会与受保护事实「${conflict.field}=${conflict.value}」(${conflict.hardness})冲突,需先修订事实` };
+      }
       return { ok: true };
     }
     case "establishObject": {
@@ -226,6 +347,10 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (!obj) return { ok: false, reason: `对象 ${d.objectId} 不存在` };
       if (!state.locations[d.toLocationId])
         return { ok: false, reason: `目标地点 ${d.toLocationId} 不存在` };
+      {
+        const conflict = protectedObjectLocationConflict(state, d.objectId, d.toLocationId);
+        if (conflict) return { ok: false, reason: `移动会与受保护事实「${conflict.field}=${conflict.value}」(${conflict.hardness})冲突,需先修订事实` };
+      }
       // Physical causality: an object explicitly marked non-portable can't be moved (movable by default).
       if (obj.props?.portable === false)
         return { ok: false, reason: `${obj.name} 搬不动` };
@@ -273,10 +398,16 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (source && HARDNESS_RANK[proposed] > HARDNESS_RANK[SOURCE_MAX_HARDNESS[source]]) {
         return { ok: false, reason: `来源 ${source} 无权写入 ${proposed} 级事实` };
       }
-      // canon hardness: an existing harder fact with a different value for the same (entityId, field) → cannot be overturned.
+      // Canon hardness: anchored/core facts are player- or author-established
+      // truth. Non-god proposals cannot revise them, even at equal hardness.
       const existing = (state.facts ?? []).find((f) => f.entityId === d.entityId && f.field === d.field);
-      if (existing && existing.value !== d.value && HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
-        return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
+      if (existing && existing.value !== d.value) {
+        if (HARDNESS_RANK[existing.hardness] >= HARDNESS_RANK.anchored && source !== "god") {
+          return { ok: false, reason: `与受保护事实「${d.field}=${existing.value}」(${existing.hardness})冲突,只有 god 可修订` };
+        }
+        if (HARDNESS_RANK[existing.hardness] > HARDNESS_RANK[proposed]) {
+          return { ok: false, reason: `与更硬的事实「${d.field}=${existing.value}」(${existing.hardness})冲突,不可推翻` };
+        }
       }
       return { ok: true };
     }
@@ -306,6 +437,8 @@ export function validateDelta(state: WorldState, rules: WorldRules, d: Delta, so
       if (o.archived) return { ok: false, reason: `对象 ${d.entityId} 已归档(空操作)` };
       return { ok: true };
     }
+    default:
+      return { ok: false, reason: `未知 delta kind: ${(d as { kind?: string }).kind ?? ""}` };
   }
 }
 
@@ -327,6 +460,8 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
     }
     case "setFlag":
       return { ...state, flags: { ...state.flags, [d.key]: d.value } };
+    case "setTension":
+      return { ...state, tension: d.value };
     case "advanceTime":
       return {
         ...state,
@@ -504,8 +639,19 @@ export function applyDelta(state: WorldState, d: Delta): WorldState {
       return { ...state, pressureLines: lines };
     }
     case "setFact": {
-      const hardness: Hardness = d.hardness ?? "ambient";
-      const fact = { id: d.id, field: d.field, value: d.value, hardness, sinceDay: state.time.day, ...(d.entityId ? { entityId: d.entityId } : {}) };
+      const proposed: Hardness = d.hardness ?? "ambient";
+      const existing = (state.facts ?? []).find((f) => f.entityId === d.entityId && f.field === d.field);
+      const hardness = existing && existing.value === d.value ? maxHardness(existing.hardness, proposed) : proposed;
+      const playerKnown = d.playerKnown ?? (existing?.value === d.value ? existing.playerKnown : undefined);
+      const fact = {
+        id: d.id,
+        field: d.field,
+        value: d.value,
+        hardness,
+        sinceDay: state.time.day,
+        ...(d.entityId ? { entityId: d.entityId } : {}),
+        ...(playerKnown !== undefined ? { playerKnown } : {}),
+      };
       // Upsert by (entityId, field): the "truth right now" for this dimension is single-valued.
       const rest = (state.facts ?? []).filter((f) => !(f.entityId === d.entityId && f.field === d.field));
       return { ...state, facts: [...rest, fact] };

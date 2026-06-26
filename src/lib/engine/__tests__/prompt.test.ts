@@ -34,8 +34,8 @@ describe("prompt", () => {
   it("injects retrieved memories into system and recent observations as user-turn messages", () => {
     const c = DEMO_SEED.characters[0];
     const msgs = buildCharacterPrompt(DEMO_SEED, DEMO_SEED.openingState, c, {
-      memories: [{ id: "m1", charId: c.id, kind: "observation", text: "你：我之前来过这里", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
-      recent: [{ id: "r1", charId: c.id, kind: "observation", text: "老周：你又来啦", keywords: [], importance: 4, createdAt: 2, lastAccessed: 2 }],
+      memories: [{ id: "m1", instanceId: "w-test", charId: c.id, kind: "observation", text: "你：我之前来过这里", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
+      recent: [{ id: "r1", instanceId: "w-test", charId: c.id, kind: "observation", text: "老周：你又来啦", keywords: [], importance: 4, createdAt: 2, lastAccessed: 2 }],
     });
 
     // Memory injected into system message
@@ -111,7 +111,7 @@ describe("prompt", () => {
       lore: [{ id: "l1", keys: ["血誓录"], content: "血誓录是一本禁书。" }],
     };
     const msgs = buildCharacterPrompt(DEMO_SEED, stateWithLore, c, {
-      recent: [{ id: "r1", charId: c.id, kind: "observation", text: "你：我手里这本血誓录是什么？", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
+      recent: [{ id: "r1", instanceId: "w-test", charId: c.id, kind: "observation", text: "你：我手里这本血誓录是什么？", keywords: [], importance: 5, createdAt: 1, lastAccessed: 1 }],
     });
     const all = msgs.map((m) => m.content).join("\n");
     expect(all).toContain("血誓录是一本禁书。");

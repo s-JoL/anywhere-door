@@ -4,6 +4,8 @@ import { propagateGossip } from "../gossip";
 import { scoreMemories } from "../retrieve";
 import type { Memory, WorldState } from "../../types";
 
+const INSTANCE_ID = "w-test";
+
 const state: WorldState = {
   currentLocationId: "bar",
   time: { day: 1, clock: "夜", lighting: "暗" },
@@ -15,9 +17,10 @@ const state: WorldState = {
 
 describe("§4.5 provenance/confidence stamping", () => {
   it("first-hand observations are witnessed, full, and fully confident", () => {
-    const obs = buildObservations(state, { speakerName: "甲", text: "我来了" });
+    const obs = buildObservations(INSTANCE_ID, state, { speakerName: "甲", text: "我来了" });
     expect(obs.length).toBe(2);
     for (const m of obs) {
+      expect(m.instanceId).toBe(INSTANCE_ID);
       expect(m.provenance).toBe("witnessed");
       expect(m.confidence).toBe(1);
       expect(m.perceptionQuality).toBe("full");
@@ -25,20 +28,22 @@ describe("§4.5 provenance/confidence stamping", () => {
   });
 
   it("buildSelfMemory is a witnessed first-hand record", () => {
-    const m = buildSelfMemory("c1", "我记下点什么");
+    const m = buildSelfMemory(INSTANCE_ID, "c1", "我记下点什么");
+    expect(m.instanceId).toBe(INSTANCE_ID);
     expect(m.provenance).toBe("witnessed");
     expect(m.confidence).toBe(1);
   });
 
   it("hearsay is heard, partial, and less confident than first-hand", () => {
     const firsthand: Memory = {
-      id: "m1", charId: "c1", kind: "observation", text: "甲：那个杀手摸进了后巷",
+      id: "m1", instanceId: INSTANCE_ID, charId: "c1", kind: "observation", text: "甲：那个杀手摸进了后巷",
       keywords: ["杀手", "后巷"], importance: 8, createdAt: 1, lastAccessed: 1,
       provenance: "witnessed", confidence: 1, perceptionQuality: "full",
     };
     const out = propagateGossip(
       [{ id: "c1", name: "甲" }, { id: "c2", name: "乙" }],
       { c1: [firsthand], c2: [] },
+      { instanceId: INSTANCE_ID },
     );
     expect(out.length).toBe(1);
     const hearsay = out[0];
@@ -51,7 +56,7 @@ describe("§4.5 provenance/confidence stamping", () => {
 
 describe("§4.5 confidence folded into retrieval", () => {
   const baseMem = (id: string, confidence: number): Memory => ({
-    id, charId: "c1", kind: "observation", text: "杀手 来过",
+    id, instanceId: INSTANCE_ID, charId: "c1", kind: "observation", text: "杀手 来过",
     keywords: ["杀手"], importance: 5, createdAt: 100, lastAccessed: 100, confidence,
   });
 
@@ -65,7 +70,7 @@ describe("§4.5 confidence folded into retrieval", () => {
   });
 
   it("absent confidence is treated as full (no regression for legacy memories)", () => {
-    const legacy: Memory = { id: "leg", charId: "c1", kind: "observation", text: "杀手", keywords: ["杀手"], importance: 5, createdAt: 100, lastAccessed: 100 };
+    const legacy: Memory = { id: "leg", instanceId: INSTANCE_ID, charId: "c1", kind: "observation", text: "杀手", keywords: ["杀手"], importance: 5, createdAt: 100, lastAccessed: 100 };
     const ranked = scoreMemories([legacy], ["杀手"], { topK: 1 });
     expect(ranked[0].id).toBe("leg"); // scored fine without a confidence field
   });

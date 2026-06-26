@@ -1,4 +1,5 @@
 import type { WorldSeed } from "../types";
+import { DEFAULT_NARRATION_RULE } from "./narration";
 
 export const DEMO_SEED: WorldSeed = {
   id: "seed-demo-tavern",
@@ -8,6 +9,7 @@ export const DEMO_SEED: WorldSeed = {
     physics: "现实世界物理，无超自然；人会受伤、会累、会醉。",
     setting: "近未来港口城市，永夜多雨。",
     redLines: ["仅限成年人之间的虚构创作；排除任何未成年人相关内容。"],
+    narrationRule: DEFAULT_NARRATION_RULE,
   },
   characters: [
     { id: "c-lan", name: "阿岚", description: "無燈酒馆的女主人，三十出头，话不多但看人很准；左手有一道旧疤。表面冷淡，熟了之后毒舌又护短。", identity: { gender: "女", body: "成年女性，左手旧疤" }, goal: "摸清这位深夜来客到底想要什么。" },
@@ -30,15 +32,31 @@ export const DEMO_SEED: WorldSeed = {
     ],
   },
   modelConfig: { provider: "openrouter", apiKey: "", model: "deepseek/deepseek-v4-pro", reasoningEnabled: false },
+  source: "builtin",
   presentation: {
     genre: "都市夜谈",
     mood: ["暧昧", "危险"],
     intensity: "charged",
     hook: "你推开那扇门，雨声从身后涌进来。吧台后的女人头也没抬，但你知道她已经把你看透了。",
+    entryAction: "问阿岚她看出了什么",
     cast: [
       { name: "阿岚", line: "無燈的主人，左手旧疤，看人比酒更准" },
       { name: "老周", line: "角落里的常客，旧左轮，一笔还不上的债" },
     ],
     accent: "#f0c36b",
+  },
+  prebakedTaste: {
+    userAction: "问阿岚她看出了什么",
+    beats: [
+      {
+        kind: "speaker",
+        speakerId: "c-lan",
+        content: "阿岚终于抬眼，指节在空杯边缘敲了两下。「你进门前停了半秒，像是在确认有没有人跟着。雨衣左袖是干的，说明你刚刚把什么东西护在怀里。」",
+      },
+      {
+        kind: "narration",
+        content: "角落里的老周擦枪的动作慢了下来。他没有看你，但枪膛合上的声音比雨声更清楚。",
+      },
+    ],
   },
 };

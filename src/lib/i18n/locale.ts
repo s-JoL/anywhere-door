@@ -1,7 +1,7 @@
 /**
  * Build-time locale. Anywhere Door ships as two separate single-language
  * deployments (zh / en) of one shared, language-agnostic kernel — see
- * docs/ui-redesign-proposal.md §2 and AGENTS.md §17. The locale is fixed at
+ * AGENTS.md §17 and docs/product-design.md §2.5. The locale is fixed at
  * build time via NEXT_PUBLIC_LOCALE; there is no runtime language switch.
  */
 export type Locale = "zh" | "en";
